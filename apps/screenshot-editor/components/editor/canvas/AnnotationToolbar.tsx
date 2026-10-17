@@ -631,9 +631,9 @@ export function AnnotationToolbar() {
             className="flex animate-tool-options items-center gap-1"
           >
             <Divider />
-            <MagnifyZoom />
-            <Divider />
             <MagnifyOptions />
+            <Divider />
+            <MagnifyZoom />
           </div>
         ) : (
           <div
