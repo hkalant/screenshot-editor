@@ -428,17 +428,6 @@ function MagnifyOptions() {
   const isInset = magnifier ? magnifier.from !== undefined : inset;
   return (
     <>
-      {LENSES.map((item) => (
-        <ToolButton
-          key={item.lens}
-          label={item.label}
-          pressed={shown === item.lens}
-          onClick={() => setLens(item.lens)}
-        >
-          {item.icon}
-        </ToolButton>
-      ))}
-      <Divider />
       <ToolButton
         label="Magnify in place"
         hint="Covers the area it enlarges"
@@ -455,6 +444,17 @@ function MagnifyOptions() {
       >
         <PictureInPicture2 aria-hidden />
       </ToolButton>
+      <Divider />
+      {LENSES.map((item) => (
+        <ToolButton
+          key={item.lens}
+          label={item.label}
+          pressed={shown === item.lens}
+          onClick={() => setLens(item.lens)}
+        >
+          {item.icon}
+        </ToolButton>
+      ))}
     </>
   );
 }
