@@ -94,6 +94,7 @@ export function FrameOptions() {
       {frame.kind !== "none" && (
         <Segmented
           label="Frame theme"
+          glide
           value={frame.theme}
           options={THEME_OPTIONS}
           onChange={(theme) => setFrame({ theme })}

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
+import { defaultShotStyle } from "@/lib/design/defaults";
 import { BORDER_WIDTH, PADDING } from "@/lib/design/limits";
 import type { ShadowPresetId } from "@/lib/design/schema";
 import { SHADOW_LABELS, SHADOW_PRESET_ORDER } from "@/lib/design/shadows";
@@ -15,6 +16,9 @@ const SHADOW_OPTIONS = SHADOW_PRESET_ORDER.map((id) => ({
 }));
 
 const percent = (value: number) => Math.round(value * 100);
+
+/** Where the sliders go back to when their thumb is double-clicked. */
+const defaults = defaultShotStyle();
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -43,6 +47,7 @@ export function StylePanel() {
           max={PADDING.max}
           step={PADDING.step}
           unit="px"
+          defaultValue={defaults.padding}
           onChange={setPadding}
         />
       </Section>
@@ -71,6 +76,7 @@ export function StylePanel() {
           max={BORDER_WIDTH.max}
           step={BORDER_WIDTH.step}
           unit="px"
+          defaultValue={defaults.border.width}
           onChange={(width) => setBorder({ width })}
         />
         <LabeledSlider
@@ -79,6 +85,7 @@ export function StylePanel() {
           min={0}
           max={100}
           unit="%"
+          defaultValue={percent(defaults.border.opacity)}
           onChange={(value) => setBorder({ opacity: value / 100 })}
         />
         <ColorField

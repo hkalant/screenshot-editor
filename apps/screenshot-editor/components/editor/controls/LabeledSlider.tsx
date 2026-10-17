@@ -11,6 +11,8 @@ type Props = {
   /** How the value is shown next to the label; defaults to value + unit. */
   format?: (value: number) => string;
   disabled?: boolean;
+  /** Double-clicking the thumb (or Delete on it) goes back to this. */
+  defaultValue?: number;
   onChange: (value: number) => void;
 };
 
@@ -23,6 +25,7 @@ export function LabeledSlider({
   unit = "",
   format,
   disabled,
+  defaultValue,
   onChange,
 }: Props) {
   const sealHistory = useEditorStore((state) => state.sealHistory);
@@ -49,6 +52,16 @@ export function LabeledSlider({
         onPointerDown={beginGesture}
         onPointerUp={sealHistory}
         onPointerCancel={sealHistory}
+        // The reset is an undo step of its own.
+        onReset={
+          defaultValue === undefined
+            ? undefined
+            : () => {
+                sealHistory();
+                onChange(defaultValue);
+                sealHistory();
+              }
+        }
       />
     </div>
   );

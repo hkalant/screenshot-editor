@@ -21,7 +21,10 @@ export function TopBar({ onReplace }: Props) {
   const loading = useEditorStore((state) => state.loading);
 
   return (
-    <header className="relative flex h-14 shrink-0 items-center gap-2 rounded-xl glass px-3 lg:gap-3 lg:px-4">
+    <header
+      data-pane="bar"
+      className="relative flex h-14 shrink-0 items-center gap-2 rounded-xl glass px-3 lg:gap-3 lg:px-4"
+    >
       <div className="flex shrink-0 items-center gap-3 font-semibold whitespace-nowrap">
         {/* The logo only where the bar has room for it. */}
         <BrookesLogo className="hidden h-8 w-auto text-(--obu-charcoal) lg:block dark:text-foreground" />
