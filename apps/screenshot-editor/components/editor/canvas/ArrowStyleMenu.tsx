@@ -22,7 +22,6 @@ export const ARROW_STYLE_NAMES: Record<ArrowStyle, string> = {
   solid: "Solid",
   bold: "Bold",
   halo: "Outlined",
-  refined: "Classic",
   dotted: "Dotted",
   chevrons: "Chevron",
 };
