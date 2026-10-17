@@ -119,11 +119,15 @@ test("the export button keeps focus while it exports", async ({ page }) => {
 test("a short workspace still fits the canvas", async ({ page }) => {
   await upload(page, makeSolidPng(1200, 750, RED));
   await page.setViewportSize({ width: 1280, height: 200 });
-  const box = await stage(page).boundingBox();
-  const main = await page.locator("main").boundingBox();
-  expect(box && main).toBeTruthy();
-  expect(box!.y).toBeGreaterThanOrEqual(main!.y);
-  expect(box!.y + box!.height).toBeLessThanOrEqual(main!.y + main!.height);
+  // The canvas refits a frame or two after the resize, so wait for it.
+  await expect
+    .poll(async () => {
+      const box = await stage(page).boundingBox();
+      const main = await page.locator("main").boundingBox();
+      if (!box || !main) return false;
+      return box.y >= main.y && box.y + box.height <= main.y + main.height;
+    })
+    .toBe(true);
 });
 
 // A 1200 x 750 shot in a macOS frame, plus 72px of padding on each side.
