@@ -192,3 +192,48 @@ test("the padding slider changes the space around the screenshot", async ({
   await page.getByRole("button", { name: "Reset style" }).click();
   await expectDesignSize(page, 1344, 894);
 });
+
+test("double-clicking a slider's thumb returns it to its default", async ({
+  page,
+}) => {
+  await upload(page, makeSolidPng(1200, 750, RED));
+  await openTab(page, "Style");
+  const padding = await setSlider(page, "Padding", "Home");
+  await expectDesignSize(page, 1200, 750);
+  await padding.dblclick();
+  await expect(padding).toHaveAttribute("aria-valuenow", "72");
+  await expectDesignSize(page, 1344, 894);
+  // The reset is one undo step.
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect(padding).toHaveAttribute("aria-valuenow", "0");
+
+  // Delete on a focused thumb does the same.
+  const opacity = await setSlider(page, "Border opacity", "End");
+  await expect(opacity).toHaveAttribute("aria-valuenow", "100");
+  await opacity.press("Delete");
+  await expect(opacity).toHaveAttribute("aria-valuenow", "30");
+
+  // The gradient angle goes back to the chosen gradient's own angle.
+  await openTab(page, "Background");
+  const angle = await setSlider(page, "Angle", "Home");
+  await expect(angle).toHaveAttribute("aria-valuenow", "0");
+  await angle.dblclick();
+  await expect(angle).toHaveAttribute("aria-valuenow", "135");
+});
+
+test.describe("on a touchscreen", () => {
+  test.use({ hasTouch: true });
+  test("double-tapping a slider's thumb returns it to its default", async ({
+    page,
+  }) => {
+    await upload(page, makeSolidPng(1200, 750, RED));
+    await openTab(page, "Style");
+    const padding = await setSlider(page, "Padding", "End");
+    const box = (await padding.boundingBox())!;
+    const x = box.x + box.width / 2;
+    const y = box.y + box.height / 2;
+    await page.touchscreen.tap(x, y);
+    await page.touchscreen.tap(x, y);
+    await expect(padding).toHaveAttribute("aria-valuenow", "72");
+  });
+});

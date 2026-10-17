@@ -1,10 +1,12 @@
 import { ImageUp } from "lucide-react";
 import { useId, useMemo, useRef, type ChangeEvent } from "react";
 import { Button } from "@/components/ui/button";
-import { defaultBackground } from "@/lib/design/defaults";
+import { createDefaultDesign, defaultBackground } from "@/lib/design/defaults";
 import {
   BROOKES_COLORS,
+  DEFAULT_GRADIENT,
   GRADIENT_PRESETS,
+  getGradientPreset,
   toCssLinearGradient,
 } from "@/lib/design/gradients";
 import { ANGLE, BLUR } from "@/lib/design/limits";
@@ -27,6 +29,9 @@ import {
 import { ColorField } from "../controls/ColorField";
 import { LabeledSlider } from "../controls/LabeledSlider";
 import { SwatchGrid, type Swatch } from "../controls/SwatchGrid";
+
+/** Where the sliders go back to when their thumb is double-clicked. */
+const defaultDesign = createDefaultDesign();
 
 const GRADIENT_SWATCHES: readonly Swatch[] = GRADIENT_PRESETS.map((preset) => ({
   id: preset.id,
@@ -126,6 +131,13 @@ function GradientControls({
           max={ANGLE.max}
           step={ANGLE.step}
           unit="°"
+          // Back to the chosen gradient's own angle (the default gradient's
+          // once its colours are edited and it is no longer a preset).
+          defaultValue={
+            (background.presetId
+              ? getGradientPreset(background.presetId)?.angle
+              : undefined) ?? DEFAULT_GRADIENT.angle
+          }
           onChange={setGradientAngle}
         />
       )}
@@ -293,6 +305,7 @@ function EffectsControls({ fx }: { fx: BackgroundFx }) {
         max={BLUR.max}
         step={BLUR.step}
         unit="px"
+        defaultValue={defaultDesign.backgroundFx.blur}
         onChange={setBlur}
       />
     </section>
