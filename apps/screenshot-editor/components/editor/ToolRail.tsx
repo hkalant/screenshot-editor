@@ -16,6 +16,7 @@ export function ToolRail() {
 
   return (
     <aside
+      data-pane="side"
       aria-label="Tools"
       className="flex w-72 shrink-0 flex-col overflow-hidden rounded-xl glass lg:w-80"
     >

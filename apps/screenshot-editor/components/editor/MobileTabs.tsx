@@ -39,6 +39,7 @@ export function MobileTabs() {
 
   return (
     <nav
+      data-pane="side"
       aria-label="Tools"
       className="shrink-0 border-t bg-background pb-(--safe-area-bottom)"
     >

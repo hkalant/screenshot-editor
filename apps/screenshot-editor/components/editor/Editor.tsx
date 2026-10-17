@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useRef, useState, type ChangeEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+} from "react";
 import sample from "@/assets/samples/sample-screenshot.jpg";
 import { useAutosave } from "@/lib/hooks/useAutosave";
 import { DESKTOP_QUERY, useMediaQuery } from "@/lib/hooks/useMediaQuery";
@@ -29,6 +35,9 @@ function handleIncomingFiles(files: File[]) {
   else useEditorStore.getState().showError(IMAGE_MESSAGES.dropHint);
 }
 
+// Long enough for the last pane's fade-in to finish.
+const INTRO_MS = 600;
+
 export default function Editor() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { isDragging } = useWindowFileDrop(handleIncomingFiles);
@@ -42,6 +51,12 @@ export default function Editor() {
   const desktop = useMediaQuery(DESKTOP_QUERY);
   // The editor only renders on the client, so the device is known up front.
   const [phone] = useState(isPhone);
+  // The first appearance's fade-in (see globals.css), then never again.
+  const [intro, setIntro] = useState(true);
+  useEffect(() => {
+    const timer = setTimeout(() => setIntro(false), INTRO_MS);
+    return () => clearTimeout(timer);
+  }, []);
   // Here rather than in the theme toggle, which the mobile layout doesn't
   // show: the theme keeps following the system in both layouts.
   useTheme();
@@ -57,6 +72,7 @@ export default function Editor() {
   // breakpoint doesn't remount the stage.
   return (
     <div
+      data-intro={intro || undefined}
       className={cn(
         // Colour, font and scheme here as well as on body, which a host page
         // (such as the artifact preview) may style over.
@@ -92,6 +108,7 @@ export default function Editor() {
             desktop ? "canvas-surround" : "bg-workspace",
           )}
           aria-label="Canvas"
+          data-pane="canvas"
         >
           <CanvasViewport onUpload={openFilePicker} onSample={loadSample} />
           {isDragging && <DropOverlay />}

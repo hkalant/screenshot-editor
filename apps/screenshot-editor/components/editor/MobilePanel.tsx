@@ -27,6 +27,7 @@ export function MobilePanel() {
 
   return (
     <section
+      data-pane="side"
       id={MOBILE_PANEL_ID}
       aria-labelledby={headingId}
       className="flex h-[45dvh] shrink-0 flex-col border-t bg-background"
