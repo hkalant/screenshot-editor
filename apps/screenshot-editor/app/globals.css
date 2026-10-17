@@ -49,6 +49,8 @@
   /* The active tool in the annotation toolbar: a soft brand-yellow tint. */
   --tool-active: rgb(249 201 9 / 30%);
   --tool-active-edge: rgb(214 170 0 / 45%);
+  /* The ring round the selected background tile and frame card. */
+  --selection-ring: #8e9297;
   /* The sheet the design sits on, lifted off the surround. */
   --sheet-shadow: 0 8px 30px rgb(0 0 0 / 8%);
   --workspace: #f2f2f3;
@@ -95,6 +97,7 @@
   --selected-foreground: var(--obu-charcoal);
   --tool-active: rgb(249 201 9 / 22%);
   --tool-active-edge: rgb(249 201 9 / 45%);
+  --selection-ring: #d9dbdc;
   --sheet-shadow: 0 8px 30px rgb(0 0 0 / 35%);
   --workspace: #30363c;
   --surround-dot: rgb(255 255 255 / 9%);
