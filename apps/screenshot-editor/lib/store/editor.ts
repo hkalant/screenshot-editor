@@ -1028,7 +1028,9 @@ export const useEditorStore = create<EditorState>()((set, get) => {
       commit(
         (design) =>
           updateAnnotation(design, id, (annotation) =>
-            annotation.kind !== "arrow" || annotation.bend === to
+            annotation.kind !== "arrow" ||
+            annotation.style === "chevrons" ||
+            annotation.bend === to
               ? null
               : { ...annotation, bend: to },
           ),

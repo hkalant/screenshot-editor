@@ -173,11 +173,16 @@ describe("migrateDesign", () => {
     });
     const design = migrateDesign({
       ...createDefaultDesign(),
-      annotations: [arrow("tapered"), arrow("chevron"), arrow("dotted")],
+      annotations: [
+        arrow("tapered"),
+        arrow("chevron"),
+        arrow("refined"),
+        arrow("dotted"),
+      ],
     });
     expect(
       design?.annotations.map((item) => item.kind === "arrow" && item.style),
-    ).toEqual(["solid", "bold", "dotted"]);
+    ).toEqual(["solid", "bold", "solid", "dotted"]);
   });
 
   it("returns null for anything invalid", () => {

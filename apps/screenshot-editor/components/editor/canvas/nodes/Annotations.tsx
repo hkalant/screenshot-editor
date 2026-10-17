@@ -1303,7 +1303,9 @@ export function AnnotationsNode({
             />
           );
         })}
+      {/* Chevrons stay straight, so they get no bend handle. */}
       {selectedArrow &&
+        selectedArrow.style !== "chevrons" &&
         (() => {
           const tail = { x: selectedArrow.x * unit, y: selectedArrow.y * unit };
           const tip = {

@@ -84,7 +84,7 @@ export function FrameOptions() {
             <FramePreview
               kind={kind}
               theme={frame.theme}
-              className="ring-offset-2 ring-offset-background transition-shadow group-data-[state=on]:ring-2 group-data-[state=on]:ring-foreground"
+              className="ring-offset-[3px] ring-offset-background transition-shadow group-data-[state=on]:ring-[1.5px] group-data-[state=on]:ring-(--selection-ring)"
             />
             {FRAME_LABELS[kind]}
           </ToggleGroup.Item>

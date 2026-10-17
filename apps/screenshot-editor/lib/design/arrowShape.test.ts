@@ -112,10 +112,20 @@ describe("arrow shapes", () => {
         arc: record("arc"),
         closePath: record("closePath"),
       },
-      arrowShape("refined", tail, tip, 0.2, 1200)!.fill!,
+      arrowShape("solid", tail, tip, 0.2, 1200)!.fill!,
     );
     expect(calls[0]).toBe("beginPath");
     expect(calls).toContain("arcTo");
     expect(calls.at(-1)).toBe("closePath");
+  });
+});
+
+describe("chevrons", () => {
+  it("ignore the bend and stay straight", () => {
+    const tail = { x: 0, y: 0 };
+    const tip = { x: 300, y: 0 };
+    const bent = arrowShape("chevrons", tail, tip, 0.4, 1200)!;
+    const straight = arrowShape("chevrons", tail, tip, 0, 1200)!;
+    expect(bent.spine).toEqual(straight.spine);
   });
 });

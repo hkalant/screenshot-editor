@@ -10,7 +10,6 @@ import {
 } from "react";
 import { computePreviewScale } from "@/lib/design/layout";
 import { atZoomLimit, maxZoom, minZoom, stepZoom } from "@/lib/design/zoom";
-import { planExport } from "@/lib/export/exportImage";
 import { useElementSize } from "@/lib/hooks/useElementSize";
 import { CANVAS_FOCUS_ATTRIBUTE } from "@/lib/hooks/useShortcuts";
 import { selectActiveImage, useEditorStore } from "@/lib/store/editor";
@@ -28,12 +27,6 @@ const TOOLBAR_SPACE = 52;
 const CONTROLS_SPACE = 44;
 // Below this workspace height the zoom controls would cover the canvas.
 const CONTROLS_MIN_HEIGHT = 120;
-// More room under them for the size readout: two lines, since a capped
-// export's note wraps in a narrow workspace.
-const READOUT_SPACE = 36;
-// Below this workspace height (a phone in landscape with a panel open) the
-// readout would crowd out the canvas, so only screen readers get it.
-const READOUT_MIN_HEIGHT = 200;
 
 type Props = {
   onUpload: () => void;
@@ -49,7 +42,6 @@ export function CanvasViewport({ onUpload, onSample }: Props) {
   const transparent = useEditorStore(
     (state) => state.design.background.kind === "transparent",
   );
-  const scaleOption = useEditorStore((state) => state.exportOptions.scale);
   const pruneImages = useEditorStore((state) => state.pruneImages);
   // An absolutely positioned box: its size never depends on the stage inside it.
   const [measureRef, size] = useElementSize<HTMLDivElement>();
@@ -72,9 +64,7 @@ export function CanvasViewport({ onUpload, onSample }: Props) {
   }, [revision, pruneImages]);
 
   const showControls = size.height >= CONTROLS_MIN_HEIGHT;
-  const showReadout = size.height >= READOUT_MIN_HEIGHT;
-  const bottomSpace =
-    (showControls ? CONTROLS_SPACE : 0) + (showReadout ? READOUT_SPACE : 0);
+  const bottomSpace = showControls ? CONTROLS_SPACE : 0;
   const margin = size.width < 480 ? 16 : 32;
   const fit = layout
     ? computePreviewScale(
@@ -141,9 +131,6 @@ export function CanvasViewport({ onUpload, onSample }: Props) {
     );
   }
 
-  const { width, height } = layout.canvas;
-  const plan = planExport(layout.canvas, scaleOption);
-
   return (
     <div ref={measureRef} className="absolute inset-0 overflow-hidden">
       {size.width > 0 && (
@@ -193,17 +180,6 @@ export function CanvasViewport({ onUpload, onSample }: Props) {
             onReset={() => changeZoom(null)}
           />
         )}
-        <p
-          className={cn(
-            "text-center text-xs/4 text-balance text-muted-foreground tabular-nums",
-            !showReadout && "sr-only",
-          )}
-          data-testid="size-readout"
-        >
-          {width} × {height} · exports {plan.pixels.width} ×{" "}
-          {plan.pixels.height}
-          {plan.capped && " (largest size this browser allows)"}
-        </p>
       </div>
       {loading && (
         <div className="absolute top-3 right-3 flex items-center gap-2 rounded-full glass px-3 py-1.5 text-xs">

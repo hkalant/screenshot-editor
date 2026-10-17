@@ -116,18 +116,18 @@ test("the export button keeps focus while it exports", async ({ page }) => {
   await expect(button).toBeFocused();
 });
 
-test("a short workspace hides the size readout and fits the canvas", async ({
-  page,
-}) => {
+test("a short workspace still fits the canvas", async ({ page }) => {
   await upload(page, makeSolidPng(1200, 750, RED));
-  await expect(page.getByTestId("size-readout")).not.toHaveClass(/sr-only/);
   await page.setViewportSize({ width: 1280, height: 200 });
-  await expect(page.getByTestId("size-readout")).toHaveClass(/sr-only/);
-  const box = await stage(page).boundingBox();
-  const main = await page.locator("main").boundingBox();
-  expect(box && main).toBeTruthy();
-  expect(box!.y).toBeGreaterThanOrEqual(main!.y);
-  expect(box!.y + box!.height).toBeLessThanOrEqual(main!.y + main!.height);
+  // The canvas refits a frame or two after the resize, so wait for it.
+  await expect
+    .poll(async () => {
+      const box = await stage(page).boundingBox();
+      const main = await page.locator("main").boundingBox();
+      if (!box || !main) return false;
+      return box.y >= main.y && box.y + box.height <= main.y + main.height;
+    })
+    .toBe(true);
 });
 
 // A 1200 x 750 shot in a macOS frame, plus 72px of padding on each side.
@@ -356,7 +356,6 @@ test("very large exports are capped to what the browser allows", async ({
   await page.getByRole("radio", { name: "2×" }).click();
   // 8,000 px a side is over the 16,777,216 px area limit: 4096 x 4096 instead.
   await expect(page.getByTestId("export-size")).toContainText("4096 × 4096 px");
-  await expect(page.getByTestId("size-readout")).toContainText("largest size");
 });
 
 test("the screenshot can be nudged and dragged on a fixed canvas", async ({

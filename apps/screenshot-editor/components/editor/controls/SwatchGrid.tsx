@@ -80,7 +80,7 @@ export function SwatchGrid({
                 selected &&
                   (shape === "dot"
                     ? "ring-2 ring-foreground"
-                    : "ring-[1.5px] ring-foreground ring-offset-[3px]"),
+                    : "ring-[1.5px] ring-(--selection-ring) ring-offset-[3px]"),
               )}
               style={swatch.style}
             />

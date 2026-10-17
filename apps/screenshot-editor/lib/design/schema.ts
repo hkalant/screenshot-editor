@@ -166,7 +166,6 @@ export const ARROW_STYLES = [
   "solid",
   "bold",
   "halo",
-  "refined",
   "dotted",
   "chevrons",
 ] as const;
@@ -235,12 +234,16 @@ export const arrowAnnotationSchema = z.object({
   color: annotationColorSchema,
   /**
    * A head, or a line end for lines. Arrows saved before there were styles
-   * get the default; the retired tapered style becomes solid, and the
-   * retired open style becomes bold.
+   * get the default; the retired tapered and classic styles become solid,
+   * and the retired open style becomes bold.
    */
   style: z.preprocess(
     (style) =>
-      style === "tapered" ? "solid" : style === "chevron" ? "bold" : style,
+      style === "tapered" || style === "refined"
+        ? "solid"
+        : style === "chevron"
+          ? "bold"
+          : style,
     z.enum([...ARROW_STYLES, ...LINE_ENDS]).default("solid"),
   ),
   /** How far the middle is pulled to the left of straight, as a share of the length. */

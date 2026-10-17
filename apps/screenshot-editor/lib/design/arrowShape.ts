@@ -22,7 +22,7 @@ export type PathCommand =
   | { op: "Z" };
 
 export type ArrowShape = {
-  /** A filled outline (solid, halo, refined; the dotted style's dot; a line's dot or round end), or null. */
+  /** A filled outline (solid, halo; the dotted style's dot; a line's dot or round end), or null. */
   fill: PathCommand[] | null;
   /** A stroked path (the bold, dotted and chevron styles, lines), or null. Painted under the fill. */
   stroke: { path: PathCommand[]; width: number; cap: CanvasLineCap } | null;
@@ -347,7 +347,7 @@ function lineShape(end: LineEnd, samples: Sample[], unit: number): ArrowShape {
 function boldWidth(length: number, unit: number) {
   const short = Math.min(1, length / (0.1 * unit));
   // Never more than a fifth of the arrow, so short ones stay arrows.
-  return Math.min(0.017 * unit * (0.6 + 0.4 * short), length * 0.2);
+  return Math.min(0.013 * unit * (0.6 + 0.4 * short), length * 0.2);
 }
 
 /** The two ends of an open V whose point is `vertex`, pointing along `d`. */
@@ -372,7 +372,7 @@ function openArrow(
   unit: number,
 ): ArrowShape {
   const length = samples[samples.length - 1].s;
-  const wing = Math.min(2.6 * width, length * 0.6);
+  const wing = Math.min(2.2 * width, length * 0.6);
   // The direction at the tip, and the vertex pulled back so the round
   // join ends on the tip.
   const d = unitVector(pointAt(samples, length - wing / 2), tip);
@@ -412,7 +412,9 @@ export function arrowShape(
 ): ArrowShape | null {
   const chord = Math.hypot(tip.x - tail.x, tip.y - tail.y);
   if (!(chord > 0.5) || !(unit > 0) || !Number.isFinite(chord)) return null;
-  const { control } = arrowCurve(tail, tip, Number.isFinite(bend) ? bend : 0);
+  // Chevrons always point straight along the arrow.
+  const curve = style === "chevrons" || !Number.isFinite(bend) ? 0 : bend;
+  const { control } = arrowCurve(tail, tip, curve);
   const samples = sampleCurve(tail, tip, control);
   const length = samples[samples.length - 1].s;
 
@@ -422,7 +424,8 @@ export function arrowShape(
     // A heavy round-capped line with an open V head, one stroke weight;
     // "dotted" starts with a dot and a gap.
     const width = boldWidth(length, unit);
-    const r = width * 0.6;
+    // The dot is a touch heavier than the line, so it holds its own.
+    const r = width * 0.75;
     const gap = width * 0.45;
     // Where the line starts: after the dot, its gap and the line's round cap.
     const start =
@@ -504,69 +507,37 @@ export function arrowShape(
     };
   }
 
-  if (style === "halo" || style === "solid") {
-    // A solid arrow with a soft shadow; the halo style adds a white outline,
-    // legible on anything.
-    const full = 0.03 * unit;
-    const k = Math.min(1, Math.max(0.5, Math.sqrt(length / (4 * full))));
-    const kw = Math.sqrt(k);
-    const head = Math.max(Math.min(full * k, length * 0.62), 0.011 * unit);
-    const headHalf = head * 0.52;
-    const neckHalf = Math.min(0.0034 * unit * kw, headHalf * 0.42);
-    const halo =
-      style === "halo" ? Math.min(0.0024 * unit * kw, headHalf * 0.4) : 0;
-    const shape = filledArrow(samples, tip, {
-      head,
-      headHalf,
-      sweep: head * 0.28,
-      neckHalf,
-      tailHalf: neckHalf * 0.7,
-      taper: 1,
-      tipRadius: headHalf * 0.08,
-      barbRadius: headHalf * 0.16,
-      neckRadius: neckHalf * 0.5,
-    });
-    return {
-      ...shape,
-      stroke: null,
-      halo,
-      shadow: {
-        blur: 0.009 * unit * kw,
-        offsetY: 0.0022 * unit * kw,
-        opacity: 0.26,
-      },
-      bounds: boundsOf(shape.outline, halo * 1.25),
-    };
-  }
-
-  // Refined classic: a slim shaft that thickens slightly into a swept-back
-  // head with softly rounded corners.
-  const full = 0.028 * unit;
-  const head = Math.min(
-    full * Math.min(1, Math.sqrt(length / (full * 2.6))),
-    length * 0.52,
-  );
-  const f = head / full;
-  const headHalf = 0.0116 * unit * Math.pow(f, 0.8);
-  const neckHalf =
-    Math.min(0.0056 * unit * Math.max(0.7, f), headHalf * 0.8) / 2;
+  // Solid or halo: a solid arrow with a soft shadow; the halo style adds
+  // a white outline, legible on anything.
+  const full = 0.03 * unit;
+  const k = Math.min(1, Math.max(0.5, Math.sqrt(length / (4 * full))));
+  const kw = Math.sqrt(k);
+  const head = Math.max(Math.min(full * k, length * 0.62), 0.011 * unit);
+  const headHalf = head * 0.52;
+  const neckHalf = Math.min(0.0034 * unit * kw, headHalf * 0.42);
+  const halo =
+    style === "halo" ? Math.min(0.0024 * unit * kw, headHalf * 0.4) : 0;
   const shape = filledArrow(samples, tip, {
     head,
     headHalf,
-    sweep: head * 0.18,
+    sweep: head * 0.28,
     neckHalf,
-    tailHalf: neckHalf * 0.82,
+    tailHalf: neckHalf * 0.7,
     taper: 1,
-    tipRadius: 0.0014 * unit * f,
-    barbRadius: 0.0018 * unit * f,
-    neckRadius: 0.0012 * unit * f,
+    tipRadius: headHalf * 0.08,
+    barbRadius: headHalf * 0.16,
+    neckRadius: neckHalf * 0.5,
   });
   return {
     ...shape,
     stroke: null,
-    halo: 0,
-    shadow: { blur: 0.0075 * unit, offsetY: 0.0024 * unit, opacity: 0.28 },
-    bounds: boundsOf(shape.outline, 0),
+    halo,
+    shadow: {
+      blur: 0.009 * unit * kw,
+      offsetY: 0.0022 * unit * kw,
+      opacity: 0.26,
+    },
+    bounds: boundsOf(shape.outline, halo * 1.25),
   };
 }
 
