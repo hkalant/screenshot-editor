@@ -224,12 +224,32 @@ test("the More menu lists the tutorials", async ({ page }) => {
     /^https:\/\/docs\.google\.com\/document\/d\//,
   );
   await expect(text).toHaveAttribute("target", "_blank");
-  // The video is still a placeholder: picking it just closes the menu.
-  await tutorials
-    .getByRole("link", { name: "Watch the video tutorial" })
-    .click();
-  await expect(tutorials).toHaveCount(0);
+  await expect(
+    tutorials.getByRole("button", { name: "Watch the video tutorial" }),
+  ).toBeVisible();
   await expect(page).toHaveURL(/\/$/);
+});
+
+test("the video tutorial plays over the editor", async ({ page }) => {
+  // Panopto stays out of the test: an empty page stands in for the player.
+  await page.route("https://brookes.cloud.panopto.eu/**", (route) =>
+    route.fulfill({ contentType: "text/html", body: "<!doctype html>" }),
+  );
+  await page.getByRole("button", { name: "More" }).click();
+  await page.getByRole("button", { name: "Watch the video tutorial" }).click();
+  const dialog = page.getByRole("dialog", {
+    name: "Getting started with Screenshot Editor",
+  });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.locator("iframe")).toHaveAttribute(
+    "src",
+    /^https:\/\/brookes\.cloud\.panopto\.eu\/Panopto\/Pages\/Embed\.aspx\?id=85fe6444-f450-4178-af97-b4e7014550ff&/,
+  );
+  await expect(
+    dialog.getByRole("link", { name: "Open in Panopto" }),
+  ).toHaveAttribute("target", "_blank");
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
 });
 
 test("the More menu lists the shortcuts", async ({ page }) => {

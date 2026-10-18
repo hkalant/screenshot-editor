@@ -30,6 +30,7 @@ import { Notice } from "./Notice";
 import { ToolRail } from "./ToolRail";
 import { TopBar } from "./TopBar";
 import { Tour } from "./tour/Tour";
+import { VideoDialog } from "./VideoDialog";
 
 /** A project file opens as a project; anything else is taken as a screenshot. */
 function openFile(file: File) {
@@ -137,6 +138,7 @@ export default function Editor() {
       />
       <Notice />
       <Tour enabled={desktop && !phone} />
+      <VideoDialog />
     </div>
   );
 }
