@@ -57,13 +57,13 @@ const STEPS: Step[] = [
     target: '[data-tour="export"]',
     side: "bottom",
     title: "Export",
-    body: "Download a PNG or JPEG at the size you need. The arrow opens the options, including the original screenshot.",
+    body: "Save your screenshot flattened, as a PNG or JPEG at the size you need. The arrow opens the options, including the original screenshot.",
   },
   {
     target: '[data-tour="more"]',
     side: "bottom",
     title: "Save your work",
-    body: "Save your screenshot as flattened and/or as a project file to keep every annotation editable, and open it again later. Learn the keyboard shortcuts and restart this tour from here too.",
+    body: "Save your work as a project file to keep every annotation editable, and open it again later. Learn the keyboard shortcuts and restart this tour from here too.",
   },
   {
     title: "You're all set!",
