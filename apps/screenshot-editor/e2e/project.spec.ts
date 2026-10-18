@@ -67,6 +67,8 @@ test("Export both downloads the design and the original", async ({ page }) => {
 
 test("a saved project reopens with everything still editable", async ({
   page,
+  browser,
+  baseURL,
 }) => {
   await upload(page, makeSolidPng(1200, 750, RED), "My Dashboard.png");
   await openTab(page, "Style");
@@ -90,13 +92,14 @@ test("a saved project reopens with everything still editable", async ({
   expect(project.design.annotations).toHaveLength(1);
   expect(Object.keys(project.images)).toHaveLength(1);
 
-  // Start over in a fresh editor, then open the project.
-  await page.evaluate(() => indexedDB.deleteDatabase("screenshot-editor"));
-  await page.reload();
-  await expectEmptyState(page);
-  await page.getByRole("button", { name: "More" }).click();
-  const chooser = page.waitForEvent("filechooser");
-  await page.getByRole("button", { name: /^Open project/ }).click();
+  // Open it in a fresh editor: a new browser context, with nothing saved.
+  const fresh = await browser.newContext({ baseURL });
+  const other = await fresh.newPage();
+  await other.goto("./");
+  await expectEmptyState(other);
+  await other.getByRole("button", { name: "More" }).click();
+  const chooser = other.waitForEvent("filechooser");
+  await other.getByRole("button", { name: /^Open project/ }).click();
   await (
     await chooser
   ).setFiles({
@@ -105,15 +108,16 @@ test("a saved project reopens with everything still editable", async ({
     buffer: saved.data,
   });
 
-  await expectDesignSize(page, 1200, 750);
+  await expectDesignSize(other, 1200, 750);
   await expect(
-    toolbar(page).getByRole("button", { name: "Add step 2" }),
+    toolbar(other).getByRole("button", { name: "Add step 2" }),
   ).toBeVisible();
-  await expect(page.getByText("Project opened.")).toBeVisible();
-  await expect(exportButton(page)).toBeEnabled();
+  await expect(other.getByText("Project opened.")).toBeVisible();
+  await expect(exportButton(other)).toBeEnabled();
   // Opening is one undo step.
-  await page.getByRole("button", { name: "Undo" }).click();
-  await expectEmptyState(page);
+  await other.getByRole("button", { name: "Undo" }).click();
+  await expectEmptyState(other);
+  await fresh.close();
 });
 
 test("a project file picked like an image opens as a project", async ({
