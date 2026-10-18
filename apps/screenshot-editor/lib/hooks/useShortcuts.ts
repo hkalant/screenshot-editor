@@ -10,6 +10,7 @@ import {
   type ShortcutContext,
 } from "@/lib/shortcuts";
 import { selectSelectedAnnotation, useEditorStore } from "@/lib/store/editor";
+import { pickProjectFile, saveProject } from "@/lib/persist/projectActions";
 import { runShowShortcuts } from "@/lib/shortcutsCommand";
 import { runZoom } from "@/lib/zoomCommands";
 
@@ -80,6 +81,12 @@ export function useShortcuts({ onOpen }: { onOpen: () => void }) {
         case "zoom":
           // Without a design on screen the browser zooms the page as usual.
           if (!runZoom(command.direction)) return;
+          break;
+        case "saveProject":
+          void saveProject();
+          break;
+        case "openProject":
+          pickProjectFile();
           break;
         case "shortcuts":
           if (!runShowShortcuts()) return;

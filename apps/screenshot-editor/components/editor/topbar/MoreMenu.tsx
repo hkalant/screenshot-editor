@@ -11,13 +11,14 @@ import {
 import { currentPlatform, isApplePlatform } from "@/lib/platform";
 import { setShortcutsHandler } from "@/lib/shortcutsCommand";
 import { itemClass, TutorialLinks } from "./HelpMenu";
+import { ProjectItems } from "./ProjectItems";
 import { KeyboardIcon, ShortcutList } from "./ShortcutList";
 
 const subscribe = () => () => {};
 
 type View = "menu" | "shortcuts";
 
-/** The top bar's More button: the keyboard shortcuts and the tutorials. */
+/** The top bar's More button: projects, the keyboard shortcuts and the tutorials. */
 export function MoreMenu() {
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<View>("menu");
@@ -57,7 +58,16 @@ export function MoreMenu() {
         </Button>
       </PopoverTrigger>
       {view === "menu" ? (
-        <PopoverContent align="end" className="w-64 p-2.5">
+        <PopoverContent align="end" className="w-80 p-2.5">
+          <ProjectItems
+            onPick={() => setOpen(false)}
+            shortcuts={
+              apple
+                ? { save: "⇧⌘S", open: "⇧⌘O" }
+                : { save: "Ctrl+Shift+S", open: "Ctrl+Shift+O" }
+            }
+          />
+          <div className="my-1 h-px bg-border" aria-hidden />
           <button
             type="button"
             className={itemClass}
@@ -67,7 +77,7 @@ export function MoreMenu() {
               <KeyboardIcon />
             </span>
             Keyboard shortcuts
-            <kbd className="ml-auto text-xs text-muted-foreground">
+            <kbd className="ml-auto text-xs whitespace-nowrap text-muted-foreground">
               {apple ? "⌘/" : "Ctrl+/"}
             </kbd>
           </button>
