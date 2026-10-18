@@ -23,7 +23,7 @@ export function TopBar({ onReplace }: Props) {
   return (
     <header
       data-pane="bar"
-      className="relative flex h-14 shrink-0 items-center gap-2 rounded-xl glass px-3 lg:gap-3 lg:px-4"
+      className="relative z-20 flex h-14 shrink-0 items-center gap-2 rounded-xl glass px-3 lg:gap-3 lg:px-4"
     >
       <div className="flex shrink-0 items-center gap-3 font-semibold whitespace-nowrap">
         {/* The logo only where the bar has room for it. */}

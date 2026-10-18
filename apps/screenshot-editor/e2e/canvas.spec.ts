@@ -409,6 +409,20 @@ test("copies the design to the clipboard as a PNG", async ({
   // Shown as a tooltip under the button, not as a notice.
   const tooltip = page.getByTestId("copied-tooltip");
   await expect(tooltip).toHaveText("Copied!");
+  // It hangs below the top bar, over the canvas, and must not be hidden by it.
+  await page.waitForTimeout(300);
+  expect(
+    await tooltip.evaluate((element) => {
+      // Hit testing skips pointer-events: none, which the tooltip has.
+      (element as HTMLElement).style.pointerEvents = "auto";
+      const box = element.getBoundingClientRect();
+      const top = document.elementFromPoint(
+        box.left + box.width / 2,
+        box.bottom - 2,
+      );
+      return element.contains(top);
+    }),
+  ).toBe(true);
   await expect(page.getByTestId("notice")).toHaveCount(0);
   const [button, tip] = [
     (await copyButton.boundingBox())!,
