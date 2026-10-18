@@ -1,5 +1,11 @@
 import type { Page } from "@playwright/test";
-import { expectEmptyState, RED, stage, upload } from "./helpers/editor";
+import {
+  expectEmptyState,
+  RED,
+  stage,
+  upload,
+  useAutoSize,
+} from "./helpers/editor";
 import { expect, test } from "./helpers/fixtures";
 import { makeSolidPng } from "./helpers/png";
 
@@ -76,4 +82,28 @@ test("Esc from the More menu's tour puts the user's screenshot back", async ({
   // The user's screenshot is back, and undo still reaches before it.
   await page.getByRole("button", { name: "Undo", exact: true }).first().click();
   await expectEmptyState(page);
+});
+
+test("closing the page mid-tour reopens on the user's own design", async ({
+  page,
+}) => {
+  await page.goto("./");
+  await welcome(page).getByRole("button", { name: "Skip tour" }).click();
+  await useAutoSize(page);
+  await upload(page, makeSolidPng(400, 300, RED), "mine.png");
+  await expect(stage(page)).toBeVisible();
+  const mine = await stage(page).getAttribute("data-width");
+
+  await page.getByRole("button", { name: "More" }).click();
+  await page.getByRole("button", { name: "Take the tour" }).click();
+  await welcome(page).getByRole("button", { name: "Start" }).click();
+  await expect(card(page)).toContainText("Background");
+  await expect(stage(page)).not.toHaveAttribute("data-width", mine ?? "");
+  // Long enough for an autosave to have run, were it not held off.
+  await page.waitForTimeout(1500);
+
+  await page.reload();
+  await expect(stage(page)).toBeVisible();
+  await expect(card(page)).toBeHidden();
+  await expect(stage(page)).toHaveAttribute("data-width", mine ?? "");
 });

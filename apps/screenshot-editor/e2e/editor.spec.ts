@@ -217,10 +217,17 @@ test.describe("broken images", () => {
 test("the More menu lists the tutorials", async ({ page }) => {
   await page.getByRole("button", { name: "More" }).click();
   const tutorials = page.getByRole("navigation", { name: "Tutorials" });
-  await expect(
-    tutorials.getByRole("link", { name: "Watch the video tutorial" }),
-  ).toBeVisible();
-  await tutorials.getByRole("link", { name: "Read the text tutorial" }).click();
+  const text = tutorials.getByRole("link", { name: "Read the text tutorial" });
+  // The text tutorial is a Google Doc, opened in a new tab.
+  await expect(text).toHaveAttribute(
+    "href",
+    /^https:\/\/docs\.google\.com\/document\/d\//,
+  );
+  await expect(text).toHaveAttribute("target", "_blank");
+  // The video is still a placeholder: picking it just closes the menu.
+  await tutorials
+    .getByRole("link", { name: "Watch the video tutorial" })
+    .click();
   await expect(tutorials).toHaveCount(0);
   await expect(page).toHaveURL(/\/$/);
 });

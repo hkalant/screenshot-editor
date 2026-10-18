@@ -32,6 +32,13 @@ type TourState = {
 
 let snapshot: Snapshot | null = null;
 
+/**
+ * The user's design while the tour shows the sample in its place, else null.
+ * Autosave saves this instead, so closing the page mid-tour reopens on their
+ * own design rather than the sample.
+ */
+export const designUnderTour = () => snapshot?.design ?? null;
+
 /** Puts back the design, history and panel saved at Start, and frees the sample. */
 function restore() {
   if (!snapshot) return;
