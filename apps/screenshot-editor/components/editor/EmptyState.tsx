@@ -85,7 +85,7 @@ export function EmptyState({ loading, restoring, onUpload, onSample }: Props) {
                   className="flex flex-col items-center gap-3 text-sm text-balance text-foreground"
                 >
                   <Icon
-                    className="size-10 text-[#8E9297] dark:text-[#D9DBDC]"
+                    className="size-10 text-[#424A52] dark:text-[#D9DBDC]"
                     strokeWidth={1.5}
                     aria-hidden
                   />
