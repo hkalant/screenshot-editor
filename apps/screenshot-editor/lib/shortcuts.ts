@@ -11,7 +11,9 @@ export type ShortcutCommand =
   | { type: "escape" }
   | { type: "nudge"; dx: number; dy: number }
   | { type: "zoom"; direction: "in" | "out" | "reset" }
-  | { type: "shortcuts" };
+  | { type: "shortcuts" }
+  | { type: "saveProject" }
+  | { type: "openProject" };
 
 export type KeyInput = Pick<
   KeyboardEvent,
@@ -41,9 +43,9 @@ export function matchShortcut(
   if (modifier && !otherModifier) {
     if (key === "z") return { type: event.shiftKey ? "redo" : "undo" };
     if (key === "y" && !apple && !event.shiftKey) return { type: "redo" };
-    if (key === "s" && !event.shiftKey) return { type: "export" };
+    if (key === "s") return { type: event.shiftKey ? "saveProject" : "export" };
     if (key === "c") return { type: "copy" };
-    if (key === "o" && !event.shiftKey) return { type: "open" };
+    if (key === "o") return { type: event.shiftKey ? "openProject" : "open" };
     // "=" is the plus key without Shift; "+" with it, or on the number pad.
     if (key === "=" || key === "+") return { type: "zoom", direction: "in" };
     if (key === "-" || key === "_") return { type: "zoom", direction: "out" };

@@ -1,7 +1,9 @@
 "use client";
 
+import { Ellipsis } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
+import { ProjectItems } from "./ProjectItems";
 import {
   Popover,
   PopoverContent,
@@ -20,13 +22,6 @@ function FaIcon({ viewBox, path }: { viewBox: string; path: string }) {
     </svg>
   );
 }
-
-const CircleInfoIcon = () => (
-  <FaIcon
-    viewBox="0 0 512 512"
-    path="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM216 336l24 0 0-64-24 0c-13.3 0-24-10.7-24-24s10.7-24 24-24l48 0c13.3 0 24 10.7 24 24l0 88 8 0c13.3 0 24 10.7 24 24s-10.7 24-24 24l-80 0c-13.3 0-24-10.7-24-24s10.7-24 24-24zm40-208a32 32 0 1 1 0 64 32 32 0 1 1 0-64z"
-  />
-);
 
 const VideoIcon = () => (
   <FaIcon
@@ -98,7 +93,7 @@ export function TutorialLinks({ onPick }: { onPick: () => void }) {
   );
 }
 
-/** The phone bar's help button: links to the video and text tutorials. */
+/** The phone bar's More button: projects, and links to the video and text tutorials. */
 export function HelpMenu() {
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
@@ -108,14 +103,16 @@ export function HelpMenu() {
         <Button
           variant="ghost"
           size="icon"
-          aria-label="Help"
-          title="Help"
+          aria-label="More"
+          title="More"
           className="data-[state=open]:bg-accent"
         >
-          <CircleInfoIcon />
+          <Ellipsis aria-hidden />
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-64 p-2.5">
+        <ProjectItems onPick={close} shortcuts={null} />
+        <div className="my-1 h-px bg-border" aria-hidden />
         <TutorialLinks onPick={close} />
       </PopoverContent>
     </Popover>

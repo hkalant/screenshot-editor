@@ -16,6 +16,8 @@ import { useWindowFileDrop } from "@/lib/hooks/useWindowFileDrop";
 import { useWindowPaste } from "@/lib/hooks/useWindowPaste";
 import { ACCEPT_ATTR, IMAGE_MESSAGES, pickImageFile } from "@/lib/image/accept";
 import { ingestFile, ingestSample } from "@/lib/image/ingest";
+import { isProjectFile } from "@/lib/persist/project";
+import { openProjectFile } from "@/lib/persist/projectActions";
 import { useEditorStore } from "@/lib/store/editor";
 import { cn } from "@/lib/utils";
 import { CanvasViewport } from "./canvas/CanvasViewport";
@@ -28,10 +30,16 @@ import { Notice } from "./Notice";
 import { ToolRail } from "./ToolRail";
 import { TopBar } from "./TopBar";
 
+/** A project file opens as a project; anything else is taken as a screenshot. */
+function openFile(file: File) {
+  if (isProjectFile(file)) void openProjectFile(file);
+  else void ingestFile(file);
+}
+
 function handleIncomingFiles(files: File[]) {
   // The first usable file wins; otherwise the first file explains what went wrong.
   const file = pickImageFile(files) ?? files[0];
-  if (file) void ingestFile(file);
+  if (file) openFile(file);
   else useEditorStore.getState().showError(IMAGE_MESSAGES.dropHint);
 }
 
@@ -64,7 +72,7 @@ export default function Editor() {
   const onFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = ""; // so picking the same file again still fires change
-    if (file) void ingestFile(file);
+    if (file) openFile(file);
   };
 
   // One layout or the other, never both, so no control or test id appears

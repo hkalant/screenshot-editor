@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, Download, LoaderCircle } from "lucide-react";
+import { ChevronDown, Download, FileImage, LoaderCircle } from "lucide-react";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -8,7 +8,11 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { runExport } from "@/lib/export/controller";
+import {
+  downloadOriginal,
+  runExport,
+  runExportBoth,
+} from "@/lib/export/controller";
 import { canEncode, planExport } from "@/lib/export/exportImage";
 import {
   EXPORT_FORMATS,
@@ -122,6 +126,61 @@ function ExportOptionsForm() {
   );
 }
 
+const TYPE_LABELS: Record<string, string> = {
+  "image/png": "PNG",
+  "image/jpeg": "JPG",
+  "image/webp": "WebP",
+};
+
+/**
+ * The screenshot as it was imported: no background, frame or annotations,
+ * so the user can start over without finding (or losing) the original.
+ */
+function OriginalSection() {
+  const image = useEditorStore(selectActiveImage);
+  const exporting = useEditorStore((state) => state.exporting);
+  const canExport = useCanExport();
+  const type = image ? (TYPE_LABELS[image.blob.type] ?? "image") : null;
+  return (
+    <div className="space-y-3 border-t pt-4">
+      <div className="space-y-1">
+        <h3 className="text-sm font-medium">Original screenshot</h3>
+        <p
+          className="text-xs text-muted-foreground tabular-nums"
+          data-testid="original-size"
+        >
+          {image
+            ? `The file you imported, unedited · ${image.width} × ${image.height} px ${type}`
+            : "Add a screenshot to download its original."}
+        </p>
+      </div>
+      <div className="flex flex-col gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full rounded-md"
+          disabled={!image}
+          onClick={downloadOriginal}
+        >
+          <FileImage aria-hidden />
+          Download original
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full rounded-md"
+          title="The export and the original, as two files"
+          disabled={!canExport || exporting}
+          onClick={() => void runExportBoth()}
+        >
+          <Download aria-hidden />
+          Export both
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function ExportButton({ className }: { className?: string }) {
   const options = useEditorStore((state) => state.exportOptions);
   const exporting = useEditorStore((state) => state.exporting);
@@ -164,6 +223,7 @@ export function ExportMenu({ compact = false }: { compact?: boolean }) {
         <PopoverContent align="end" className="space-y-4">
           <ExportOptionsForm />
           <ExportButton className="w-full rounded-md" />
+          <OriginalSection />
         </PopoverContent>
       </Popover>
     );
@@ -183,8 +243,9 @@ export function ExportMenu({ compact = false }: { compact?: boolean }) {
             <ChevronDown aria-hidden />
           </Button>
         </PopoverTrigger>
-        <PopoverContent align="end">
+        <PopoverContent align="end" className="space-y-4">
           <ExportOptionsForm />
+          <OriginalSection />
         </PopoverContent>
       </Popover>
     </div>

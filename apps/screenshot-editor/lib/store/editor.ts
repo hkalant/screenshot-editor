@@ -229,6 +229,8 @@ export type EditorState = {
 
   /** Replaces the design (an autosave restore). Clears the history. */
   loadDesign: (design: Design, images: LoadedImage[]) => void;
+  /** Replaces the design with an opened project, as one undo step. */
+  openProject: (design: Design, images: LoadedImage[]) => void;
 
   setActivePanel: (panel: PanelId) => void;
   setMobilePanel: (panel: MobilePanelId | null) => void;
@@ -1329,6 +1331,17 @@ export const useEditorStore = create<EditorState>()((set, get) => {
           },
         };
       }),
+
+    openProject: (design, images) =>
+      set((state) =>
+        commitDesign(state, design, undefined, {
+          images: {
+            ...state.images,
+            ...Object.fromEntries(images.map((image) => [image.id, image])),
+          },
+          selectedAnnotationId: null,
+        }),
+      ),
 
     setActivePanel: (panel) => set(() => ({ activePanel: panel })),
     setMobilePanel: (panel) => set(() => ({ mobilePanel: panel })),

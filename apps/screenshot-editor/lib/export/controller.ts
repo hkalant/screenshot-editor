@@ -4,11 +4,13 @@ import { selectActiveImage, useEditorStore } from "@/lib/store/editor";
 import {
   canCopyImages,
   copyPngToClipboard,
+  downloadBlob,
   exportDesign,
   nextPaint,
   renderDesignBlob,
   type RenderTarget,
 } from "./exportImage";
+import { originalFilename } from "./filename";
 
 // Export and copy are started from the top bar, the mobile bar and keyboard
 // shortcuts, so the stage registers itself here instead of being passed around.
@@ -61,10 +63,13 @@ const fontsReady = () =>
 
 let exporting = false;
 
-/** Exports with the current options. Ignored while an export runs or an image loads. */
-export async function runExport(): Promise<void> {
+/**
+ * Exports with the current options. Ignored while an export runs or an image
+ * loads. True if the file was written.
+ */
+export async function runExport(): Promise<boolean> {
   const initial = useEditorStore.getState();
-  if (exporting || !currentTarget()) return;
+  if (exporting || !currentTarget()) return false;
   exporting = true;
   initial.setExporting(true);
   try {
@@ -74,18 +79,38 @@ export async function runExport(): Promise<void> {
     // Read everything after the waits, so the size, the file name and the
     // drawn canvas all describe the same design.
     const target = currentTarget();
-    if (!target) return;
+    if (!target) return false;
     await exportDesign(
       target,
       useEditorStore.getState().exportOptions,
       target.sourceName,
     );
+    return true;
   } catch {
     useEditorStore.getState().showError(EXPORT_FAILED);
+    return false;
   } finally {
     exporting = false;
     useEditorStore.getState().setExporting(false);
   }
+}
+
+/**
+ * Downloads the screenshot exactly as it was imported or pasted: the same
+ * file, with no background, frame, annotations or resizing, so the user can
+ * start over without hunting for it. False if there is no screenshot.
+ */
+export function downloadOriginal(): boolean {
+  const image = selectActiveImage(useEditorStore.getState());
+  if (!image) return false;
+  downloadBlob(image.blob, originalFilename(image.name, image.blob.type));
+  return true;
+}
+
+/** Exports the design, then downloads the original screenshot beside it. */
+export async function runExportBoth(): Promise<void> {
+  // Only when the export went through (it shows its own error otherwise).
+  if (await runExport()) downloadOriginal();
 }
 
 /**

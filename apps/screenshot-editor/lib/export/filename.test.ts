@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { exportFilename } from "./filename";
+import { exportFilename, originalFilename, projectFilename } from "./filename";
 
 const now = new Date(2026, 9, 11, 9, 5, 7); // 11 Oct 2026, 09:05:07 local time
 
@@ -52,5 +52,37 @@ describe("exportFilename", () => {
     const name = `${"a".repeat(59)} b${"c".repeat(40)}.png`;
     const result = exportFilename(name, 2, now);
     expect(result).toBe(`${"a".repeat(59)}-2x.png`);
+  });
+});
+
+describe("originalFilename", () => {
+  it("marks the name as the original and keeps the file's own format", () => {
+    expect(originalFilename("My Dashboard.png", "image/png", now)).toBe(
+      "my-dashboard-original.png",
+    );
+    expect(originalFilename("photo.JPEG", "image/jpeg", now)).toBe(
+      "photo-original.jpg",
+    );
+    expect(originalFilename("shot.webp", "", now)).toBe("shot-original.webp");
+  });
+
+  it("names a pasted image by the time", () => {
+    expect(originalFilename("image.png", "image/png", now)).toBe(
+      "screenshot-20261011-090507-original.png",
+    );
+    expect(originalFilename(null, "", now)).toBe(
+      "screenshot-20261011-090507-original.png",
+    );
+  });
+});
+
+describe("projectFilename", () => {
+  it("names the project after the screenshot", () => {
+    expect(projectFilename("My Dashboard.png", now)).toBe(
+      "my-dashboard.screenshot.json",
+    );
+    expect(projectFilename(null, now)).toBe(
+      "screenshot-20261011-090507.screenshot.json",
+    );
   });
 });

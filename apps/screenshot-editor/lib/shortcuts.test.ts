@@ -50,6 +50,16 @@ describe("matchShortcut", () => {
     expect(matchShortcut(key("v", mod), false)).toBeNull(); // paste is handled by the paste event
   });
 
+  it("saves and opens projects with Shift added", () => {
+    const shifted = { metaKey: true, shiftKey: true };
+    expect(matchShortcut(key("S", shifted), true)).toEqual({
+      type: "saveProject",
+    });
+    expect(matchShortcut(key("O", shifted), true)).toEqual({
+      type: "openProject",
+    });
+  });
+
   it("zooms with ⌘/Ctrl and plus, minus or zero", () => {
     const zoom = (value: string, mods: Partial<KeyInput>, apple: boolean) =>
       matchShortcut(key(value, mods), apple);

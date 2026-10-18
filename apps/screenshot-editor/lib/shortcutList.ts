@@ -15,6 +15,8 @@ export function shortcutGroups(apple: boolean): ShortcutGroup[] {
         { keys: [mod, "V"], action: "Paste an image" },
         { keys: [mod, "C"], action: "Copy image" },
         { keys: [mod, "S"], action: "Export" },
+        { keys: [mod, shift, "S"], action: "Save project" },
+        { keys: [mod, shift, "O"], action: "Open project" },
         { keys: [mod, "Z"], action: "Undo" },
         apple
           ? { keys: [mod, shift, "Z"], action: "Redo" }
