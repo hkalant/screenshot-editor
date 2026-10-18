@@ -81,21 +81,15 @@ export function releaseCanvas(canvas: HTMLCanvasElement) {
   canvas.height = 0;
 }
 
-// The last download URL stays valid until the next export (or a minute), so a
-// slow save sheet, as on iOS, still gets the file.
-let lastDownload: { url: string; timer: number } | null = null;
-
-function revokeLastDownload() {
-  if (!lastDownload) return;
-  window.clearTimeout(lastDownload.timer);
-  URL.revokeObjectURL(lastDownload.url);
-  lastDownload = null;
-}
+// Each download URL stays valid for a minute, so a slow save sheet (as on
+// iOS) still gets the file. Each has its own timer: WebKit reads the file
+// after the click returns, so revoking the previous URL when the next
+// download starts (as Export both does) would lose the first file.
+const DOWNLOAD_URL_MS = 60_000;
 
 export function downloadBlob(blob: Blob, filename: string) {
-  revokeLastDownload();
   const url = URL.createObjectURL(blob);
-  lastDownload = { url, timer: window.setTimeout(revokeLastDownload, 60_000) };
+  window.setTimeout(() => URL.revokeObjectURL(url), DOWNLOAD_URL_MS);
   const link = document.createElement("a");
   link.href = url;
   link.download = filename;

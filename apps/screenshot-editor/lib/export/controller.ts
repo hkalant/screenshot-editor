@@ -107,10 +107,16 @@ export function downloadOriginal(): boolean {
   return true;
 }
 
+const BOTH_GAP_MS = 300;
+
 /** Exports the design, then downloads the original screenshot beside it. */
 export async function runExportBoth(): Promise<void> {
   // Only when the export went through (it shows its own error otherwise).
-  if (await runExport()) downloadOriginal();
+  if (!(await runExport())) return;
+  // A moment apart: Safari can drop a download that starts in the same
+  // instant as the one before.
+  await new Promise((resolve) => window.setTimeout(resolve, BOTH_GAP_MS));
+  downloadOriginal();
 }
 
 /**
