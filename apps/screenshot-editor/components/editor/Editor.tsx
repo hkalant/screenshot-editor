@@ -29,6 +29,7 @@ import { MobileTabs } from "./MobileTabs";
 import { Notice } from "./Notice";
 import { ToolRail } from "./ToolRail";
 import { TopBar } from "./TopBar";
+import { Tour } from "./tour/Tour";
 
 /** A project file opens as a project; anything else is taken as a screenshot. */
 function openFile(file: File) {
@@ -135,6 +136,7 @@ export default function Editor() {
         onChange={onFileChange}
       />
       <Notice />
+      <Tour enabled={desktop && !phone} />
     </div>
   );
 }

@@ -24,7 +24,7 @@ export function ToolRail() {
         <label htmlFor={id} className="sr-only">
           Tool
         </label>
-        <div className="relative">
+        <div className="relative" data-tour="panel-picker">
           <Icon
             className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-foreground"
             aria-hidden

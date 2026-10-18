@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, Ellipsis } from "lucide-react";
+import { ChevronLeft, Compass, Ellipsis } from "lucide-react";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,6 +9,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { currentPlatform, isApplePlatform } from "@/lib/platform";
+import { useTourStore } from "@/lib/tour/tour";
 import { setShortcutsHandler } from "@/lib/shortcutsCommand";
 import { itemClass, TutorialLinks } from "./HelpMenu";
 import { ProjectItems } from "./ProjectItems";
@@ -52,6 +53,7 @@ export function MoreMenu() {
           size="icon"
           aria-label="More"
           title="More"
+          data-tour="more"
           className="data-[state=open]:bg-accent"
         >
           <Ellipsis aria-hidden />
@@ -82,6 +84,19 @@ export function MoreMenu() {
             </kbd>
           </button>
           <div className="my-1 h-px bg-border" aria-hidden />
+          <button
+            type="button"
+            className={itemClass}
+            onClick={() => {
+              setOpen(false);
+              useTourStore.getState().open();
+            }}
+          >
+            <span className="flex w-5 justify-center text-muted-foreground">
+              <Compass className="size-4" aria-hidden />
+            </span>
+            Take the tour
+          </button>
           <TutorialLinks onPick={() => setOpen(false)} />
         </PopoverContent>
       ) : (

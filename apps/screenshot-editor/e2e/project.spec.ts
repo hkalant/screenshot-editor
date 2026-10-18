@@ -11,7 +11,7 @@ import {
   upload,
   useAutoSize,
 } from "./helpers/editor";
-import { expect, test } from "./helpers/fixtures";
+import { expect, test, TOUR_SEEN_SCRIPT } from "./helpers/fixtures";
 import { makeSolidPng } from "./helpers/png";
 
 test.beforeEach(async ({ page }) => {
@@ -94,6 +94,7 @@ test("a saved project reopens with everything still editable", async ({
 
   // Open it in a fresh editor: a new browser context, with nothing saved.
   const fresh = await browser.newContext({ baseURL });
+  await fresh.addInitScript(TOUR_SEEN_SCRIPT);
   const other = await fresh.newPage();
   await other.goto("./");
   await expectEmptyState(other);

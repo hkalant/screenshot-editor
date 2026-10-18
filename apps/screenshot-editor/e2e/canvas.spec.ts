@@ -434,14 +434,20 @@ test("copies the design to the clipboard as a PNG", async ({
   await expect(tooltip).toHaveText("Copied!");
 });
 
-test("the empty editor shows a dotted drop area with the paste tip", async ({
+test("the empty editor shows a dotted drop area with the ways to start", async ({
   page,
 }) => {
   const dropArea = page.getByRole("button", {
-    name: /Drag and drop your screenshot here/,
+    name: /Welcome to Screenshot Editor/,
   });
   await expect(dropArea).toContainText(
-    "Tip: If you have copied a screenshot, you can paste it here with Ctrl+V (Windows) or Cmd+V (Mac)",
+    "To get started, do any of the following:",
+  );
+  await expect(dropArea).toContainText(
+    "Drag and drop screenshots directly into the editor.",
+  );
+  await expect(dropArea).toContainText(
+    "Paste a screenshot from your clipboard here with Ctrl/⌘ + V.",
   );
   await expect(dropArea).toHaveCSS("border-top-style", "dotted");
   await expect(dropArea).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
