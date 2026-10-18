@@ -531,6 +531,7 @@ export function AnnotationToolbar() {
     <div
       ref={boxRef}
       role="toolbar"
+      data-tour="annotate"
       aria-label="Annotate"
       // A floating dock: more room and a deeper shadow than the other panes.
       // Its width follows its tools' options smoothly, growing from the

@@ -230,7 +230,7 @@ export function ExportMenu({ compact = false }: { compact?: boolean }) {
   }
 
   return (
-    <div className="flex items-center">
+    <div className="flex items-center" data-tour="export">
       <ExportButton className="rounded-r-none" />
       <Popover>
         <PopoverTrigger asChild>
