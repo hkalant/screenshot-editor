@@ -21,11 +21,11 @@ type Props = {
 const OPTIONS: { icon: LucideIcon; text: ReactNode }[] = [
   {
     icon: ImageDown,
-    text: "Drag and drop screenshots directly into the editor",
+    text: "Drag and drop screenshots directly into the editor.",
   },
   {
     icon: FolderOpen,
-    text: "Click to choose and import your screenshot from the file browser",
+    text: "Click to choose and import your screenshot from the file browser.",
   },
   {
     icon: ClipboardPaste,
@@ -37,7 +37,7 @@ const OPTIONS: { icon: LucideIcon; text: ReactNode }[] = [
           <abbr title="Cmd" aria-label="Cmd" className="no-underline">
             ⌘
           </abbr>{" "}
-          + V
+          + V.
         </span>
       </>
     ),

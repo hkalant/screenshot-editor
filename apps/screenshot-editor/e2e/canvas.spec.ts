@@ -444,10 +444,10 @@ test("the empty editor shows a dotted drop area with the ways to start", async (
     "To get started, do any of the following:",
   );
   await expect(dropArea).toContainText(
-    "Drag and drop screenshots directly into the editor",
+    "Drag and drop screenshots directly into the editor.",
   );
   await expect(dropArea).toContainText(
-    "Paste a screenshot from your clipboard here with Ctrl/⌘ + V",
+    "Paste a screenshot from your clipboard here with Ctrl/⌘ + V.",
   );
   await expect(dropArea).toHaveCSS("border-top-style", "dotted");
   await expect(dropArea).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
