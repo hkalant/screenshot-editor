@@ -37,7 +37,7 @@ test("walks through the steps on a sample, then removes it", async ({
   await expect(stage(page)).toBeVisible();
 
   await card(page).getByRole("button", { name: "Next" }).click();
-  await expect(card(page)).toContainText("Frame & style");
+  await expect(card(page)).toContainText("Frame & Style");
   // The dropdown is shown switching to Style.
   await expect(tool(page)).toHaveValue("style");
 

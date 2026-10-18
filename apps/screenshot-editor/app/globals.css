@@ -290,7 +290,7 @@
 }
 
 /* The welcome tour: its backdrop fades in, its cards pop, and the
-   dropdown chevron in the Frame & style step nudges downward. */
+   dropdown chevron in the Frame & Style step nudges downward. */
 @keyframes tour-pop {
   from {
     opacity: 0;

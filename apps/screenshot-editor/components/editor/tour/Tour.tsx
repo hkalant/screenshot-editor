@@ -23,7 +23,7 @@ type Step = {
 const setPanel = (panel: "background" | "style") =>
   useEditorStore.getState().setActivePanel(panel);
 
-// How long the Frame & style step shows Background before switching, so
+// How long the Frame & Style step shows Background before switching, so
 // the dropdown is seen to change.
 const SWITCH_DELAY_MS = 700;
 let switchTimer: number | undefined;
@@ -33,14 +33,14 @@ const STEPS: Step[] = [
     target: '[data-pane="side"]',
     side: "right",
     title: "Background",
-    body: "Put a gradient, a solid colour, a wallpaper or your own image behind the screenshot, and adjust the angle and blur.",
+    body: "Choose a gradient, a solid colour or upload your own image behind the screenshot, then adjust the angle and blur.",
     enter: () => setPanel("background"),
   },
   {
     target: '[data-tour="panel-picker"]',
     side: "right",
-    title: "Frame & style",
-    body: "This menu is a dropdown. Open it and choose Style to add a browser or device frame, round the corners, and set the padding, shadow and border.",
+    title: "Frame & Style",
+    body: "Switch to Style from this dropdown menu to add a browser frame, set padding, shadow and border.",
     enter: () => {
       setPanel("background");
       window.clearTimeout(switchTimer);
@@ -63,11 +63,11 @@ const STEPS: Step[] = [
     target: '[data-tour="more"]',
     side: "bottom",
     title: "Save your work",
-    body: "Save a project file to keep every annotation editable, and open it again later. The tour lives here too.",
+    body: "Save your screenshot as flattened and/or as a project file to keep every annotation editable, and open it again later. Learn the keyboard shortcuts and restart this tour from here too.",
   },
   {
-    title: "You're all set",
-    body: "The sample goes away now. Paste, drop or open your own screenshot to begin.",
+    title: "You're all set!",
+    body: "The sample screenshot goes away now. Paste, drop or click to open your own screenshot to begin.",
   },
 ];
 
@@ -188,8 +188,9 @@ function Welcome() {
             Welcome to Screenshot Editor
           </h2>
           <p id="tour-description" className="text-sm text-muted-foreground">
-            Turn any screenshot into a polished image in seconds. Take a quick
-            look around with a sample screenshot.
+            Turn any screenshot into a polished image in seconds. Click Start
+            below to explore the different options of the editor with a sample
+            screenshot before making your own.
           </p>
         </div>
         <div className="flex justify-end gap-2 px-6 pt-5 pb-6">
