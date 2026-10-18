@@ -250,7 +250,7 @@ function StepCard({ index }: { index: number }) {
         // catches clicks so the page waits until the tour ends.
         <div
           aria-hidden
-          className="pointer-events-none absolute rounded-xl ring-2 ring-white/80 transition-all duration-300 ease-out motion-reduce:transition-none"
+          className="tour-spot pointer-events-none absolute rounded-xl ring-2 ring-white/80"
           style={{
             top: target.top - pad,
             left: target.left - pad,
