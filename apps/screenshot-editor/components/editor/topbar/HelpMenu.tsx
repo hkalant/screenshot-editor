@@ -3,6 +3,7 @@
 import { Ellipsis } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
+import { useVideoStore } from "@/lib/video";
 import { ProjectItems } from "./ProjectItems";
 import {
   Popover,
@@ -10,8 +11,6 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 
-// The video is a placeholder until it exists.
-const VIDEO_TUTORIAL_URL = "#";
 const TEXT_TUTORIAL_URL =
   "https://docs.google.com/document/d/10Ti4Hn1kNuVGtStQZHqFbMokCOVisJW8RJdkAg14KAE/edit?usp=sharing";
 
@@ -52,17 +51,13 @@ function TutorialLink({
   children: ReactNode;
   onPick: () => void;
 }) {
-  const placeholder = href === "#";
   return (
     <a
       href={href}
-      target={placeholder ? undefined : "_blank"}
-      rel={placeholder ? undefined : "noopener noreferrer"}
+      target="_blank"
+      rel="noopener noreferrer"
       className={itemClass}
-      onClick={(event) => {
-        if (placeholder) event.preventDefault();
-        onPick();
-      }}
+      onClick={onPick}
     >
       <span className="flex w-5 justify-center text-muted-foreground">
         {icon}
@@ -76,13 +71,20 @@ function TutorialLink({
 export function TutorialLinks({ onPick }: { onPick: () => void }) {
   return (
     <nav aria-label="Tutorials" className="flex flex-col gap-0.5">
-      <TutorialLink
-        href={VIDEO_TUTORIAL_URL}
-        icon={<VideoIcon />}
-        onPick={onPick}
+      {/* The video plays over the editor rather than in a new tab. */}
+      <button
+        type="button"
+        className={itemClass}
+        onClick={() => {
+          onPick();
+          useVideoStore.getState().setOpen(true);
+        }}
       >
+        <span className="flex w-5 justify-center text-muted-foreground">
+          <VideoIcon />
+        </span>
         Watch the video tutorial
-      </TutorialLink>
+      </button>
       <TutorialLink
         href={TEXT_TUTORIAL_URL}
         icon={<BookIcon />}
