@@ -145,6 +145,18 @@ The Atlassian documentation could not be checked while this was written, so thes
 | Blank page or missing styles                         | The build has the wrong base path; check `NEXT_PUBLIC_BASE_PATH` in the build log                                      |
 | Old version still showing                            | Browser or CDN cache; reload, or wait a few minutes                                                                    |
 
+## Mirroring the code to Bitbucket
+
+`.github/workflows/mirror-bitbucket.yml` keeps a read-only copy of this repository on Bitbucket. After every push to `main`, it pushes `main` and the tags to the Bitbucket repository. GitHub stays where the work happens: the copy is overwritten each time, so anything committed on Bitbucket is lost.
+
+To turn it on:
+
+1. Create an empty repository on Bitbucket. Under **Repository settings → Access tokens**, create a token with **write** access to repositories.
+2. On GitHub, under **Settings → Secrets and variables → Actions**, add the secret `BITBUCKET_MIRROR_TOKEN` (the token) and the variable `BITBUCKET_MIRROR_REPO` (`<workspace>/<repository>`).
+3. Run **Mirror to Bitbucket** from the Actions tab once, or push to `main`.
+
+Until both are set, the workflow skips itself and stays green. `BITBUCKET_MIRROR_USERNAME` overrides the git username for the token (default `x-token-auth`).
+
 ## Project layout
 
 ```

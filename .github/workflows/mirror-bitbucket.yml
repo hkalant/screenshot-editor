@@ -1,0 +1,87 @@
+name: Mirror to Bitbucket
+
+# Keeps a read-only copy of this repository on Bitbucket: after every push to main, main
+# and the tags are pushed to the Bitbucket repository. GitHub stays where the work happens;
+# the Bitbucket copy is overwritten each time, so commits made there are lost.
+#
+# Setup (Settings > Secrets and variables > Actions):
+#   Secret   BITBUCKET_MIRROR_TOKEN   Repository access token of the mirror repository, with
+#                                     write access to repositories.
+#   Variable BITBUCKET_MIRROR_REPO    The mirror repository as <workspace>/<repository>.
+#   Optional variable:
+#     BITBUCKET_MIRROR_USERNAME       Git username for the token (default: x-token-auth).
+# With neither the secret nor the variable set, the mirror is skipped and the run stays green.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One mirror push at a time; a newer pending run replaces an older one, since each pushes
+# the whole of main.
+concurrency:
+  group: mirror-bitbucket
+  cancel-in-progress: false
+
+jobs:
+  mirror:
+    name: Push main to Bitbucket
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check the Bitbucket secret and variable
+        id: check
+        env:
+          HAS_TOKEN: ${{ secrets.BITBUCKET_MIRROR_TOKEN != '' }}
+          REPO: ${{ vars.BITBUCKET_MIRROR_REPO }}
+        run: |
+          set -euo pipefail
+          note() { printf '%s\n' "$1" >> "$GITHUB_STEP_SUMMARY"; }
+          note "### Bitbucket mirror"
+          if [ "$HAS_TOKEN" != true ] && [ -z "$REPO" ]; then
+            message="The Bitbucket mirror is not set up, so it was skipped. To turn it on, add the repository secret BITBUCKET_MIRROR_TOKEN and the repository variable BITBUCKET_MIRROR_REPO (<workspace>/<repository>) under Settings > Secrets and variables > Actions."
+            echo "::notice title=Bitbucket mirror skipped::$message"
+            note "$message"
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ "$HAS_TOKEN" != true ] || [ -z "$REPO" ]; then
+            message="The Bitbucket mirror needs both the secret BITBUCKET_MIRROR_TOKEN and the variable BITBUCKET_MIRROR_REPO; only one is set."
+            echo "::error title=Bitbucket mirror misconfigured::$message"
+            note "$message"
+            exit 1
+          fi
+          if ! [[ "$REPO" =~ ^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+$ ]]; then
+            message="BITBUCKET_MIRROR_REPO must look like <workspace>/<repository>, not \"$REPO\"."
+            echo "::error title=Bitbucket mirror misconfigured::$message"
+            note "$message"
+            exit 1
+          fi
+          note "Mirroring main to \`$REPO\`."
+          echo "enabled=true" >> "$GITHUB_OUTPUT"
+
+      - name: Check out the full history
+        if: steps.check.outputs.enabled == 'true'
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Push main and the tags
+        if: steps.check.outputs.enabled == 'true'
+        env:
+          TOKEN: ${{ secrets.BITBUCKET_MIRROR_TOKEN }}
+          REPO: ${{ vars.BITBUCKET_MIRROR_REPO }}
+          USERNAME: ${{ vars.BITBUCKET_MIRROR_USERNAME || 'x-token-auth' }}
+        run: |
+          set -euo pipefail
+          # The token goes in a header, so it never appears in the remote URL or the log.
+          auth="$(printf '%s:%s' "$USERNAME" "$TOKEN" | base64 -w0)"
+          echo "::add-mask::$auth"
+          git -c http.extraHeader="Authorization: Basic $auth" \
+            push --force "https://bitbucket.org/$REPO.git" "HEAD:refs/heads/main" --tags
+          printf 'Pushed %s to https://bitbucket.org/%s (main).\n' "$GITHUB_SHA" "$REPO" >> "$GITHUB_STEP_SUMMARY"
