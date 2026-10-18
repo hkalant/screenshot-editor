@@ -3,13 +3,29 @@ import "@fontsource-variable/inter";
 import { THEME_SCRIPT } from "@/lib/theme";
 import "./globals.css";
 
+// Link previews (iMessage, Slack, Teams…) need the preview image's full
+// address, so the site's origin is set here; Next adds the base path.
+const SITE_ORIGIN =
+  process.env.NEXT_PUBLIC_SITE_ORIGIN ?? "https://brookesdigied.bitbucket.io";
+
+const DESCRIPTION =
+  "Turn any screenshot into a clear, polished image: backgrounds, frames, numbered steps, arrows, blur and more. Runs in your browser.";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_ORIGIN),
   title: {
     default: "Screenshot Editor",
     template: "%s · Screenshot Editor",
   },
-  description:
-    "Make screenshots look good: add a gradient background, padding, rounded corners and a shadow, then export a PNG. Runs in your browser.",
+  description: DESCRIPTION,
+  // The preview image is app/opengraph-image.png, which Next adds itself.
+  openGraph: {
+    type: "website",
+    siteName: "Screenshot Editor",
+    title: "Screenshot Editor",
+    description: DESCRIPTION,
+  },
+  twitter: { card: "summary_large_image" },
 };
 
 export const viewport: Viewport = {

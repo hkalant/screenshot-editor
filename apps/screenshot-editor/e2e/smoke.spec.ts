@@ -59,3 +59,20 @@ test("desktops get no phone notice", async ({ page }) => {
   ).toBeVisible();
   await expect(page.getByTestId("desktop-notice")).toHaveCount(0);
 });
+
+test("link previews show the tour's illustration", async ({ page }) => {
+  await page.goto("./");
+  const image = page.locator('meta[property="og:image"]');
+  await expect(image).toHaveAttribute(
+    "content",
+    /^https:\/\/.+\/opengraph-image\.png/,
+  );
+  await expect(page.locator('meta[property="og:title"]')).toHaveAttribute(
+    "content",
+    "Screenshot Editor",
+  );
+  // The image itself is served next to the page, with the base path.
+  const response = await page.request.get("opengraph-image.png");
+  expect(response.status()).toBe(200);
+  expect(response.headers()["content-type"]).toContain("image/png");
+});
