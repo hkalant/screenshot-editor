@@ -24,6 +24,7 @@ import {
   writeValue,
 } from "@/lib/persist/storage";
 import { useEditorStore } from "@/lib/store/editor";
+import { designUnderTour } from "@/lib/tour/tour";
 
 const SAVE_DELAY_MS = 600;
 // Steady editing (typing a title) still saves at least this often.
@@ -150,6 +151,9 @@ export function useAutosave() {
     let pendingRevision = -1;
     let unsubscribe: (() => void) | undefined;
 
+    // The design to keep: the user's own, even while the tour shows the sample.
+    const savedDesign = () => designUnderTour() ?? store.getState().design;
+
     const save = async () => {
       window.clearTimeout(timer);
       timer = undefined;
@@ -160,7 +164,8 @@ export function useAutosave() {
         return;
       }
       saving = true;
-      const { design, images, revision } = store.getState();
+      const { images, revision } = store.getState();
+      const design = savedDesign();
       // A flush while this save waits may have written a newer design.
       const isCurrent = () => revision >= writtenRevision;
       if (await saveSnapshot(storage, design, images, isCurrent)) {
@@ -194,7 +199,8 @@ export function useAutosave() {
     // design goes in one write committed straight away, and then the full
     // save runs too in case the page stays (a tab switch).
     const flush = () => {
-      const { design, images, revision } = store.getState();
+      const { images, revision } = store.getState();
+      const design = savedDesign();
       if (!storageWorks || revision <= writtenRevision) return;
       const copy: SavedDesign = { design, savedAt: Date.now() };
       writePreference(PENDING_KEY, JSON.stringify(copy));
