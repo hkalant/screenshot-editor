@@ -10,9 +10,10 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 
-// Placeholders until the real tutorials exist.
+// The video is a placeholder until it exists.
 const VIDEO_TUTORIAL_URL = "#";
-const TEXT_TUTORIAL_URL = "#";
+const TEXT_TUTORIAL_URL =
+  "https://docs.google.com/document/d/10Ti4Hn1kNuVGtStQZHqFbMokCOVisJW8RJdkAg14KAE/edit?usp=sharing";
 
 // Font Awesome Free icons (solid), CC BY 4.0.
 function FaIcon({ viewBox, path }: { viewBox: string; path: string }) {
