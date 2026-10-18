@@ -18,14 +18,6 @@ type Props = {
   onSample: () => void;
 };
 
-function Key({ children }: { children: ReactNode }) {
-  return (
-    <kbd className="inline-block min-w-6 rounded-md border border-b-2 border-input bg-background px-1.5 py-0.5 font-sans text-xs font-semibold text-foreground">
-      {children}
-    </kbd>
-  );
-}
-
 const OPTIONS: { icon: LucideIcon; text: ReactNode }[] = [
   {
     icon: ImageDown,
@@ -41,7 +33,11 @@ const OPTIONS: { icon: LucideIcon; text: ReactNode }[] = [
       <>
         Paste a screenshot from your clipboard here with{" "}
         <span className="whitespace-nowrap">
-          <Key>Ctrl</Key>/<Key>Cmd</Key> + <Key>V</Key>
+          Ctrl/
+          <abbr title="Cmd" aria-label="Cmd" className="no-underline">
+            ⌘
+          </abbr>{" "}
+          + V
         </span>
       </>
     ),

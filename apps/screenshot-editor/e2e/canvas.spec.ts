@@ -447,9 +447,8 @@ test("the empty editor shows a dotted drop area with the ways to start", async (
     "Drag and drop screenshots directly into the editor",
   );
   await expect(dropArea).toContainText(
-    "Paste a screenshot from your clipboard here with Ctrl/Cmd + V",
+    "Paste a screenshot from your clipboard here with Ctrl/⌘ + V",
   );
-  await expect(dropArea.locator("kbd")).toHaveCount(3);
   await expect(dropArea).toHaveCSS("border-top-style", "dotted");
   await expect(dropArea).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
   await expect(stage(page)).toHaveCount(0);
