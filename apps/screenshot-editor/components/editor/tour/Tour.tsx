@@ -247,10 +247,12 @@ function StepCard({ index }: { index: number }) {
     <div className="fixed inset-0 z-[60]" data-testid="tour-step">
       {target ? (
         // The page dimmed around a hole over the target; the layer above
-        // catches clicks so the page waits until the tour ends.
+        // catches clicks so the page waits until the tour ends. The dimming
+        // stays put between steps (fading it would flash the whole screen);
+        // only the outline fades in.
         <div
           aria-hidden
-          className="tour-spot pointer-events-none absolute rounded-xl ring-2 ring-white/80"
+          className="pointer-events-none absolute rounded-xl"
           style={{
             top: target.top - pad,
             left: target.left - pad,
@@ -258,7 +260,9 @@ function StepCard({ index }: { index: number }) {
             height: target.height + pad * 2,
             boxShadow: "0 0 0 9999px rgb(0 0 0 / 45%)",
           }}
-        />
+        >
+          <div className="tour-spot absolute inset-0 rounded-xl ring-2 ring-white/80" />
+        </div>
       ) : (
         <div aria-hidden className="absolute inset-0 bg-black/45" />
       )}
