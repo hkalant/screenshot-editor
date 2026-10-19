@@ -122,20 +122,20 @@ export default function Editor() {
         >
           <CanvasViewport onUpload={openFilePicker} onSample={loadSample} />
           {isDragging && <DropOverlay />}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept={ACCEPT_ATTR}
+            className="sr-only"
+            tabIndex={-1}
+            aria-label="Upload image"
+            data-testid="file-input"
+            onChange={onFileChange}
+          />
         </main>
         {!desktop && <MobilePanel />}
       </div>
       {!desktop && <MobileTabs />}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept={ACCEPT_ATTR}
-        className="sr-only"
-        tabIndex={-1}
-        aria-label="Upload image"
-        data-testid="file-input"
-        onChange={onFileChange}
-      />
       <Notice />
       <Tour enabled={desktop && !phone} />
       <VideoDialog />

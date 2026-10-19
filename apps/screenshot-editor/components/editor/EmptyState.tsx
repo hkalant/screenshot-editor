@@ -57,7 +57,7 @@ export function EmptyState({ loading, restoring, onUpload, onSample }: Props) {
         type="button"
         onClick={onUpload}
         disabled={busy}
-        className="flex min-h-64 flex-1 flex-col items-center justify-center gap-3 rounded-lg border-2 border-dotted border-muted-foreground/40 bg-transparent px-6 py-10 text-center transition-colors outline-none hover:border-muted-foreground/70 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-progress"
+        className="flex min-h-64 flex-1 flex-col items-center justify-center gap-3 rounded-lg border-2 border-dotted border-muted-foreground/40 bg-transparent px-6 py-10 text-center transition-colors outline-none hover:border-muted-foreground/70 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid disabled:cursor-progress"
       >
         {busy && (
           <LoaderCircle

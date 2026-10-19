@@ -122,7 +122,7 @@ function ToggleGroupItem({
     <ToggleGroupPrimitive.Item
       data-slot="toggle-group-item"
       className={cn(
-        "flex h-8 min-w-0 flex-1 items-center justify-center rounded-[10px] px-1.5 text-xs font-medium text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring",
+        "flex h-8 min-w-0 flex-1 items-center justify-center rounded-[10px] px-1.5 text-xs font-medium text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid",
         // With glide, the highlight behind the items is the fill.
         glide
           ? "duration-300 data-highlight:text-selected-foreground"

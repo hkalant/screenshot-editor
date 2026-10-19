@@ -16,7 +16,7 @@ test("a new design starts on the Desktop size, listed above Auto", async ({
   await expectEmptyState(page);
   const sizeButton = page.getByRole("button", { name: /^Canvas size/ });
   await expect(sizeButton).toHaveAccessibleName(
-    "Canvas size: Desktop, 1920 × 1080",
+    "Canvas size: Desktop 1920 × 1080",
   );
   await upload(page, makeSolidPng(1200, 750, RED));
   await expectDesignSize(page, 1920, 1080);

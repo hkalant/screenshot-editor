@@ -144,7 +144,7 @@ function OriginalSection() {
   return (
     <div className="space-y-3 border-t pt-4">
       <div className="space-y-1">
-        <h3 className="text-sm font-medium">Original screenshot</h3>
+        <h2 className="text-sm font-medium">Original screenshot</h2>
         <p
           className="text-xs text-muted-foreground tabular-nums"
           data-testid="original-size"
@@ -220,7 +220,11 @@ export function ExportMenu({ compact = false }: { compact?: boolean }) {
             <Download aria-hidden />
           </Button>
         </PopoverTrigger>
-        <PopoverContent align="end" className="space-y-4">
+        <PopoverContent
+          align="end"
+          className="space-y-4"
+          aria-label="Export options"
+        >
           <ExportOptionsForm />
           <ExportButton className="w-full rounded-md" />
           <OriginalSection />
@@ -243,7 +247,11 @@ export function ExportMenu({ compact = false }: { compact?: boolean }) {
             <ChevronDown aria-hidden />
           </Button>
         </PopoverTrigger>
-        <PopoverContent align="end" className="space-y-4">
+        <PopoverContent
+          align="end"
+          className="space-y-4"
+          aria-label="Export options"
+        >
           <ExportOptionsForm />
           <OriginalSection />
         </PopoverContent>

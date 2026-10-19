@@ -60,7 +60,7 @@ export function MoreMenu() {
         </Button>
       </PopoverTrigger>
       {view === "menu" ? (
-        <PopoverContent align="end" className="w-80 p-2.5">
+        <PopoverContent align="end" className="w-80 p-2.5" aria-label="More">
           <ProjectItems
             onPick={() => setOpen(false)}
             shortcuts={
@@ -100,7 +100,11 @@ export function MoreMenu() {
           <TutorialLinks onPick={() => setOpen(false)} />
         </PopoverContent>
       ) : (
-        <PopoverContent align="end" className="w-96 p-3">
+        <PopoverContent
+          align="end"
+          className="w-96 p-3"
+          aria-label="Keyboard shortcuts"
+        >
           <div className="mb-2 flex items-center gap-1">
             <Button
               variant="ghost"

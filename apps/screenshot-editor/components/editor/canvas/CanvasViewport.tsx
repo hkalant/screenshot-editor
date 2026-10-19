@@ -156,7 +156,7 @@ export function CanvasViewport({ onUpload, onSample }: Props) {
               className={cn(
                 // Auto margins centre it, and unlike centring with flex they
                 // keep all of it reachable by scrolling when it is bigger.
-                "m-auto rounded-[2px] shadow-(--sheet-shadow) outline-none focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                "m-auto rounded-[2px] shadow-(--sheet-shadow) outline-none focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid",
                 transparent && "checkerboard",
               )}
             >
