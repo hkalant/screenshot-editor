@@ -46,6 +46,7 @@ function NameForm({
   const [name, setName] = useState(request.stem);
 
   return (
+    // Above the overlay, which can mount after it.
     <Dialog.Content
       data-testid="save-name-dialog"
       onCloseAutoFocus={(event) => {
@@ -66,7 +67,7 @@ function NameForm({
           input.select();
         }
       }}
-      className="tour-pop fixed top-1/2 left-1/2 z-50 w-[min(28rem,calc(100vw-2rem))] -translate-1/2 rounded-2xl bg-background p-6 text-foreground shadow-2xl outline-none"
+      className="tour-pop fixed top-1/2 left-1/2 z-51 w-[min(28rem,calc(100vw-2rem))] -translate-1/2 rounded-2xl bg-background p-6 text-foreground shadow-2xl outline-none"
     >
       <form
         onSubmit={(event) => {
