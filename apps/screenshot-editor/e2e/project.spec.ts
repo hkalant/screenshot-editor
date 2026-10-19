@@ -10,6 +10,7 @@ import {
   stage,
   upload,
   useAutoSize,
+  confirmFileName,
 } from "./helpers/editor";
 import { expect, test, TOUR_SEEN_SCRIPT } from "./helpers/fixtures";
 import { makeSolidPng } from "./helpers/png";
@@ -58,9 +59,10 @@ test("Export both downloads the design and the original", async ({ page }) => {
   const names: string[] = [];
   page.on("download", (file) => names.push(file.suggestedFilename()));
   await page.getByRole("button", { name: "Export both" }).click();
+  await confirmFileName(page);
   await expect.poll(() => names.length).toBe(2);
   expect(names).toEqual([
-    expect.stringMatching(/^my-dashboard-\dx\.(png|jpg|webp)$/),
+    expect.stringMatching(/^My Dashboard\.(png|jpg|webp)$/),
     "my-dashboard-original.png",
   ]);
 });
@@ -83,10 +85,9 @@ test("a saved project reopens with everything still editable", async ({
   ).toBeVisible();
 
   await page.getByRole("button", { name: "More" }).click();
-  const saved = await download(page, () =>
-    page.getByRole("button", { name: /^Save project/ }).click(),
-  );
-  expect(saved.name).toBe("my-dashboard.screenshot.json");
+  await page.getByRole("button", { name: /^Save project/ }).click();
+  const saved = await download(page, () => confirmFileName(page));
+  expect(saved.name).toBe("My Dashboard.screenshot.json");
   const project = JSON.parse(saved.data.toString("utf8"));
   expect(project.format).toBe("screenshot-editor-project");
   expect(project.design.annotations).toHaveLength(1);
@@ -126,9 +127,8 @@ test("a project file picked like an image opens as a project", async ({
 }) => {
   await upload(page, makeSolidPng(1200, 750, RED));
   await page.getByRole("button", { name: "More" }).click();
-  const saved = await download(page, () =>
-    page.getByRole("button", { name: /^Save project/ }).click(),
-  );
+  await page.getByRole("button", { name: /^Save project/ }).click();
+  const saved = await download(page, () => confirmFileName(page));
   await page.keyboard.press("Escape");
   await openTab(page, "Style");
   await setSlider(page, "Padding", "Home");

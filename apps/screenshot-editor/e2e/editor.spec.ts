@@ -39,7 +39,7 @@ test("uploads a screenshot and exports it at 2x with rounded corners", async ({
   await expectDesignSize(page, 1344, 894);
 
   const first = await exportPng(page);
-  expect(first.name).toBe("fixture-2x.png");
+  expect(first.name).toBe("fixture.png");
   expect(readPngSize(first.png)).toEqual({ width: 2688, height: 1788 });
   // The image starts at (144, 144) in export pixels; with a 15px (30 export px)
   // radius, the pixel just inside its corner is cut away.
@@ -158,7 +158,7 @@ test("the sample image loads", async ({ page }) => {
   // The 2000 x 1354 sample is shown at 1600 x 1083, plus padding.
   await expectDesignSize(page, 1744, 1227);
   const { name, png } = await exportPng(page);
-  expect(name).toBe("sample-screenshot-2x.png");
+  expect(name).toBe("sample-screenshot.png");
   expect(readPngSize(png)).toEqual({ width: 3488, height: 2454 });
 });
 
@@ -186,7 +186,7 @@ test("a large screenshot is downscaled and still exports sharp", async ({
   await upload(page, makeSolidPng(4000, 2500, [0, 128, 255, 255]), "wide.png");
   await expectDesignSize(page, 1744, 1144);
   const { name, png } = await exportPng(page);
-  expect(name).toBe("wide-2x.png");
+  expect(name).toBe("wide.png");
   expect(readPngSize(png)).toEqual({ width: 3488, height: 2288 });
   const [center] = await samplePixels(page, png, [[1744, 1144]]);
   expectColor(center, "#0080ff", 4);

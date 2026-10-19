@@ -1,7 +1,6 @@
 import type Konva from "konva";
 import { SceneCanvas } from "konva/lib/Canvas";
 import type { Size } from "@/lib/design/layout";
-import { exportFilename } from "./filename";
 import { exportPixelSize, safePixelRatio } from "./limits";
 import { FORMAT_INFO, type ExportFormat } from "./options";
 
@@ -153,31 +152,6 @@ export async function renderDesignBlob(
   } finally {
     releaseCanvas(canvas);
   }
-}
-
-/** Renders, encodes and downloads the design. Returns the file name. */
-export async function exportDesign(
-  target: RenderTarget,
-  options: { format: ExportFormat; quality: number; scale: number },
-  sourceName: string | null,
-): Promise<{ filename: string; plan: ExportPlan }> {
-  const { blob, plan } = await renderDesignBlob(target, options);
-  // A browser that can't encode the format writes PNG instead; name it so.
-  const written =
-    Object.values(FORMAT_INFO).find((info) => info.mime === blob.type) ??
-    FORMAT_INFO[options.format];
-  // A capped export says the scale it really has, such as "1.02x".
-  const scale = plan.capped
-    ? Math.floor(plan.ratio * 100) / 100
-    : options.scale;
-  const filename = exportFilename(
-    sourceName,
-    scale,
-    new Date(),
-    written.extension,
-  );
-  downloadBlob(blob, filename);
-  return { filename, plan };
 }
 
 const encodable = new Map<string, boolean>();

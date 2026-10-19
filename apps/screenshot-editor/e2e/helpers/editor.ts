@@ -43,11 +43,23 @@ export async function upload(
 export const exportButton = (page: Page) =>
   page.getByRole("button", { name: /^Export (PNG|JPEG|WebP) \d×$/ });
 
-/** Clicks the export button and returns the downloaded file. */
-export async function exportImage(page: Page) {
+/**
+ * Answers the editor's file name dialog: keeps the suggested name, or types
+ * `name`, then saves.
+ */
+export async function confirmFileName(page: Page, name?: string) {
+  const dialog = page.getByTestId("save-name-dialog");
+  await expect(dialog).toBeVisible();
+  if (name !== undefined) await dialog.getByLabel("File name").fill(name);
+  await dialog.getByRole("button", { name: /^(Save|Export)$/ }).click();
+}
+
+/** Clicks the export button, keeps the suggested name and returns the downloaded file. */
+export async function exportImage(page: Page, name?: string) {
+  await exportButton(page).click();
   const [download] = await Promise.all([
     page.waitForEvent("download"),
-    exportButton(page).click(),
+    confirmFileName(page, name),
   ]);
   const file = await download.path();
   return { name: download.suggestedFilename(), data: await readFile(file) };

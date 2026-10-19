@@ -4,13 +4,16 @@ import { selectActiveImage, useEditorStore } from "@/lib/store/editor";
 import {
   canCopyImages,
   copyPngToClipboard,
+  canEncode,
   downloadBlob,
-  exportDesign,
   nextPaint,
+  planExport,
   renderDesignBlob,
   type RenderTarget,
 } from "./exportImage";
-import { originalFilename } from "./filename";
+import { originalFilename, suggestedStem } from "./filename";
+import { FORMAT_INFO } from "./options";
+import { chooseSaveTarget, rememberedStem, rememberStem } from "./saveFile";
 
 // Export and copy are started from the top bar, the mobile bar and keyboard
 // shortcuts, so the stage registers itself here instead of being passed around.
@@ -45,7 +48,8 @@ export function onCopied(listener: () => void): () => void {
 }
 
 /** The stage and design size as they are right now, or null if there's nothing to render. */
-function currentTarget(): (RenderTarget & { sourceName: string }) | null {
+function currentTarget():
+  (RenderTarget & { sourceName: string; imageId: string }) | null {
   const state = useEditorStore.getState();
   const image = selectActiveImage(state);
   if (state.loading || state.restoring || !image || !stageTarget) return null;
@@ -53,6 +57,7 @@ function currentTarget(): (RenderTarget & { sourceName: string }) | null {
     ...stageTarget,
     size: computeLayout(image, state.design).canvas,
     sourceName: image.name,
+    imageId: image.id,
   };
 }
 
@@ -64,27 +69,47 @@ const fontsReady = () =>
 let exporting = false;
 
 /**
- * Exports with the current options. Ignored while an export runs or an image
- * loads. True if the file was written.
+ * Asks for a file name, then exports with the current options. Call it
+ * straight from the click or key press, for the system Save dialog. Ignored
+ * while an export runs or an image loads. True if the file was written.
  */
 export async function runExport(): Promise<boolean> {
   const initial = useEditorStore.getState();
-  if (exporting || !currentTarget()) return false;
+  const chosen = currentTarget();
+  if (exporting || !chosen) return false;
   exporting = true;
-  initial.setExporting(true);
   try {
+    const options = initial.exportOptions;
+    // A browser that can't encode the format writes PNG instead; name it so.
+    const requested = FORMAT_INFO[options.format];
+    const format = canEncode(requested.mime) ? options.format : "png";
+    const info = FORMAT_INFO[format];
+    const { pixels } = planExport(chosen.size, options.scale);
+    const save = await chooseSaveTarget({
+      title: "Export image",
+      action: "Export",
+      description: `${info.label} at ${options.scale}×, ${pixels.width} × ${pixels.height}.`,
+      stem: rememberedStem(chosen.imageId) ?? suggestedStem(chosen.sourceName),
+      extension: `.${info.extension}`,
+      mime: info.mime,
+      typeLabel: `${info.label} image`,
+      alsoStrip: [".png", ".jpg", ".jpeg", ".webp"],
+    });
+    if (!save) return false;
+    rememberStem(chosen.imageId, save.stem);
+    useEditorStore.getState().setExporting(true);
     // Let the disabled button paint, and frame text use the real font.
     await nextPaint();
     await fontsReady();
-    // Read everything after the waits, so the size, the file name and the
-    // drawn canvas all describe the same design.
+    // Read the design after the waits, so the size and the drawn canvas
+    // describe the same moment.
     const target = currentTarget();
     if (!target) return false;
-    await exportDesign(
-      target,
-      useEditorStore.getState().exportOptions,
-      target.sourceName,
-    );
+    const { blob } = await renderDesignBlob(target, {
+      ...useEditorStore.getState().exportOptions,
+      format,
+    });
+    await save.write(blob);
     return true;
   } catch {
     useEditorStore.getState().showError(EXPORT_FAILED);

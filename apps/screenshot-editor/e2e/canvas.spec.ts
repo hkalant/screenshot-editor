@@ -107,6 +107,9 @@ test("the export button keeps focus while it exports", async ({ page }) => {
   await expect(button).toBeEnabled();
   await button.focus();
   await expect(button).toBeFocused();
+  await page.keyboard.press("Enter");
+  // Enter in the name dialog exports; focus then goes back to the button.
+  await expect(page.getByLabel("File name")).toBeFocused();
   const [download] = await Promise.all([
     page.waitForEvent("download"),
     page.keyboard.press("Enter"),
@@ -307,7 +310,7 @@ test("exports JPEG and WebP at other scales and remembers the choice", async ({
   await expect(exportButton(page)).toHaveText("Export JPEG 1×");
 
   const jpeg = await exportImage(page);
-  expect(jpeg.name).toBe("fixture-1x.jpg");
+  expect(jpeg.name).toBe("fixture.jpg");
   expect(readJpegSize(jpeg.data)).toEqual({ width: 1344, height: 894 });
 
   const webpSupported = await page.evaluate(() =>
@@ -326,7 +329,7 @@ test("exports JPEG and WebP at other scales and remembers the choice", async ({
   await page.getByRole("radio", { name: "1×" }).click();
   await page.keyboard.press("Escape");
   const webpFile = await exportImage(page);
-  expect(webpFile.name).toBe("fixture-1x.webp");
+  expect(webpFile.name).toBe("fixture.webp");
   expect(isWebp(webpFile.data)).toBe(true);
   expect(await imageSize(page, webpFile.data)).toEqual({
     width: 1344,

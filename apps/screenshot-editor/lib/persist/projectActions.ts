@@ -1,5 +1,9 @@
-import { downloadBlob } from "@/lib/export/exportImage";
-import { projectFilename } from "@/lib/export/filename";
+import { suggestedStem } from "@/lib/export/filename";
+import {
+  chooseSaveTarget,
+  rememberedStem,
+  rememberStem,
+} from "@/lib/export/saveFile";
 import { loadImageFromBlob } from "@/lib/image/load";
 import { selectActiveImage, useEditorStore } from "@/lib/store/editor";
 import { PROJECT_EXTENSION } from "@/lib/export/filename";
@@ -17,16 +21,35 @@ export const PROJECT_SAVE_FAILED = "Couldn't save the project.";
 
 let saving = false;
 
-/** Downloads the design as a project file, to reopen and keep editing later. */
+/**
+ * Asks for a file name, then saves the design as a project file, to reopen
+ * and keep editing later. Call it straight from the click or key press, for
+ * the system Save dialog.
+ */
 export async function saveProject(): Promise<void> {
   const state = useEditorStore.getState();
   const image = selectActiveImage(state);
   if (saving || !image || state.loading || state.restoring) return;
   saving = true;
   try {
-    const text = await serializeProject(state.design, state.images);
-    const blob = new Blob([text], { type: "application/json" });
-    downloadBlob(blob, projectFilename(image.name));
+    const save = await chooseSaveTarget({
+      title: "Save project",
+      action: "Save",
+      description:
+        "Save your work as a project file so you can open it later and keep editing every annotation.",
+      stem: rememberedStem(image.id) ?? suggestedStem(image.name),
+      extension: PROJECT_EXTENSION,
+      mime: "application/json",
+      typeLabel: "Screenshot Editor project",
+      pickerExtension: ".json",
+      alsoStrip: [".json"],
+    });
+    if (!save) return;
+    rememberStem(image.id, save.stem);
+    // The design as it is now, after the dialog.
+    const now = useEditorStore.getState();
+    const text = await serializeProject(now.design, now.images);
+    await save.write(new Blob([text], { type: "application/json" }));
   } catch {
     useEditorStore.getState().showError(PROJECT_SAVE_FAILED);
   } finally {

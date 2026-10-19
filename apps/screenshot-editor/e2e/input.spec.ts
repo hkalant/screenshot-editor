@@ -1,6 +1,10 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "./helpers/fixtures";
-import { expectEmptyState, useAutoSize } from "./helpers/editor";
+import {
+  expectEmptyState,
+  useAutoSize,
+  confirmFileName,
+} from "./helpers/editor";
 import { makeSolidPng } from "./helpers/png";
 
 // Synthetic clipboard and drag events are only dependable in Chromium.
@@ -41,13 +45,14 @@ test("pasting a screenshot adds it", async ({ page }) => {
   await expect(stage).toHaveAttribute("data-width", "1744");
   await expect(stage).toHaveAttribute("data-height", "1144");
 
+  await page.getByRole("button", { name: "Export PNG 2×" }).click();
   const [download] = await Promise.all([
     page.waitForEvent("download"),
-    page.getByRole("button", { name: "Export PNG 2×" }).click(),
+    confirmFileName(page),
   ]);
-  // Pasted images are called "image.png", so the export gets a timestamped name.
+  // Pasted images are called "image.png", so the export gets a dated name.
   expect(download.suggestedFilename()).toMatch(
-    /^screenshot-\d{8}-\d{6}-2x\.png$/,
+    /^Screenshot \d{4}-\d{2}-\d{2}\.png$/,
   );
 });
 
