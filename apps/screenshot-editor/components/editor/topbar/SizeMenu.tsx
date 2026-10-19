@@ -34,7 +34,7 @@ export function canvasLabel(canvas: CanvasSpec): string {
 }
 
 const itemClass =
-  "flex w-full items-center gap-3 rounded-md px-2.5 py-2 text-left text-sm outline-none hover:bg-accent focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring data-[state=on]:bg-accent data-[state=on]:font-medium";
+  "flex w-full items-center gap-3 rounded-md px-2.5 py-2 text-left text-sm outline-none hover:bg-accent focus-visible:outline-3 focus-visible:outline-solid focus-visible:outline-offset-2 focus-visible:outline-ring data-[state=on]:bg-accent data-[state=on]:font-medium";
 
 const dimensions = ({ width, height }: Size) => `${width} × ${height}`;
 
@@ -192,7 +192,7 @@ function CustomSizeFields({
         onKeyDown={(event) => {
           if (event.key === "Enter") commit(name);
         }}
-        className="h-9 w-full min-w-0 rounded-full border border-input bg-background/70 px-2 text-sm tabular-nums outline-none focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        className="h-9 w-full min-w-0 rounded-full border border-input bg-background/70 px-2 text-sm tabular-nums outline-none focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid"
       />
     </label>
   );
@@ -208,7 +208,7 @@ function CustomSizeFields({
           title="Lock aspect ratio"
           onClick={() => onLockedChange(!locked, size)}
           className={cn(
-            "flex size-9 shrink-0 items-center justify-center rounded-full border text-muted-foreground outline-none hover:bg-accent focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring",
+            "flex size-9 shrink-0 items-center justify-center rounded-full border text-muted-foreground outline-none hover:bg-accent focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid",
             locked && "bg-accent text-foreground",
           )}
         >
@@ -237,20 +237,25 @@ export function SizeMenu() {
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger
-        aria-label={`Canvas size: ${label}${size ? `, ${dimensions(size)}` : ""}`}
-        className="flex h-8 shrink-0 items-center gap-2 rounded-full px-3 text-sm whitespace-nowrap outline-none hover:bg-accent focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring data-[state=open]:bg-accent"
-      >
+      <PopoverTrigger className="flex h-8 shrink-0 items-center gap-2 rounded-full px-3 text-sm whitespace-nowrap outline-none hover:bg-accent focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid data-[state=open]:bg-accent">
         <Maximize2 className="size-4 text-muted-foreground" aria-hidden />
+        {/* The name read out starts with the visible text's purpose and
+            keeps the visible text whole (WCAG 2.5.3). */}
+        <span className="sr-only">Canvas size: </span>
         <span className="max-w-36 truncate">{label}</span>
         {size && (
-          <span className="hidden text-xs text-muted-foreground tabular-nums xl:inline">
+          <span className="sr-only text-xs text-muted-foreground tabular-nums xl:not-sr-only">
+            {" "}
             {dimensions(size)}
           </span>
         )}
         <ChevronDown className="size-3.5 text-muted-foreground" aria-hidden />
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-80 p-2.5">
+      <PopoverContent
+        align="start"
+        className="w-80 p-2.5"
+        aria-label="Choose canvas size"
+      >
         <SizeOptions onPick={() => setOpen(false)} />
       </PopoverContent>
     </Popover>

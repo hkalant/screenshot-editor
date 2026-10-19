@@ -23,7 +23,7 @@ const defaults = defaultShotStyle();
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className="space-y-5">
-      <h3 className="text-sm font-semibold text-muted-foreground">{title}</h3>
+      <h2 className="text-sm font-semibold text-muted-foreground">{title}</h2>
       {children}
     </div>
   );

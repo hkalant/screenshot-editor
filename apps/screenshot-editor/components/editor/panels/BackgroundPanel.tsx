@@ -292,12 +292,12 @@ function EffectsControls({ fx }: { fx: BackgroundFx }) {
   const setBlur = useEditorStore((state) => state.setBlur);
   return (
     <section aria-labelledby={headingId} className="space-y-5 border-t pt-5">
-      <h3
+      <h2
         id={headingId}
         className="text-sm font-semibold text-muted-foreground"
       >
         Effects
-      </h3>
+      </h2>
       <LabeledSlider
         label="Blur"
         value={fx.blur}

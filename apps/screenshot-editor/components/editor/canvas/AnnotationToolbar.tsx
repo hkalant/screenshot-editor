@@ -46,7 +46,7 @@ import {
 import { Slider } from "@/components/ui/slider";
 
 const buttonClass =
-  "flex size-8 shrink-0 items-center justify-center rounded-full text-foreground outline-none transition-colors hover:bg-accent focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-40 aria-pressed:bg-(--tool-active) aria-pressed:shadow-[inset_0_0_0_1px_var(--tool-active-edge)] [&_svg]:size-4";
+  "flex size-8 shrink-0 items-center justify-center rounded-full text-foreground outline-none transition-colors hover:bg-accent focus-visible:outline-3 focus-visible:outline-solid focus-visible:outline-offset-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-40 aria-pressed:bg-(--tool-active) aria-pressed:shadow-[inset_0_0_0_1px_var(--tool-active-edge)] [&_svg]:size-4";
 
 function ToolButton({
   label,
@@ -186,7 +186,7 @@ function StepNumberField({ step }: { step: StepAnnotation }) {
         onKeyDown={(event) => {
           if (event.key === "Enter") event.currentTarget.blur();
         }}
-        className="h-7 w-11 rounded-full border border-input bg-background/70 px-2 text-center text-sm text-foreground tabular-nums outline-none focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        className="h-7 w-11 rounded-full border border-input bg-background/70 px-2 text-center text-sm text-foreground tabular-nums outline-none focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid"
       />
     </label>
   );
@@ -250,7 +250,7 @@ function ToolMenu<T extends AnnotationTool>({
               aria-label={chooseLabel}
               title={chooseLabel}
               aria-haspopup="menu"
-              className="-ml-1 flex h-8 w-4 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring [&_svg]:size-3"
+              className="flex h-8 w-6 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid [&_svg]:size-3"
             >
               <ChevronDown aria-hidden />
             </button>
@@ -656,7 +656,7 @@ export function AnnotationToolbar() {
                   aria-label={ANNOTATION_COLOR_NAMES[swatch]}
                   title={ANNOTATION_COLOR_NAMES[swatch]}
                   onClick={() => setColor(swatch)}
-                  className="flex size-7 shrink-0 items-center justify-center rounded-full outline-none focus-visible:outline-3 focus-visible:outline-offset-1 focus-visible:outline-ring"
+                  className="flex size-7 shrink-0 items-center justify-center rounded-full outline-none focus-visible:outline-3 focus-visible:outline-offset-1 focus-visible:outline-ring focus-visible:outline-solid"
                 >
                   <span
                     className={cn(

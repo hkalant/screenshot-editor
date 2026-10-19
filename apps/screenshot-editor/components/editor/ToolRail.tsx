@@ -33,7 +33,7 @@ export function ToolRail() {
             id={id}
             value={panel.id}
             onChange={(event) => setActivePanel(event.target.value as PanelId)}
-            className="h-10 w-full appearance-none rounded-md border border-input bg-background/50 pr-10 pl-10 text-sm font-semibold text-foreground outline-none focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            className="h-10 w-full appearance-none rounded-md border border-input bg-background/50 pr-10 pl-10 text-sm font-semibold text-foreground outline-none focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid"
           >
             {PANELS.map((entry) => (
               <option key={entry.id} value={entry.id}>

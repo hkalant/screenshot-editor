@@ -51,7 +51,7 @@ function TextField({
         onChange={(event) => onChange(event.target.value)}
         // Typing merges into one undo step; leaving the field ends it.
         onBlur={sealHistory}
-        className="h-9 w-full min-w-0 rounded-md border border-input bg-background/70 px-3 text-sm outline-none placeholder:text-muted-foreground focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        className="h-9 w-full min-w-0 rounded-md border border-input bg-background/70 px-3 text-sm outline-none placeholder:text-muted-foreground focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid"
       />
     </div>
   );
@@ -79,7 +79,7 @@ export function FrameOptions() {
           <ToggleGroup.Item
             key={kind}
             value={kind}
-            className="group flex min-w-0 flex-col items-center gap-1.5 rounded-md p-1 text-xs font-medium text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring data-[state=on]:text-foreground"
+            className="group flex min-w-0 flex-col items-center gap-1.5 rounded-md p-1 text-xs font-medium text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid data-[state=on]:text-foreground"
           >
             <FramePreview
               kind={kind}

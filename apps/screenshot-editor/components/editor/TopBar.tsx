@@ -25,12 +25,12 @@ export function TopBar({ onReplace }: Props) {
       data-pane="bar"
       className="relative z-20 flex h-14 shrink-0 items-center gap-2 rounded-xl glass px-3 lg:gap-3 lg:px-4"
     >
-      <div className="flex shrink-0 items-center gap-3 font-semibold whitespace-nowrap">
+      <h1 className="flex shrink-0 items-center gap-3 font-semibold whitespace-nowrap">
         {/* The logo only where the bar has room for it. */}
         <BrookesLogo className="hidden h-8 w-auto text-(--obu-charcoal) lg:block dark:text-foreground" />
         <span className="hidden h-6 w-px bg-border lg:block" aria-hidden />
         Screenshot Editor
-      </div>
+      </h1>
       <div
         className="mx-1 h-6 w-px bg-border min-[1360px]:hidden"
         aria-hidden

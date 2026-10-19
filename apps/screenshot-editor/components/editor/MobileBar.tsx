@@ -22,9 +22,9 @@ export function MobileBar({ onReplace }: Props) {
       className="relative z-20 flex h-13 shrink-0 items-center gap-1 border-b bg-background px-2 [&_[data-slot=button]]:min-h-10 [&_[data-slot=button]]:min-w-10"
     >
       {/* Shortened before any button is pushed off a narrow screen. */}
-      <div className="flex h-10 min-w-0 items-center px-2 text-sm font-semibold whitespace-nowrap">
+      <h1 className="flex h-10 min-w-0 items-center px-2 text-sm font-semibold whitespace-nowrap">
         <span className="truncate">Screenshot Editor</span>
-      </div>
+      </h1>
       <HistoryButtons />
       <div className="flex-1" />
       {image && (

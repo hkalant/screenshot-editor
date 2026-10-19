@@ -38,7 +38,7 @@ const BookIcon = () => (
 );
 
 export const itemClass =
-  "flex w-full items-center gap-3 rounded-md px-2.5 py-2 text-left text-sm outline-none hover:bg-accent focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring";
+  "flex w-full items-center gap-3 rounded-md px-2.5 py-2 text-left text-sm outline-none hover:bg-accent focus-visible:outline-3 focus-visible:outline-solid focus-visible:outline-offset-2 focus-visible:outline-ring";
 
 function TutorialLink({
   href,
@@ -113,7 +113,7 @@ export function HelpMenu() {
           <Ellipsis aria-hidden />
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-64 p-2.5">
+      <PopoverContent align="end" className="w-64 p-2.5" aria-label="More">
         <ProjectItems onPick={close} shortcuts={null} />
         <div className="my-1 h-px bg-border" aria-hidden />
         <TutorialLinks onPick={close} />
