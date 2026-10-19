@@ -7,6 +7,7 @@ import { hexToRgba } from "@/lib/design/colors";
 import type { DesignLayout } from "@/lib/design/layout";
 import type { ShadowSpec, ShotLayer } from "@/lib/design/schema";
 import type { LoadedImage } from "@/lib/image/load";
+import { isOpaque } from "@/lib/image/opaque";
 import {
   framePalette,
   hasShadow,
@@ -28,6 +29,11 @@ type Props = {
   /** On-screen zoom of the stage (for screen-pixel snapping distances). */
   zoom: number;
 };
+
+const insetRadii = (radii: number | number[], by: number) =>
+  Array.isArray(radii)
+    ? radii.map((radius) => Math.max(0, radius - by))
+    : Math.max(0, radii - by);
 
 /** Konva shadow props. Shadows are canvas px: never multiplied by the shot's scale. */
 function shadowProps(shadow: ShadowSpec) {
@@ -164,7 +170,27 @@ export function ShotNode({ image, shot, layout, zoom }: Props) {
     // corners and a transparent PNG's alpha. Don't clip it with a Group (that
     // removes the shadow) and don't turn off perfectDrawEnabled (that skips
     // the buffer). konva is pinned for this reason.
-    body = imageNode(true);
+    //
+    // An opaque screenshot casts it from a rounded rectangle behind instead:
+    // after the shot moves, Safari stops blurring a buffer's shadow on screen.
+    body = isOpaque(image.source, image.blob.type) ? (
+      <>
+        {/* A pixel inside the image, so no edge shows past its smoothing. */}
+        <Rect
+          x={box.image.x + 1}
+          y={box.image.y + 1}
+          width={Math.max(0, box.image.width - 2)}
+          height={Math.max(0, box.image.height - 2)}
+          cornerRadius={insetRadii(box.imageRadii, 1)}
+          fill="#ffffff"
+          {...shadow}
+          listening={false}
+        />
+        {imageNode(false)}
+      </>
+    ) : (
+      imageNode(true)
+    );
   } else if (frame.kind === "glass") {
     const ring = framePalette(frame.theme);
     const hairline = insideStroke(size, box.radius, 1.5 * box.unit);

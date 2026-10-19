@@ -321,10 +321,13 @@ test("exports JPEG and WebP at other scales and remembers the choice", async ({
   );
   await page.getByRole("button", { name: "Export options" }).click();
   const webp = page.getByRole("radio", { name: "WebP" });
+  const note = page.getByTestId("webp-unavailable");
   if (!webpSupported) {
     await expect(webp).toBeDisabled();
+    await expect(note).toHaveText(/WebP isn't available in this browser/);
     return;
   }
+  await expect(note).toHaveCount(0);
   await webp.click();
   await page.getByRole("radio", { name: "1×" }).click();
   await page.keyboard.press("Escape");

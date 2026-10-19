@@ -99,3 +99,16 @@ test("keyboard focus is visible on the toolbar's buttons", async ({ page }) => {
   await expect(step).toHaveCSS("outline-style", "solid");
   await expect(step).toHaveCSS("outline-width", "3px");
 });
+
+test("the canvas shows its focus ring after a key press, not a click", async ({
+  page,
+}) => {
+  await page.goto("./");
+  await loadSample(page);
+  const canvas = page.locator('[aria-label^="Design canvas"]');
+  await stage(page).click({ position: { x: 10, y: 10 } });
+  await expect(canvas).toBeFocused();
+  await expect(canvas).toHaveCSS("outline-style", "none");
+  await page.keyboard.press("ArrowRight");
+  await expect(canvas).toHaveCSS("outline-style", "solid");
+});

@@ -148,6 +148,19 @@ export function CanvasViewport({ onUpload, onSample }: Props) {
             <div
               {...{ [CANVAS_FOCUS_ATTRIBUTE]: "" }}
               tabIndex={0}
+              // The ring shows unless the last input was a click: browsers
+              // differ on :focus-visible for a focusable div (Safari shows it
+              // on click, Firefox not after a key press that follows one).
+              onPointerDownCapture={(event) =>
+                event.currentTarget.setAttribute("data-pointer", "")
+              }
+              onKeyDownCapture={(event) =>
+                event.currentTarget.removeAttribute("data-pointer")
+              }
+              onBlur={(event) => {
+                if (event.target === event.currentTarget)
+                  event.currentTarget.removeAttribute("data-pointer");
+              }}
               aria-label={
                 layout.draggable
                   ? "Design canvas. Drag the screenshot or use the arrow keys to move it."
@@ -156,7 +169,7 @@ export function CanvasViewport({ onUpload, onSample }: Props) {
               className={cn(
                 // Auto margins centre it, and unlike centring with flex they
                 // keep all of it reachable by scrolling when it is bigger.
-                "m-auto rounded-[2px] shadow-(--sheet-shadow) outline-none focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid",
+                "m-auto rounded-[2px] shadow-(--sheet-shadow) outline-none focus:outline-3 focus:outline-offset-2 focus:outline-ring focus:outline-solid data-pointer:focus:outline-none",
                 transparent && "checkerboard",
               )}
             >

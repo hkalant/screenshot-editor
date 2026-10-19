@@ -91,6 +91,17 @@ function ExportOptionsForm() {
         options={formatOptions()}
         onChange={(format: ExportFormat) => setExportOptions({ format })}
       />
+      {!canEncode(FORMAT_INFO.webp.mime) && (
+        // Safari can't create WebP files; say so rather than leave a
+        // greyed-out button with only a hover tooltip.
+        <p
+          className="-mt-2 text-xs text-muted-foreground"
+          data-testid="webp-unavailable"
+        >
+          WebP isn&apos;t available in this browser. Use PNG or JPEG, or another
+          browser.
+        </p>
+      )}
       {lossy && (
         <LabeledSlider
           label="Quality"
