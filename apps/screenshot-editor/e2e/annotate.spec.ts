@@ -833,3 +833,26 @@ test("the drawing cursor comes back when the annotation under it is removed", as
   await page.mouse.move(over.x + 20, over.y + 20, { steps: 3 });
   await expect.poll(cursor).toBe("crosshair");
 });
+
+test("the toolbar stays enlarged while one of its menus is open", async ({
+  page,
+}) => {
+  await upload(page, makeSolidPng(1200, 750, RED));
+  const bar = page.getByRole("toolbar", { name: "Annotate" });
+  const scale = () =>
+    bar.evaluate((element) => getComputedStyle(element).scale);
+  await bar.getByRole("button", { name: "Choose shape" }).click();
+  await expect(page.getByRole("menu", { name: "Shapes" })).toBeVisible();
+  // The pointer leaves the toolbar, as it does on its way to the menu.
+  await page.mouse.move(5, 5);
+  await expect.poll(scale).toBe("1.04");
+  // Picking a shape closes the menu; the pointer is then still away.
+  await page
+    .getByRole("menu", { name: "Shapes" })
+    .getByRole("menuitemradio")
+    .first()
+    .click();
+  await page.mouse.move(5, 5);
+  await expect(page.getByRole("menu", { name: "Shapes" })).toBeHidden();
+  await expect.poll(scale).not.toBe("1.04");
+});

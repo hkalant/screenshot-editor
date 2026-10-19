@@ -5,6 +5,7 @@ import {
   expectEmptyState,
   RED,
   upload,
+  confirmFileName,
 } from "./helpers/editor";
 import { expect, test } from "./helpers/fixtures";
 import { makeSolidPng, readPngSize } from "./helpers/png";
@@ -112,9 +113,10 @@ test.describe("on a phone", () => {
     expect(overflow).toBeLessThanOrEqual(0);
 
     await page.getByRole("button", { name: "Export", exact: true }).click();
+    await page.getByRole("button", { name: "Export PNG 2×" }).click();
     const [download] = await Promise.all([
       page.waitForEvent("download"),
-      page.getByRole("button", { name: "Export PNG 2×" }).click(),
+      confirmFileName(page),
     ]);
     expect(readPngSize(await readFile(await download.path()))).toEqual({
       width: 2160,

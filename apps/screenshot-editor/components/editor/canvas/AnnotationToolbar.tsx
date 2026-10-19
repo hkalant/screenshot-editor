@@ -536,7 +536,7 @@ export function AnnotationToolbar() {
       // A floating dock: more room and a deeper shadow than the other panes.
       // Its width follows its tools' options smoothly, growing from the
       // centre because the dock is centred.
-      className="max-w-full [scrollbar-width:none] overflow-x-auto overflow-y-hidden rounded-full glass p-1.5 transition-[width,scale] duration-300 ease-[cubic-bezier(0.3,0.9,0.3,1)] [--glass-drop:0_12px_36px_var(--glass-shadow),0_2px_8px_var(--glass-shadow)] hover:scale-[1.04] has-focus-visible:scale-[1.04] motion-reduce:transition-none"
+      className="max-w-full [scrollbar-width:none] overflow-x-auto overflow-y-hidden rounded-full glass p-1.5 transition-[width,scale] duration-300 ease-[cubic-bezier(0.3,0.9,0.3,1)] [--glass-drop:0_12px_36px_var(--glass-shadow),0_2px_8px_var(--glass-shadow)] hover:scale-[1.04] has-focus-visible:scale-[1.04] has-aria-expanded:scale-[1.04] motion-reduce:transition-none"
     >
       <div ref={contentRef} className="flex w-max items-center gap-1">
         <ToolButton

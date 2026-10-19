@@ -16,6 +16,12 @@ const WCAG_TAGS = [
 ];
 
 async function expectNoViolations(page: Page) {
+  // Text fading in reads as low contrast, so wait for it to settle.
+  await page.waitForFunction(() =>
+    document
+      .getAnimations()
+      .every((animation) => animation.playState !== "running"),
+  );
   const { violations } = await new AxeBuilder({ page })
     .withTags(WCAG_TAGS)
     .analyze();

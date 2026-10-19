@@ -31,16 +31,6 @@ function baseName(sourceName: string | null, now: Date): string {
     : `screenshot-${timestamp(now)}`;
 }
 
-/** "My Dashboard.png" at 2x -> "my-dashboard-2x.png"; a pasted "image.png" -> "screenshot-YYYYMMDD-HHmmss-2x.png". */
-export function exportFilename(
-  sourceName: string | null,
-  scale: number,
-  now = new Date(),
-  extension = "png",
-): string {
-  return `${baseName(sourceName, now)}-${scale}x.${extension}`;
-}
-
 const TYPE_EXTENSIONS: Record<string, string> = {
   "image/png": "png",
   "image/x-png": "png",
@@ -68,12 +58,48 @@ export function originalFilename(
   return `${baseName(sourceName, now)}-original.${extension}`;
 }
 
-/** "My Dashboard.png" -> "my-dashboard.screenshot.json". */
-export function projectFilename(
+// Characters Windows, macOS or Linux won't take in a file name, and control
+// characters.
+const FORBIDDEN = /[\\/:*?"<>|\u0000-\u001f\u007f]+/g;
+
+const MAX_STEM = 120;
+
+/**
+ * The name offered when saving or exporting, without its extension: the
+ * screenshot's own name ("My Dashboard.png" -> "My Dashboard"), or a dated
+ * one for pasted or unnamed images ("Screenshot 2026-10-19").
+ */
+export function suggestedStem(
   sourceName: string | null,
   now = new Date(),
 ): string {
-  return `${baseName(sourceName, now)}${PROJECT_EXTENSION}`;
+  const stem = cleanStem((sourceName ?? "").replace(/\.[^./]*$/, ""), []);
+  const generic = GENERIC_NAMES.has(stem.toLowerCase().replace(/\s+/g, "-"));
+  if (stem && !generic) return stem;
+  const date = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  return `Screenshot ${date}`;
+}
+
+/**
+ * A typed name made safe to save: characters file systems refuse go, as do
+ * leading and trailing spaces and dots, and any of `extensions` typed at the
+ * end ("Onboarding.screenshot.json" -> "Onboarding"). Empty if nothing is left.
+ */
+export function cleanStem(
+  input: string,
+  extensions: readonly string[],
+): string {
+  let stem = input.replace(FORBIDDEN, " ").replace(/\s+/g, " ").trim();
+  for (let changed = true; changed;) {
+    changed = false;
+    for (const extension of extensions) {
+      if (stem.toLowerCase().endsWith(extension.toLowerCase())) {
+        stem = stem.slice(0, -extension.length).trimEnd();
+        changed = true;
+      }
+    }
+  }
+  return stem.slice(0, MAX_STEM).replace(/^[\s.]+|[\s.]+$/g, "");
 }
 
 /** Project files end in this, so they read as projects rather than data. */
