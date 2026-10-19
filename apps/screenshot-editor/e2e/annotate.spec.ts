@@ -848,5 +848,7 @@ test("the toolbar stays enlarged while one of its menus is open", async ({
   await expect.poll(scale).toBe("1.04");
   await page.keyboard.press("Escape");
   await expect(page.getByRole("menu", { name: "Shapes" })).toBeHidden();
+  // Esc puts focus back on the arrow, which keeps the toolbar enlarged too.
+  await page.evaluate(() => (document.activeElement as HTMLElement).blur());
   await expect.poll(scale).not.toBe("1.04");
 });
