@@ -349,21 +349,18 @@ export function Tour({ enabled }: { enabled: boolean }) {
   }, [enabled, restoring, open]);
 
   // Leaving the desktop layout ends it: the steps point at desktop controls.
-  // The welcome alone is only hidden, not counted as seen, so a window
-  // narrowed for a moment (or a browser settling its size on load) brings
-  // it back when wide again.
+  // The welcome alone stays open, only not shown, so a window narrowed for
+  // a moment still has it when wide again.
   useEffect(() => {
-    if (enabled) return;
     const { step: current, end } = useTourStore.getState();
-    if (current === 0) useTourStore.setState({ step: null });
-    else if (current !== null) end();
+    if (!enabled && current !== null && current !== 0) end();
   }, [enabled]);
 
   // Esc ends it, the arrow keys move between steps, and Tab stays in the
   // tour. Caught first and kept from the editor, whose shortcuts would act
   // on the page underneath.
   useEffect(() => {
-    if (step === null) return;
+    if (step === null || !enabled) return;
     const onKey = (event: KeyboardEvent) => {
       event.stopPropagation();
       const { go, end } = useTourStore.getState();
@@ -378,7 +375,7 @@ export function Tour({ enabled }: { enabled: boolean }) {
     };
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
-  }, [step]);
+  }, [step, enabled]);
 
   if (step === null || !enabled) return null;
   return step === 0 ? <Welcome /> : <StepCard key={step} index={step} />;

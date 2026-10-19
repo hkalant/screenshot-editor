@@ -116,6 +116,8 @@ test("narrowing the window for a moment doesn't lose the welcome", async ({
   const size = page.viewportSize()!;
   await page.setViewportSize({ width: 700, height: size.height });
   await expect(welcome(page)).toBeHidden();
+  // Keys reach the editor while it's hidden.
+  await page.keyboard.press("Escape");
   await page.setViewportSize(size);
   await expect(welcome(page)).toBeVisible();
 });
