@@ -349,9 +349,14 @@ export function Tour({ enabled }: { enabled: boolean }) {
   }, [enabled, restoring, open]);
 
   // Leaving the desktop layout ends it: the steps point at desktop controls.
+  // The welcome alone is only hidden, not counted as seen, so a window
+  // narrowed for a moment (or a browser settling its size on load) brings
+  // it back when wide again.
   useEffect(() => {
-    if (!enabled && useTourStore.getState().step !== null)
-      useTourStore.getState().end();
+    if (enabled) return;
+    const { step: current, end } = useTourStore.getState();
+    if (current === 0) useTourStore.setState({ step: null });
+    else if (current !== null) end();
   }, [enabled]);
 
   // Esc ends it, the arrow keys move between steps, and Tab stays in the
