@@ -42,7 +42,11 @@ test.describe("welcome tour", () => {
 
   test("has no detectable WCAG violations", async ({ page }) => {
     await page.goto("./");
-    await expect(page.getByTestId("tour-welcome")).toBeVisible();
+    // Often the first test a browser runs, so the app may still be loading
+    // into a cold browser (WebKit on CI has taken over 5 s).
+    await expect(page.getByTestId("tour-welcome")).toBeVisible({
+      timeout: 15_000,
+    });
     await expectNoViolations(page);
   });
 });
