@@ -107,3 +107,15 @@ test("closing the page mid-tour reopens on the user's own design", async ({
   await expect(card(page)).toBeHidden();
   await expect(stage(page)).toHaveAttribute("data-width", mine ?? "");
 });
+
+test("narrowing the window for a moment doesn't lose the welcome", async ({
+  page,
+}) => {
+  await page.goto("./");
+  await expect(welcome(page)).toBeVisible();
+  const size = page.viewportSize()!;
+  await page.setViewportSize({ width: 700, height: size.height });
+  await expect(welcome(page)).toBeHidden();
+  await page.setViewportSize(size);
+  await expect(welcome(page)).toBeVisible();
+});
