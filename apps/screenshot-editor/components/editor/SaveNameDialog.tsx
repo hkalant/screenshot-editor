@@ -48,6 +48,15 @@ function NameForm({
   return (
     <Dialog.Content
       data-testid="save-name-dialog"
+      onCloseAutoFocus={(event) => {
+        // Back to what opened it, such as the Export button, which a
+        // keyboard user may press again.
+        const target = useSaveDialogStore.getState().returnFocus;
+        if (target?.isConnected) {
+          event.preventDefault();
+          target.focus();
+        }
+      }}
       onOpenAutoFocus={(event) => {
         // Focus the name, selected, so typing replaces it.
         event.preventDefault();

@@ -49,14 +49,18 @@ const savePicker = (): SaveFilePicker | undefined =>
 export const useSaveDialogStore = create<{
   request: SaveRequest | null;
   answer: ((stem: string | null) => void) | null;
-}>()(() => ({ request: null, answer: null }));
+  /** Where focus was before the dialog, to go back to after it. */
+  returnFocus: HTMLElement | null;
+}>()(() => ({ request: null, answer: null, returnFocus: null }));
 
 /** Shows the editor's name dialog. The cleaned name, or null if cancelled. */
 export function askFileName(request: SaveRequest): Promise<string | null> {
   useSaveDialogStore.getState().answer?.(null);
   return new Promise((resolve) => {
+    const active = document.activeElement;
     useSaveDialogStore.setState({
       request,
+      returnFocus: active instanceof HTMLElement ? active : null,
       answer: (stem) => {
         useSaveDialogStore.setState({ request: null, answer: null });
         resolve(stem);
