@@ -148,8 +148,9 @@ export function CanvasViewport({ onUpload, onSample }: Props) {
             <div
               {...{ [CANVAS_FOCUS_ATTRIBUTE]: "" }}
               tabIndex={0}
-              // Safari shows the focus ring when the canvas is clicked, as
-              // if from the keyboard; only show it after a key press.
+              // The ring shows unless the last input was a click: browsers
+              // differ on :focus-visible for a focusable div (Safari shows it
+              // on click, Firefox not after a key press that follows one).
               onPointerDownCapture={(event) =>
                 event.currentTarget.setAttribute("data-pointer", "")
               }
@@ -168,7 +169,7 @@ export function CanvasViewport({ onUpload, onSample }: Props) {
               className={cn(
                 // Auto margins centre it, and unlike centring with flex they
                 // keep all of it reachable by scrolling when it is bigger.
-                "m-auto rounded-[2px] shadow-(--sheet-shadow) outline-none focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid data-pointer:focus-visible:outline-none",
+                "m-auto rounded-[2px] shadow-(--sheet-shadow) outline-none focus:outline-3 focus:outline-offset-2 focus:outline-ring focus:outline-solid data-pointer:focus:outline-none",
                 transparent && "checkerboard",
               )}
             >
