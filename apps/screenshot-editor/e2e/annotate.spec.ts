@@ -846,9 +846,13 @@ test("the toolbar stays enlarged while one of its menus is open", async ({
   // The pointer leaves the toolbar, as it does on its way to the menu.
   await page.mouse.move(5, 5);
   await expect.poll(scale).toBe("1.04");
-  await page.keyboard.press("Escape");
+  // Picking a shape closes the menu; the pointer is then still away.
+  await page
+    .getByRole("menu", { name: "Shapes" })
+    .getByRole("menuitemradio")
+    .first()
+    .click();
+  await page.mouse.move(5, 5);
   await expect(page.getByRole("menu", { name: "Shapes" })).toBeHidden();
-  // Esc puts focus back on the arrow, which keeps the toolbar enlarged too.
-  await page.evaluate(() => (document.activeElement as HTMLElement).blur());
   await expect.poll(scale).not.toBe("1.04");
 });
