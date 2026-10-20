@@ -37,11 +37,13 @@ test("the theme can be switched and is remembered", async ({ page }) => {
   await expectEmptyState(page);
   const html = page.locator("html");
   await page.getByRole("button", { name: "Menu" }).click();
-  const theme = page.getByRole("radiogroup", { name: "Theme" });
-  await expect(theme.getByRole("radio", { name: "System" })).toBeChecked();
-  await theme.getByRole("radio", { name: "Light" }).click();
+  const theme = page.getByRole("button", { name: /^Switch theme/ });
+  await expect(theme).toHaveAccessibleName("Switch theme System");
+  await theme.click();
+  await expect(theme).toHaveAccessibleName("Switch theme Light");
   await expect(html).not.toHaveClass(/\bdark\b/);
-  await theme.getByRole("radio", { name: "Dark" }).click();
+  await theme.click();
+  await expect(theme).toHaveAccessibleName("Switch theme Dark");
   await expect(html).toHaveClass(/\bdark\b/);
 
   // Applied before the page renders, on every page.

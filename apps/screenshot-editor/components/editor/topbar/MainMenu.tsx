@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, Compass, ImageUp, Menu } from "lucide-react";
+import { ChevronLeft, Compass, Contrast, ImageUp, Menu } from "lucide-react";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,15 +11,10 @@ import {
 import { useTheme } from "@/lib/hooks/useTheme";
 import { selectActiveImage, useEditorStore } from "@/lib/store/editor";
 import { currentPlatform, isApplePlatform } from "@/lib/platform";
-import {
-  THEME_LABELS,
-  THEME_PREFERENCES,
-  type ThemePreference,
-} from "@/lib/theme";
+import { nextThemePreference, THEME_LABELS } from "@/lib/theme";
 import { useTourStore } from "@/lib/tour/tour";
 import { cn } from "@/lib/utils";
 import { setShortcutsHandler } from "@/lib/shortcutsCommand";
-import { Segmented } from "../controls/Segmented";
 import { itemClass, TutorialLinks } from "./HelpMenu";
 import { ProjectItems } from "./ProjectItems";
 import { KeyboardIcon, ShortcutList } from "./ShortcutList";
@@ -28,15 +23,10 @@ const subscribe = () => () => {};
 
 type View = "menu" | "shortcuts";
 
-const THEME_OPTIONS = THEME_PREFERENCES.map((value) => ({
-  value,
-  label: THEME_LABELS[value],
-}));
-
 /**
- * The menu at the start of the top bar, for everything secondary: the theme,
- * replacing the screenshot, projects, the keyboard shortcuts, the tour and
- * the tutorials.
+ * The menu at the start of the top bar, for everything secondary: projects,
+ * replacing the screenshot, the keyboard shortcuts, the tour, the tutorials
+ * and the theme.
  */
 export function MainMenu({ onReplace }: { onReplace: () => void }) {
   const { preference, setPreference } = useTheme();
@@ -82,23 +72,21 @@ export function MainMenu({ onReplace }: { onReplace: () => void }) {
       </PopoverTrigger>
       {view === "menu" ? (
         <PopoverContent align="start" className="w-80 p-2.5" aria-label="Menu">
-          <div className="space-y-2 px-2 pt-1 pb-2.5">
-            <Segmented<ThemePreference>
-              label="Theme"
-              glide
-              value={preference}
-              options={THEME_OPTIONS}
-              onChange={setPreference}
-            />
-          </div>
-          <div className="my-1 h-px bg-border" aria-hidden />
+          <ProjectItems
+            onPick={() => setOpen(false)}
+            shortcuts={
+              apple
+                ? { save: "⇧⌘S", open: "⇧⌘O" }
+                : { save: "Ctrl+Shift+S", open: "Ctrl+Shift+O" }
+            }
+          />
           {hasImage && (
             <>
               <button
                 type="button"
                 className={cn(
                   itemClass,
-                  "disabled:pointer-events-none disabled:opacity-50",
+                  "mt-0.5 disabled:pointer-events-none disabled:opacity-50",
                 )}
                 disabled={loading}
                 aria-describedby="replace-hint"
@@ -122,17 +110,8 @@ export function MainMenu({ onReplace }: { onReplace: () => void }) {
               >
                 Or paste or drop a new one onto the page.
               </p>
-              <div className="my-1 h-px bg-border" aria-hidden />
             </>
           )}
-          <ProjectItems
-            onPick={() => setOpen(false)}
-            shortcuts={
-              apple
-                ? { save: "⇧⌘S", open: "⇧⌘O" }
-                : { save: "Ctrl+Shift+S", open: "Ctrl+Shift+O" }
-            }
-          />
           <div className="my-1 h-px bg-border" aria-hidden />
           <button
             type="button"
@@ -162,6 +141,21 @@ export function MainMenu({ onReplace }: { onReplace: () => void }) {
             Take the tour
           </button>
           <TutorialLinks onPick={() => setOpen(false)} />
+          <div className="my-1 h-px bg-border" aria-hidden />
+          {/* Stays open, so the theme can be cycled through in place. */}
+          <button
+            type="button"
+            className={itemClass}
+            onClick={() => setPreference(nextThemePreference(preference))}
+          >
+            <span className="flex w-5 justify-center text-muted-foreground">
+              <Contrast className="size-4" aria-hidden />
+            </span>
+            Switch theme
+            <span className="ml-auto text-xs text-muted-foreground">
+              {THEME_LABELS[preference]}
+            </span>
+          </button>
         </PopoverContent>
       ) : (
         <PopoverContent

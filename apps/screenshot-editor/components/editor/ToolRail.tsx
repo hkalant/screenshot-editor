@@ -54,7 +54,7 @@ export function ToolRail() {
                 </Accordion.Trigger>
               </h2>
             </Accordion.Header>
-            <Accordion.Content className="space-y-5 px-5 pb-5">
+            <Accordion.Content className="space-y-5 px-5 pt-3 pb-5">
               <Component />
             </Accordion.Content>
           </Accordion.Item>
