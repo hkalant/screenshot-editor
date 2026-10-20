@@ -118,8 +118,20 @@ test("narrowing the window for a moment doesn't lose the welcome", async ({
   const size = page.viewportSize()!;
   await page.setViewportSize({ width: 700, height: size.height });
   await expect(welcome(page)).toBeHidden();
-  // Keys reach the editor while it's hidden.
+  // Keys reach the editor while it's hidden. Waits for the key to arrive:
+  // WebKit can deliver it after the next resize, when the welcome is back
+  // and would rightly close on it.
+  await page.evaluate(() =>
+    window.addEventListener(
+      "keydown",
+      (event) => {
+        if (event.key === "Escape") document.body.dataset.escaped = "";
+      },
+      { capture: true },
+    ),
+  );
   await page.keyboard.press("Escape");
+  await expect(page.locator("body")).toHaveAttribute("data-escaped");
   await page.setViewportSize(size);
   await expect(welcome(page)).toBeVisible();
 });
