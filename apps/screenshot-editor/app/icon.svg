@@ -1,6 +1,16 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="4" fill="#424a52"/>
-  <rect x="7" y="9" width="18" height="14" rx="2" fill="#ffffff"/>
-  <rect x="7" y="9" width="18" height="4" rx="2" fill="#f9c909"/>
-  <rect x="7" y="11" width="18" height="2" fill="#f9c909"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>Screenshot Editor</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#D10373"/>
+      <stop offset="1" stop-color="#F9C909"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="#424A52"/>
+  <path d="M13 27V13h14M51 37v14H37" fill="none" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="23" y="24" width="18" height="16" rx="2.5" fill="url(#bg)"/>
+  <rect x="24.5" y="28" width="15" height="10.5" rx="1" fill="#FFFFFF"/>
+  <circle cx="25.5" cy="26" r="0.8" fill="#FFFFFF"/>
+  <circle cx="28" cy="26" r="0.8" fill="#FFFFFF"/>
+  <circle cx="30.5" cy="26" r="0.8" fill="#FFFFFF"/>
 </svg>
