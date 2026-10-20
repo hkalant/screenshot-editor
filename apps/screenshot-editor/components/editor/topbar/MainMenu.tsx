@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, Compass, Menu } from "lucide-react";
+import { ChevronLeft, Compass, ImageUp, Menu } from "lucide-react";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,6 +9,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useTheme } from "@/lib/hooks/useTheme";
+import { selectActiveImage, useEditorStore } from "@/lib/store/editor";
 import { currentPlatform, isApplePlatform } from "@/lib/platform";
 import {
   THEME_LABELS,
@@ -16,6 +17,7 @@ import {
   type ThemePreference,
 } from "@/lib/theme";
 import { useTourStore } from "@/lib/tour/tour";
+import { cn } from "@/lib/utils";
 import { setShortcutsHandler } from "@/lib/shortcutsCommand";
 import { Segmented } from "../controls/Segmented";
 import { itemClass, TutorialLinks } from "./HelpMenu";
@@ -33,10 +35,13 @@ const THEME_OPTIONS = THEME_PREFERENCES.map((value) => ({
 
 /**
  * The menu at the start of the top bar, for everything secondary: the theme,
- * projects, the keyboard shortcuts, the tour and the tutorials.
+ * replacing the screenshot, projects, the keyboard shortcuts, the tour and
+ * the tutorials.
  */
-export function MainMenu() {
+export function MainMenu({ onReplace }: { onReplace: () => void }) {
   const { preference, setPreference } = useTheme();
+  const hasImage = useEditorStore((state) => !!selectActiveImage(state));
+  const loading = useEditorStore((state) => state.loading);
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<View>("menu");
   const apple = useSyncExternalStore(
@@ -87,6 +92,39 @@ export function MainMenu() {
             />
           </div>
           <div className="my-1 h-px bg-border" aria-hidden />
+          {hasImage && (
+            <>
+              <button
+                type="button"
+                className={cn(
+                  itemClass,
+                  "disabled:pointer-events-none disabled:opacity-50",
+                )}
+                disabled={loading}
+                aria-describedby="replace-hint"
+                onClick={() => {
+                  setOpen(false);
+                  onReplace();
+                }}
+              >
+                <span className="flex w-5 justify-center text-muted-foreground">
+                  <ImageUp className="size-4" aria-hidden />
+                </span>
+                Replace screenshot…
+                <kbd className="ml-auto text-xs whitespace-nowrap text-muted-foreground">
+                  {apple ? "⌘O" : "Ctrl+O"}
+                </kbd>
+              </button>
+              {/* Pasting or dropping replaces it too, which few would guess. */}
+              <p
+                id="replace-hint"
+                className="pr-2 pb-1 pl-10 text-xs text-muted-foreground"
+              >
+                Or paste or drop a new one onto the page.
+              </p>
+              <div className="my-1 h-px bg-border" aria-hidden />
+            </>
+          )}
           <ProjectItems
             onPick={() => setOpen(false)}
             shortcuts={

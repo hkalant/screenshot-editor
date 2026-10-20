@@ -63,7 +63,7 @@ const STEPS: Step[] = [
     target: '[data-tour="menu"]',
     side: "bottom",
     title: "Save your work",
-    body: "Save your work as a project file to keep every annotation editable, and open it again later. This menu also has the theme, the keyboard shortcuts and this tour.",
+    body: "Save your work as a project file to keep every annotation editable, and open it again later. This menu also has the theme, Replace screenshot, the keyboard shortcuts and this tour.",
   },
   {
     title: "You're all set!",

@@ -167,9 +167,10 @@ test("replacing the image keeps the style", async ({ page }) => {
   await openStyleSections(page);
   await setSlider(page, "Border width", "End");
   await expectDesignSize(page, 544, 444);
+  await page.getByRole("button", { name: "Menu" }).click();
   await chooseFile(
     page,
-    "Replace image",
+    /^Replace screenshot/,
     makeSolidPng(800, 600, [0, 0, 255, 255]),
     "second.png",
   );
