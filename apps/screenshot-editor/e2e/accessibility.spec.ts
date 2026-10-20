@@ -113,6 +113,33 @@ test("the canvas shows its focus ring after a key press, not a click", async ({
   await stage(page).click({ position: { x: 10, y: 10 } });
   await expect(canvas).toBeFocused();
   await expect(canvas).toHaveCSS("outline-style", "none");
+  // Modifiers and shortcuts aren't keyboard use (⌘⇧4, Shift-drag, redo).
+  await page.keyboard.press("Shift");
+  await page.keyboard.press("Meta");
+  await page.keyboard.press("ControlOrMeta+Shift+z");
+  await expect(canvas).toHaveCSS("outline-style", "none");
+  // Nor is coming back to it, as from another window.
+  await canvas.evaluate((el: HTMLElement) => {
+    el.blur();
+    el.focus();
+  });
+  await expect(canvas).toBeFocused();
+  await expect(canvas).toHaveCSS("outline-style", "none");
   await page.keyboard.press("ArrowRight");
+  await expect(canvas).toHaveCSS("outline-style", "solid");
+});
+
+test("the canvas shows its focus ring when tabbed to after a click elsewhere", async ({
+  page,
+}) => {
+  await page.goto("./");
+  await loadSample(page);
+  const canvas = page.locator('[aria-label^="Design canvas"]');
+  await stage(page).click({ position: { x: 10, y: 10 } });
+  // Off the canvas, then back with the keyboard.
+  await page.getByRole("button", { name: "Add step 1" }).focus();
+  await page.keyboard.press("Shift+Tab");
+  while (!(await canvas.evaluate((el) => el === document.activeElement)))
+    await page.keyboard.press("Shift+Tab");
   await expect(canvas).toHaveCSS("outline-style", "solid");
 });
