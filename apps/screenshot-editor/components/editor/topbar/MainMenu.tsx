@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 import { setShortcutsHandler } from "@/lib/shortcutsCommand";
 import { itemClass, TutorialLinks } from "./HelpMenu";
 import { ProjectItems } from "./ProjectItems";
-import { KeyboardIcon, ShortcutList } from "./ShortcutList";
+import { KeyboardIcon, MenuShortcut, ShortcutList } from "./ShortcutList";
 
 const subscribe = () => () => {};
 
@@ -99,9 +99,7 @@ export function MainMenu({ onReplace }: { onReplace: () => void }) {
                   <ImageUp className="size-4" aria-hidden />
                 </span>
                 Replace screenshot…
-                <kbd className="ml-auto text-xs whitespace-nowrap text-muted-foreground">
-                  {apple ? "⌘O" : "Ctrl+O"}
-                </kbd>
+                <MenuShortcut keys={apple ? "⌘O" : "Ctrl+O"} />
               </button>
               {/* Pasting or dropping replaces it too, which few would guess. */}
               <p
@@ -122,9 +120,7 @@ export function MainMenu({ onReplace }: { onReplace: () => void }) {
               <KeyboardIcon />
             </span>
             Keyboard shortcuts
-            <kbd className="ml-auto text-xs whitespace-nowrap text-muted-foreground">
-              {apple ? "⌘/" : "Ctrl+/"}
-            </kbd>
+            <MenuShortcut keys={apple ? "⌘/" : "Ctrl+/"} />
           </button>
           <div className="my-1 h-px bg-border" aria-hidden />
           <button
