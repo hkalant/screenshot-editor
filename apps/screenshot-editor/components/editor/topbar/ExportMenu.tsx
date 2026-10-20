@@ -221,7 +221,7 @@ function ExportButton({
       <span>
         Export
         {/* In a narrow top bar the format and scale are only read out. */}
-        <span className={cn(inBar && "sr-only @min-[40rem]/bar:not-sr-only")}>
+        <span className={cn(inBar && "sr-only @min-[33rem]/bar:not-sr-only")}>
           {exportLabel(options).slice("Export".length)}
         </span>
       </span>

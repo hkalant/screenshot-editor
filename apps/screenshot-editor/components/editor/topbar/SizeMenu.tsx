@@ -242,11 +242,11 @@ export function SizeMenu() {
         {/* The name read out starts with the visible text's purpose and
             keeps the visible text whole (WCAG 2.5.3). */}
         <span className="sr-only">Canvas size: </span>
-        <span className="max-w-36 truncate @max-[40rem]/bar:sr-only">
+        <span className="max-w-36 truncate @max-[37rem]/bar:sr-only">
           {label}
         </span>
         {size && (
-          <span className="sr-only text-xs text-muted-foreground tabular-nums @min-[79rem]/bar:not-sr-only">
+          <span className="sr-only text-xs text-muted-foreground tabular-nums @min-[64rem]/bar:not-sr-only">
             {" "}
             {dimensions(size)}
           </span>

@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, Compass, Ellipsis } from "lucide-react";
+import { ChevronLeft, Compass, Menu } from "lucide-react";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -8,9 +8,16 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { useTheme } from "@/lib/hooks/useTheme";
 import { currentPlatform, isApplePlatform } from "@/lib/platform";
+import {
+  THEME_LABELS,
+  THEME_PREFERENCES,
+  type ThemePreference,
+} from "@/lib/theme";
 import { useTourStore } from "@/lib/tour/tour";
 import { setShortcutsHandler } from "@/lib/shortcutsCommand";
+import { Segmented } from "../controls/Segmented";
 import { itemClass, TutorialLinks } from "./HelpMenu";
 import { ProjectItems } from "./ProjectItems";
 import { KeyboardIcon, ShortcutList } from "./ShortcutList";
@@ -19,8 +26,17 @@ const subscribe = () => () => {};
 
 type View = "menu" | "shortcuts";
 
-/** The top bar's More button: projects, the keyboard shortcuts and the tutorials. */
-export function MoreMenu() {
+const THEME_OPTIONS = THEME_PREFERENCES.map((value) => ({
+  value,
+  label: THEME_LABELS[value],
+}));
+
+/**
+ * The menu at the start of the top bar, for everything secondary: the theme,
+ * projects, the keyboard shortcuts, the tour and the tutorials.
+ */
+export function MainMenu() {
+  const { preference, setPreference } = useTheme();
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<View>("menu");
   const apple = useSyncExternalStore(
@@ -51,16 +67,26 @@ export function MoreMenu() {
         <Button
           variant="ghost"
           size="icon"
-          aria-label="More"
-          title="More"
-          data-tour="more"
+          aria-label="Menu"
+          title="Menu"
+          data-tour="menu"
           className="data-[state=open]:bg-accent"
         >
-          <Ellipsis aria-hidden />
+          <Menu aria-hidden />
         </Button>
       </PopoverTrigger>
       {view === "menu" ? (
-        <PopoverContent align="end" className="w-80 p-2.5" aria-label="More">
+        <PopoverContent align="start" className="w-80 p-2.5" aria-label="Menu">
+          <div className="space-y-2 px-2 pt-1 pb-2.5">
+            <Segmented<ThemePreference>
+              label="Theme"
+              glide
+              value={preference}
+              options={THEME_OPTIONS}
+              onChange={setPreference}
+            />
+          </div>
+          <div className="my-1 h-px bg-border" aria-hidden />
           <ProjectItems
             onPick={() => setOpen(false)}
             shortcuts={
@@ -101,7 +127,7 @@ export function MoreMenu() {
         </PopoverContent>
       ) : (
         <PopoverContent
-          align="end"
+          align="start"
           className="w-96 p-3"
           aria-label="Keyboard shortcuts"
         >

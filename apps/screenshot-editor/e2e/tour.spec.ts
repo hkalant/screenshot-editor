@@ -74,7 +74,7 @@ test("Esc from the More menu's tour puts the user's screenshot back", async ({
   await upload(page, makeSolidPng(400, 300, RED), "mine.png");
   await expect(stage(page)).toBeVisible();
 
-  await page.getByRole("button", { name: "More" }).click();
+  await page.getByRole("button", { name: "Menu" }).click();
   await page.getByRole("button", { name: "Take the tour" }).click();
   await welcome(page).getByRole("button", { name: "Start" }).click();
   await expect(card(page)).toContainText("Background");
@@ -96,7 +96,7 @@ test("closing the page mid-tour reopens on the user's own design", async ({
   await expect(stage(page)).toBeVisible();
   const mine = await stage(page).getAttribute("data-width");
 
-  await page.getByRole("button", { name: "More" }).click();
+  await page.getByRole("button", { name: "Menu" }).click();
   await page.getByRole("button", { name: "Take the tour" }).click();
   await welcome(page).getByRole("button", { name: "Start" }).click();
   await expect(card(page)).toContainText("Background");

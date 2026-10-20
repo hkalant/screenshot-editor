@@ -84,7 +84,7 @@ test("a saved project reopens with everything still editable", async ({
     toolbar(page).getByRole("button", { name: "Add step 2" }),
   ).toBeVisible();
 
-  await page.getByRole("button", { name: "More" }).click();
+  await page.getByRole("button", { name: "Menu" }).click();
   await page.getByRole("button", { name: /^Save project/ }).click();
   const saved = await download(page, () => confirmFileName(page));
   expect(saved.name).toBe("My Dashboard.screenshot.json");
@@ -99,7 +99,7 @@ test("a saved project reopens with everything still editable", async ({
   const other = await fresh.newPage();
   await other.goto("./");
   await expectEmptyState(other);
-  await other.getByRole("button", { name: "More" }).click();
+  await other.getByRole("button", { name: "Menu" }).click();
   const chooser = other.waitForEvent("filechooser");
   await other.getByRole("button", { name: /^Open project/ }).click();
   await (
@@ -126,7 +126,7 @@ test("a project file picked like an image opens as a project", async ({
   page,
 }) => {
   await upload(page, makeSolidPng(1200, 750, RED));
-  await page.getByRole("button", { name: "More" }).click();
+  await page.getByRole("button", { name: "Menu" }).click();
   await page.getByRole("button", { name: /^Save project/ }).click();
   const saved = await download(page, () => confirmFileName(page));
   await page.keyboard.press("Escape");
@@ -143,7 +143,7 @@ test("a project file picked like an image opens as a project", async ({
 });
 
 test("a broken project file explains itself", async ({ page }) => {
-  await page.getByRole("button", { name: "More" }).click();
+  await page.getByRole("button", { name: "Menu" }).click();
   const chooser = page.waitForEvent("filechooser");
   await page.getByRole("button", { name: /^Open project/ }).click();
   await (

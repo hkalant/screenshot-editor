@@ -67,7 +67,7 @@ test("Cancel and Esc save nothing", async ({ page }) => {
 test("a project is saved under the typed name with .screenshot.json added once", async ({
   page,
 }) => {
-  await page.getByRole("button", { name: "More" }).click();
+  await page.getByRole("button", { name: "Menu" }).click();
   await page.getByRole("button", { name: /^Save project/ }).click();
   await expect(dialog(page)).toContainText(".screenshot.json");
   const [download] = await Promise.all([

@@ -49,7 +49,7 @@ export function CopyButton({ compact = false }: { compact?: boolean }) {
       >
         <Copy aria-hidden />
         {!compact && (
-          <span className="hidden @min-[63rem]/bar:inline">Copy image</span>
+          <span className="hidden @min-[52rem]/bar:inline">Copy image</span>
         )}
       </Button>
       <div role="status" className="contents">

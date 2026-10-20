@@ -60,10 +60,10 @@ const STEPS: Step[] = [
     body: "Save your screenshot flattened, as a PNG or JPEG at the size you need. The arrow opens the options, including the original screenshot.",
   },
   {
-    target: '[data-tour="more"]',
+    target: '[data-tour="menu"]',
     side: "bottom",
     title: "Save your work",
-    body: "Save your work as a project file to keep every annotation editable, and open it again later. Learn the keyboard shortcuts and restart this tour from here too.",
+    body: "Save your work as a project file to keep every annotation editable, and open it again later. This menu also has the theme, the keyboard shortcuts and this tour.",
   },
   {
     title: "You're all set!",
@@ -329,7 +329,7 @@ function StepCard({ index }: { index: number }) {
 
 /**
  * The welcome tour, shown once on the first desktop visit (after any
- * autosaved design is back) and again from More → Take the tour.
+ * autosaved design is back) and again from Menu → Take the tour.
  */
 export function Tour({ enabled }: { enabled: boolean }) {
   const step = useTourStore((state) => state.step);

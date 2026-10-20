@@ -215,7 +215,7 @@ test.describe("broken images", () => {
 });
 
 test("the More menu lists the tutorials", async ({ page }) => {
-  await page.getByRole("button", { name: "More" }).click();
+  await page.getByRole("button", { name: "Menu" }).click();
   const tutorials = page.getByRole("navigation", { name: "Tutorials" });
   const text = tutorials.getByRole("link", { name: "Read the text tutorial" });
   // The text tutorial is a Google Doc, opened in a new tab.
@@ -235,7 +235,7 @@ test("the video tutorial plays over the editor", async ({ page }) => {
   await page.route("https://brookes.cloud.panopto.eu/**", (route) =>
     route.fulfill({ contentType: "text/html", body: "<!doctype html>" }),
   );
-  await page.getByRole("button", { name: "More" }).click();
+  await page.getByRole("button", { name: "Menu" }).click();
   await page.getByRole("button", { name: "Watch the video tutorial" }).click();
   const dialog = page.getByRole("dialog", {
     name: "Getting started with Screenshot Editor",
@@ -253,7 +253,7 @@ test("the video tutorial plays over the editor", async ({ page }) => {
 });
 
 test("the More menu lists the shortcuts", async ({ page }) => {
-  await page.getByRole("button", { name: "More" }).click();
+  await page.getByRole("button", { name: "Menu" }).click();
   await page.getByRole("button", { name: "Keyboard shortcuts" }).click();
   const dialog = page.getByRole("dialog");
   await expect(dialog.getByText("Undo", { exact: true })).toBeVisible();

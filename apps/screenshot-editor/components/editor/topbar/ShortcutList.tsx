@@ -13,7 +13,7 @@ export const KeyboardIcon = () => (
   </svg>
 );
 
-/** Every keyboard shortcut, in groups; shown from the top bar's More menu. */
+/** Every keyboard shortcut, in groups; shown from the top bar's menu. */
 export function ShortcutList() {
   const apple = useSyncExternalStore(
     subscribe,

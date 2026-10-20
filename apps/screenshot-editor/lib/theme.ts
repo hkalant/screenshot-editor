@@ -31,12 +31,6 @@ export function parseThemePreference(value: unknown): ThemePreference {
   );
 }
 
-/** System → Light → Dark → System. */
-export function nextThemePreference(current: ThemePreference): ThemePreference {
-  const index = THEME_PREFERENCES.indexOf(current);
-  return THEME_PREFERENCES[(index + 1) % THEME_PREFERENCES.length];
-}
-
 export function resolveTheme(
   preference: ThemePreference,
   systemDark: boolean,

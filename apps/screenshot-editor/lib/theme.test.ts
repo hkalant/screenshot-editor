@@ -2,7 +2,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { writePreference } from "./persist/preferences";
 import {
   applyTheme,
-  nextThemePreference,
   parseThemePreference,
   resolveTheme,
   THEME_PREFERENCE_KEY,
@@ -70,12 +69,6 @@ describe("theme preference", () => {
     expect(parseThemePreference(null)).toBe("system");
     expect(parseThemePreference("Dark")).toBe("system");
     expect(parseThemePreference(1)).toBe("system");
-  });
-
-  it("cycles System, Light, Dark", () => {
-    expect(nextThemePreference("system")).toBe("light");
-    expect(nextThemePreference("light")).toBe("dark");
-    expect(nextThemePreference("dark")).toBe("system");
   });
 
   it("resolves system from the colour scheme", () => {
