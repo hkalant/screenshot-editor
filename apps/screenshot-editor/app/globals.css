@@ -156,6 +156,14 @@
   box-shadow: 0 0 0 1px var(--border);
 }
 
+/* Scrolls without drawing a scrollbar. Give a cue that there is more instead. */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 /* A pane that floats over the design, such as a popover or a notice. */
 @utility pane-float {
   background-color: var(--background);

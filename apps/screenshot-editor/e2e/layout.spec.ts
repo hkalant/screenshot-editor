@@ -209,3 +209,25 @@ test("the sidebar's sections open together and are remembered", async ({
   await expect(section("Frame")).toHaveAttribute("aria-expanded", "true");
   await expect(section("Shadow")).toHaveAttribute("aria-expanded", "true");
 });
+
+test("a long sidebar scrolls without a scrollbar, with a fade while there is more", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 600 });
+  await page.goto("./");
+  await expectEmptyState(page);
+  const sidebar = page.getByRole("complementary", { name: "Settings" });
+  const fade = page.getByTestId("sidebar-more");
+  for (const name of ["Frame", "Shadow", "Border"])
+    await sidebar.getByRole("button", { name, exact: true }).click();
+  await expect(fade).toHaveAttribute("data-visible", "true");
+  // No scrollbar takes any of the sidebar's width.
+  expect(
+    await sidebar.evaluate(
+      (el) => (el as HTMLElement).offsetWidth - el.clientWidth,
+    ),
+  ).toBe(0);
+
+  await sidebar.evaluate((el) => el.scrollTo(0, el.scrollHeight));
+  await expect(fade).not.toHaveAttribute("data-visible");
+});
