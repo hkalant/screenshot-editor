@@ -1,4 +1,4 @@
-// The shortcuts list lives in the top bar's More menu; the keyboard shortcut
+// The shortcuts list lives in the top bar's menu; the keyboard shortcut
 // reaches it through the handler the menu registers here while it is shown.
 
 let handler: (() => void) | null = null;

@@ -33,7 +33,7 @@ export function Notice() {
       className={cn(
         // Centred between 16px gutters. (Centring with left-1/2 would cap
         // the width at half the screen and wrap short messages on phones.)
-        "fixed inset-x-4 z-50 mx-auto flex w-fit items-center gap-3 rounded-full glass py-2 pr-2 pl-4 text-sm [--glass-fill:var(--glass-thick)]",
+        "fixed inset-x-4 z-50 mx-auto flex w-fit items-center gap-3 rounded-lg pane-float py-2 pr-2 pl-4 text-sm",
         // 56px tab bar plus a 16px gap.
         desktop
           ? "bottom-6"
@@ -53,7 +53,7 @@ export function Notice() {
         type="button"
         onClick={dismissNotice}
         aria-label="Dismiss"
-        className="rounded-full p-1 text-muted-foreground outline-none hover:bg-accent hover:text-foreground focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid max-md:p-2.5"
+        className="rounded-sm p-1 text-muted-foreground outline-none hover:bg-accent hover:text-foreground focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid max-md:p-2.5"
       >
         <X className="size-4" aria-hidden />
       </button>

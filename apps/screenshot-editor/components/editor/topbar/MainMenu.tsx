@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, Compass, Ellipsis } from "lucide-react";
+import { ChevronLeft, Compass, Contrast, ImageUp, Menu } from "lucide-react";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -8,19 +8,30 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { useTheme } from "@/lib/hooks/useTheme";
+import { selectActiveImage, useEditorStore } from "@/lib/store/editor";
 import { currentPlatform, isApplePlatform } from "@/lib/platform";
+import { nextThemePreference, THEME_LABELS } from "@/lib/theme";
 import { useTourStore } from "@/lib/tour/tour";
+import { cn } from "@/lib/utils";
 import { setShortcutsHandler } from "@/lib/shortcutsCommand";
 import { itemClass, TutorialLinks } from "./HelpMenu";
 import { ProjectItems } from "./ProjectItems";
-import { KeyboardIcon, ShortcutList } from "./ShortcutList";
+import { KeyboardIcon, MenuShortcut, ShortcutList } from "./ShortcutList";
 
 const subscribe = () => () => {};
 
 type View = "menu" | "shortcuts";
 
-/** The top bar's More button: projects, the keyboard shortcuts and the tutorials. */
-export function MoreMenu() {
+/**
+ * The menu at the start of the top bar, for everything secondary: projects,
+ * replacing the screenshot, the keyboard shortcuts, the tour, the tutorials
+ * and the theme.
+ */
+export function MainMenu({ onReplace }: { onReplace: () => void }) {
+  const { preference, setPreference } = useTheme();
+  const hasImage = useEditorStore((state) => !!selectActiveImage(state));
+  const loading = useEditorStore((state) => state.loading);
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<View>("menu");
   const apple = useSyncExternalStore(
@@ -51,16 +62,16 @@ export function MoreMenu() {
         <Button
           variant="ghost"
           size="icon"
-          aria-label="More"
-          title="More"
-          data-tour="more"
+          aria-label="Menu"
+          title="Menu"
+          data-tour="menu"
           className="data-[state=open]:bg-accent"
         >
-          <Ellipsis aria-hidden />
+          <Menu aria-hidden />
         </Button>
       </PopoverTrigger>
       {view === "menu" ? (
-        <PopoverContent align="end" className="w-80 p-2.5" aria-label="More">
+        <PopoverContent align="start" className="w-80 p-2.5" aria-label="Menu">
           <ProjectItems
             onPick={() => setOpen(false)}
             shortcuts={
@@ -69,6 +80,36 @@ export function MoreMenu() {
                 : { save: "Ctrl+Shift+S", open: "Ctrl+Shift+O" }
             }
           />
+          {hasImage && (
+            <>
+              <button
+                type="button"
+                className={cn(
+                  itemClass,
+                  "mt-0.5 disabled:pointer-events-none disabled:opacity-50",
+                )}
+                disabled={loading}
+                aria-describedby="replace-hint"
+                onClick={() => {
+                  setOpen(false);
+                  onReplace();
+                }}
+              >
+                <span className="flex w-5 justify-center text-muted-foreground">
+                  <ImageUp className="size-4" aria-hidden />
+                </span>
+                Replace screenshot…
+                <MenuShortcut keys={apple ? "⌘O" : "Ctrl+O"} />
+              </button>
+              {/* Pasting or dropping replaces it too, which few would guess. */}
+              <p
+                id="replace-hint"
+                className="pr-2 pb-1 pl-10 text-xs text-muted-foreground"
+              >
+                Or paste or drop a new one onto the page.
+              </p>
+            </>
+          )}
           <div className="my-1 h-px bg-border" aria-hidden />
           <button
             type="button"
@@ -79,9 +120,7 @@ export function MoreMenu() {
               <KeyboardIcon />
             </span>
             Keyboard shortcuts
-            <kbd className="ml-auto text-xs whitespace-nowrap text-muted-foreground">
-              {apple ? "⌘/" : "Ctrl+/"}
-            </kbd>
+            <MenuShortcut keys={apple ? "⌘/" : "Ctrl+/"} />
           </button>
           <div className="my-1 h-px bg-border" aria-hidden />
           <button
@@ -98,10 +137,25 @@ export function MoreMenu() {
             Take the tour
           </button>
           <TutorialLinks onPick={() => setOpen(false)} />
+          <div className="my-1 h-px bg-border" aria-hidden />
+          {/* Stays open, so the theme can be cycled through in place. */}
+          <button
+            type="button"
+            className={itemClass}
+            onClick={() => setPreference(nextThemePreference(preference))}
+          >
+            <span className="flex w-5 justify-center text-muted-foreground">
+              <Contrast className="size-4" aria-hidden />
+            </span>
+            Switch theme
+            <span className="ml-auto text-xs text-muted-foreground">
+              {THEME_LABELS[preference]}
+            </span>
+          </button>
         </PopoverContent>
       ) : (
         <PopoverContent
-          align="end"
+          align="start"
           className="w-96 p-3"
           aria-label="Keyboard shortcuts"
         >

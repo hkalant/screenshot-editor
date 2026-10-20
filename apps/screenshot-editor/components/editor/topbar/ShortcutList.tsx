@@ -3,6 +3,7 @@
 import { useSyncExternalStore } from "react";
 import { currentPlatform, isApplePlatform } from "@/lib/platform";
 import { shortcutGroups } from "@/lib/shortcutList";
+import { cn } from "@/lib/utils";
 
 const subscribe = () => () => {};
 
@@ -13,7 +14,28 @@ export const KeyboardIcon = () => (
   </svg>
 );
 
-/** Every keyboard shortcut, in groups; shown from the top bar's More menu. */
+// Most fonts draw the Mac modifier symbols, ⇧ above all, smaller than
+// letters, so they are set a size up.
+const SYMBOL = /([⇧⌘⌥⌃])/;
+const SYMBOL_CLASS = "text-sm leading-none";
+
+/** A shortcut at the end of a menu item, such as ⇧⌘S. */
+export function MenuShortcut({ keys }: { keys: string }) {
+  return (
+    <kbd className="ml-auto flex items-center gap-px font-sans text-xs whitespace-nowrap text-muted-foreground">
+      {keys
+        .split(SYMBOL)
+        .filter(Boolean)
+        .map((part, index) => (
+          <span key={index} className={cn(SYMBOL.test(part) && SYMBOL_CLASS)}>
+            {part}
+          </span>
+        ))}
+    </kbd>
+  );
+}
+
+/** Every keyboard shortcut, in groups; shown from the top bar's menu. */
 export function ShortcutList() {
   const apple = useSyncExternalStore(
     subscribe,
@@ -38,7 +60,10 @@ export function ShortcutList() {
                   {item.keys.map((key) => (
                     <kbd
                       key={key}
-                      className="min-w-6 rounded border bg-muted px-1.5 py-0.5 text-center font-sans text-xs"
+                      className={cn(
+                        "min-w-6 rounded border bg-muted px-1.5 py-0.5 text-center font-sans text-xs",
+                        SYMBOL.test(key) && SYMBOL_CLASS,
+                      )}
                     >
                       {key}
                     </kbd>

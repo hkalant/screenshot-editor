@@ -48,7 +48,9 @@ export function CopyButton({ compact = false }: { compact?: boolean }) {
         title={copied ? undefined : "Copy image"}
       >
         <Copy aria-hidden />
-        {!compact && <span className="hidden lg:inline">Copy image</span>}
+        {!compact && (
+          <span className="hidden @min-[52rem]/bar:inline">Copy image</span>
+        )}
       </Button>
       <div role="status" className="contents">
         {copied > 0 && (

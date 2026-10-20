@@ -46,7 +46,7 @@ import {
 import { Slider } from "@/components/ui/slider";
 
 const buttonClass =
-  "flex size-8 shrink-0 items-center justify-center rounded-full text-foreground outline-none transition-colors hover:bg-accent focus-visible:outline-3 focus-visible:outline-solid focus-visible:outline-offset-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-40 aria-pressed:bg-(--tool-active) aria-pressed:shadow-[inset_0_0_0_1px_var(--tool-active-edge)] [&_svg]:size-4";
+  "flex size-8 shrink-0 items-center justify-center rounded-sm text-foreground outline-none transition-colors hover:bg-accent focus-visible:outline-3 focus-visible:outline-solid focus-visible:outline-offset-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-40 aria-pressed:bg-(--tool-active) aria-pressed:shadow-[inset_0_0_0_1px_var(--tool-active-edge)] [&_svg]:size-4";
 
 function ToolButton({
   label,
@@ -186,7 +186,7 @@ function StepNumberField({ step }: { step: StepAnnotation }) {
         onKeyDown={(event) => {
           if (event.key === "Enter") event.currentTarget.blur();
         }}
-        className="h-7 w-11 rounded-full border border-input bg-background/70 px-2 text-center text-sm text-foreground tabular-nums outline-none focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid"
+        className="h-7 w-11 rounded-sm border border-input bg-background/70 px-2 text-center text-sm text-foreground tabular-nums outline-none focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid"
       />
     </label>
   );
@@ -250,7 +250,7 @@ function ToolMenu<T extends AnnotationTool>({
               aria-label={chooseLabel}
               title={chooseLabel}
               aria-haspopup="menu"
-              className="flex h-8 w-6 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid [&_svg]:size-3"
+              className="flex h-8 w-6 shrink-0 items-center justify-center rounded-sm text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid [&_svg]:size-3"
             >
               <ChevronDown aria-hidden />
             </button>
@@ -533,10 +533,10 @@ export function AnnotationToolbar() {
       role="toolbar"
       data-tour="annotate"
       aria-label="Annotate"
-      // A floating dock: more room and a deeper shadow than the other panes.
+      // A floating dock over the canvas.
       // Its width follows its tools' options smoothly, growing from the
       // centre because the dock is centred.
-      className="max-w-full [scrollbar-width:none] overflow-x-auto overflow-y-hidden rounded-full glass p-1.5 transition-[width,scale] duration-300 ease-[cubic-bezier(0.3,0.9,0.3,1)] [--glass-drop:0_12px_36px_var(--glass-shadow),0_2px_8px_var(--glass-shadow)] hover:scale-[1.04] has-focus-visible:scale-[1.04] has-aria-expanded:scale-[1.04] motion-reduce:transition-none"
+      className="max-w-full [scrollbar-width:none] overflow-x-auto overflow-y-hidden rounded-lg pane-float p-1 transition-[width,scale] duration-300 ease-[cubic-bezier(0.3,0.9,0.3,1)] hover:scale-[1.04] has-focus-visible:scale-[1.04] has-aria-expanded:scale-[1.04] motion-reduce:transition-none"
     >
       <div ref={contentRef} className="flex w-max items-center gap-1">
         <ToolButton

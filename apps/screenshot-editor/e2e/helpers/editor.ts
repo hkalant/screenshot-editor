@@ -100,13 +100,26 @@ export async function expectEmptyState(page: Page) {
   });
 }
 
-export async function openTab(page: Page, name: "Background" | "Style") {
-  await page.getByRole("combobox", { name: "Tool" }).selectOption(name);
+export type SidebarSection = "Background" | "Frame" | "Shadow" | "Border";
+
+/** Opens sections of the desktop sidebar; open ones stay open. */
+export async function openSections(page: Page, ...names: SidebarSection[]) {
+  const sidebar = page.getByRole("complementary", { name: "Settings" });
+  for (const name of names) {
+    const trigger = sidebar.getByRole("button", { name, exact: true });
+    if ((await trigger.getAttribute("aria-expanded")) !== "true")
+      await trigger.click();
+    await expect(trigger).toHaveAttribute("aria-expanded", "true");
+  }
 }
 
-/** Picks a window frame in the Style tool, which changes the design size. */
+/** Opens the style sections: Frame, Shadow and Border. */
+export const openStyleSections = (page: Page) =>
+  openSections(page, "Frame", "Shadow", "Border");
+
+/** Picks a window frame in the sidebar, which changes the design size. */
 export async function chooseFrame(page: Page, name: string) {
-  await openTab(page, "Style");
+  await openSections(page, "Frame");
   await page
     .getByRole("radiogroup", { name: "Frame", exact: true })
     .getByRole("radio", { name, exact: true })

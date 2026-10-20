@@ -6,7 +6,7 @@ import {
   expectEmptyState,
   exportButton,
   exportImage,
-  openTab,
+  openStyleSections,
   RED,
   stage,
   upload,
@@ -223,7 +223,7 @@ test("an edit made just before a reload is kept", async ({ page }) => {
     })
     .toEqual(expect.any(String));
 
-  await openTab(page, "Style");
+  await openStyleSections(page);
   const border = page.getByRole("slider", { name: "Border width" });
   await border.focus();
   for (let i = 0; i < 5; i += 1) await border.press("ArrowRight");
@@ -236,7 +236,7 @@ test("an edit made just before a reload is kept", async ({ page }) => {
 
   // Straight away, well inside the save delay.
   await page.reload();
-  await openTab(page, "Style");
+  await openStyleSections(page);
   await expect(
     page.getByRole("slider", { name: "Border width" }),
   ).toHaveAttribute("aria-valuenow", "15");
@@ -255,7 +255,7 @@ test("an edit is kept when the browser drops the writes made on close", async ({
     })
     .toEqual(expect.any(String));
 
-  await openTab(page, "Style");
+  await openStyleSections(page);
   const border = page.getByRole("slider", { name: "Border width" });
   await border.focus();
   for (let i = 0; i < 5; i += 1) await border.press("ArrowRight");
@@ -268,7 +268,7 @@ test("an edit is kept when the browser drops the writes made on close", async ({
     };
   });
   await page.reload();
-  await openTab(page, "Style");
+  await openStyleSections(page);
   await expect(
     page.getByRole("slider", { name: "Border width" }),
   ).toHaveAttribute("aria-valuenow", "15");

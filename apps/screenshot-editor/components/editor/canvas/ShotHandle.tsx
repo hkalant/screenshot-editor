@@ -86,7 +86,7 @@ export function ShotHandle({ layout, scale, width, height }: Props) {
       onPointerUp={end}
       onPointerCancel={end}
       onLostPointerCapture={end}
-      className="absolute flex size-8 cursor-grab touch-none items-center justify-center rounded-full glass text-foreground transition-colors outline-none hover:bg-accent focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid active:cursor-grabbing [&_svg]:size-4"
+      className="absolute flex size-8 cursor-grab touch-none items-center justify-center rounded-md pane-float text-foreground transition-colors outline-none hover:bg-accent focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid active:cursor-grabbing [&_svg]:size-4"
       style={{ left, top }}
     >
       <Move aria-hidden />

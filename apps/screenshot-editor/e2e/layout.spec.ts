@@ -36,13 +36,14 @@ test("the theme can be switched and is remembered", async ({ page }) => {
   await page.goto("./");
   await expectEmptyState(page);
   const html = page.locator("html");
-  const toggle = page.getByRole("button", { name: /^Theme:/ });
-  await expect(toggle).toHaveAccessibleName("Theme: System");
-  await toggle.click();
-  await expect(toggle).toHaveAccessibleName("Theme: Light");
+  await page.getByRole("button", { name: "Menu" }).click();
+  const theme = page.getByRole("button", { name: /^Switch theme/ });
+  await expect(theme).toHaveAccessibleName("Switch theme System");
+  await theme.click();
+  await expect(theme).toHaveAccessibleName("Switch theme Light");
   await expect(html).not.toHaveClass(/\bdark\b/);
-  await toggle.click();
-  await expect(toggle).toHaveAccessibleName("Theme: Dark");
+  await theme.click();
+  await expect(theme).toHaveAccessibleName("Switch theme Dark");
   await expect(html).toHaveClass(/\bdark\b/);
 
   // Applied before the page renders, on every page.
@@ -176,8 +177,57 @@ test.describe("on a phone", () => {
     });
     await page.goto("./");
     await expectEmptyState(page);
+    // The sidebar on the left, the top bar on the right.
+    const sidebar = (await page
+      .getByRole("complementary", { name: "Settings" })
+      .boundingBox())!;
     const header = (await page.locator("header").boundingBox())!;
-    expect(header.x).toBe(47);
+    expect(sidebar.x).toBe(47);
     expect(header.x + header.width).toBe(844 - 47);
   });
+});
+
+test("the sidebar's sections open together and are remembered", async ({
+  page,
+}) => {
+  await page.goto("./");
+  await expectEmptyState(page);
+  const sidebar = page.getByRole("complementary", { name: "Settings" });
+  const section = (name: string) =>
+    sidebar.getByRole("button", { name, exact: true });
+  await expect(section("Background")).toHaveAttribute("aria-expanded", "true");
+  await expect(section("Frame")).toHaveAttribute("aria-expanded", "false");
+
+  await section("Frame").click();
+  await section("Background").click();
+  await section("Shadow").click();
+  await expect(sidebar.getByRole("slider", { name: "Padding" })).toBeVisible();
+
+  await page.reload();
+  await expectEmptyState(page);
+  await expect(section("Background")).toHaveAttribute("aria-expanded", "false");
+  await expect(section("Frame")).toHaveAttribute("aria-expanded", "true");
+  await expect(section("Shadow")).toHaveAttribute("aria-expanded", "true");
+});
+
+test("a long sidebar scrolls without a scrollbar, with a fade while there is more", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 600 });
+  await page.goto("./");
+  await expectEmptyState(page);
+  const sidebar = page.getByRole("complementary", { name: "Settings" });
+  const fade = page.getByTestId("sidebar-more");
+  for (const name of ["Frame", "Shadow", "Border"])
+    await sidebar.getByRole("button", { name, exact: true }).click();
+  await expect(fade).toHaveAttribute("data-visible", "true");
+  // No scrollbar takes any of the sidebar's width.
+  expect(
+    await sidebar.evaluate(
+      (el) => (el as HTMLElement).offsetWidth - el.clientWidth,
+    ),
+  ).toBe(0);
+
+  await sidebar.evaluate((el) => el.scrollTo(0, el.scrollHeight));
+  await expect(fade).not.toHaveAttribute("data-visible");
 });

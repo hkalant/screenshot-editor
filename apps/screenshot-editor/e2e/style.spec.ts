@@ -5,7 +5,8 @@ import {
   expectDesignSize,
   expectEmptyState,
   exportImage,
-  openTab,
+  openSections,
+  openStyleSections,
   RED,
   setSlider,
   shadowOption,
@@ -104,7 +105,7 @@ test("JPEG exports fill transparency with white", async ({ page }) => {
 test("window frames add a title bar above the screenshot", async ({ page }) => {
   // 1000 px wide: frame chrome at its base size.
   await upload(page, makeSolidPng(1000, 600, RED));
-  await openTab(page, "Style");
+  await openStyleSections(page);
   const frame = (name: string) =>
     page
       .getByRole("radiogroup", { name: "Frame", exact: true })
@@ -146,7 +147,7 @@ test("window frames add a title bar above the screenshot", async ({ page }) => {
 
 test("border and shadow", async ({ page }) => {
   await upload(page, makeSolidPng(400, 300, RED));
-  await openTab(page, "Style");
+  await openStyleSections(page);
 
   // The border goes around the outside: the screenshot's edge stays red, and
   // the background just outside it turns lighter under the white border.
@@ -184,7 +185,7 @@ test("the padding slider changes the space around the screenshot", async ({
 }) => {
   await upload(page, makeSolidPng(1200, 750, RED));
   await expectDesignSize(page, 1344, 894);
-  await openTab(page, "Style");
+  await openStyleSections(page);
   await setSlider(page, "Padding", "End");
   await expectDesignSize(page, 1600, 1150);
   await setSlider(page, "Padding", "Home");
@@ -197,7 +198,7 @@ test("double-clicking a slider's thumb returns it to its default", async ({
   page,
 }) => {
   await upload(page, makeSolidPng(1200, 750, RED));
-  await openTab(page, "Style");
+  await openStyleSections(page);
   const padding = await setSlider(page, "Padding", "Home");
   await expectDesignSize(page, 1200, 750);
   await padding.dblclick();
@@ -214,7 +215,7 @@ test("double-clicking a slider's thumb returns it to its default", async ({
   await expect(opacity).toHaveAttribute("aria-valuenow", "30");
 
   // The gradient angle goes back to the chosen gradient's own angle.
-  await openTab(page, "Background");
+  await openSections(page, "Background");
   const angle = await setSlider(page, "Angle", "Home");
   await expect(angle).toHaveAttribute("aria-valuenow", "0");
   await angle.dblclick();
@@ -227,7 +228,7 @@ test.describe("on a touchscreen", () => {
     page,
   }) => {
     await upload(page, makeSolidPng(1200, 750, RED));
-    await openTab(page, "Style");
+    await openStyleSections(page);
     const padding = await setSlider(page, "Padding", "End");
     const box = (await padding.boundingBox())!;
     const x = box.x + box.width / 2;

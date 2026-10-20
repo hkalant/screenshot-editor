@@ -192,7 +192,7 @@ function CustomSizeFields({
         onKeyDown={(event) => {
           if (event.key === "Enter") commit(name);
         }}
-        className="h-9 w-full min-w-0 rounded-full border border-input bg-background/70 px-2 text-sm tabular-nums outline-none focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid"
+        className="h-9 w-full min-w-0 rounded-md border border-input bg-background/70 px-2 text-sm tabular-nums outline-none focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid"
       />
     </label>
   );
@@ -208,7 +208,7 @@ function CustomSizeFields({
           title="Lock aspect ratio"
           onClick={() => onLockedChange(!locked, size)}
           className={cn(
-            "flex size-9 shrink-0 items-center justify-center rounded-full border text-muted-foreground outline-none hover:bg-accent focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid",
+            "flex size-9 shrink-0 items-center justify-center rounded-md border text-muted-foreground outline-none hover:bg-accent focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid",
             locked && "bg-accent text-foreground",
           )}
         >
@@ -237,14 +237,16 @@ export function SizeMenu() {
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger className="flex h-8 shrink-0 items-center gap-2 rounded-full px-3 text-sm whitespace-nowrap outline-none hover:bg-accent focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid data-[state=open]:bg-accent">
+      <PopoverTrigger className="flex h-8 shrink-0 items-center gap-2 rounded-md px-3 text-sm whitespace-nowrap outline-none hover:bg-accent focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid data-[state=open]:bg-accent">
         <Maximize2 className="size-4 text-muted-foreground" aria-hidden />
         {/* The name read out starts with the visible text's purpose and
             keeps the visible text whole (WCAG 2.5.3). */}
         <span className="sr-only">Canvas size: </span>
-        <span className="max-w-36 truncate">{label}</span>
+        <span className="max-w-36 truncate @max-[37rem]/bar:sr-only">
+          {label}
+        </span>
         {size && (
-          <span className="sr-only text-xs text-muted-foreground tabular-nums xl:not-sr-only">
+          <span className="sr-only text-xs text-muted-foreground tabular-nums @min-[64rem]/bar:not-sr-only">
             {" "}
             {dimensions(size)}
           </span>

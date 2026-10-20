@@ -5,7 +5,7 @@ import {
   expectDesignSize,
   expectEmptyState,
   exportPng,
-  openTab,
+  openStyleSections,
   RED,
   setSlider,
   shadowOption,
@@ -114,7 +114,7 @@ test("the shadow is drawn below a screenshot with rounded corners", async ({
 }) => {
   await upload(page, makeSolidPng(1200, 750, RED));
   await page.getByRole("button", { name: "Stone" }).click(); // light background, so the shadow shows
-  await openTab(page, "Style");
+  await openStyleSections(page);
 
   // 20 export px below the bottom edge of the image, horizontally centred.
   const probe: [number, number] = [1344, (72 + 750) * 2 + 20];
@@ -145,7 +145,7 @@ test("clicking the active shadow option again keeps it selected", async ({
   page,
 }) => {
   await upload(page, makeSolidPng(400, 300, RED));
-  await openTab(page, "Style");
+  await openStyleSections(page);
   const floating = page.getByRole("radio", { name: "Floating" });
   await floating.click();
   await floating.click();
@@ -164,12 +164,13 @@ test("the sample image loads", async ({ page }) => {
 
 test("replacing the image keeps the style", async ({ page }) => {
   await upload(page, makeSolidPng(400, 300, RED));
-  await openTab(page, "Style");
+  await openStyleSections(page);
   await setSlider(page, "Border width", "End");
   await expectDesignSize(page, 544, 444);
+  await page.getByRole("button", { name: "Menu" }).click();
   await chooseFile(
     page,
-    "Replace image",
+    /^Replace screenshot/,
     makeSolidPng(800, 600, [0, 0, 255, 255]),
     "second.png",
   );
@@ -215,7 +216,7 @@ test.describe("broken images", () => {
 });
 
 test("the More menu lists the tutorials", async ({ page }) => {
-  await page.getByRole("button", { name: "More" }).click();
+  await page.getByRole("button", { name: "Menu" }).click();
   const tutorials = page.getByRole("navigation", { name: "Tutorials" });
   const text = tutorials.getByRole("link", { name: "Read the text tutorial" });
   // The text tutorial is a Google Doc, opened in a new tab.
@@ -235,7 +236,7 @@ test("the video tutorial plays over the editor", async ({ page }) => {
   await page.route("https://brookes.cloud.panopto.eu/**", (route) =>
     route.fulfill({ contentType: "text/html", body: "<!doctype html>" }),
   );
-  await page.getByRole("button", { name: "More" }).click();
+  await page.getByRole("button", { name: "Menu" }).click();
   await page.getByRole("button", { name: "Watch the video tutorial" }).click();
   const dialog = page.getByRole("dialog", {
     name: "Getting started with Screenshot Editor",
@@ -253,7 +254,7 @@ test("the video tutorial plays over the editor", async ({ page }) => {
 });
 
 test("the More menu lists the shortcuts", async ({ page }) => {
-  await page.getByRole("button", { name: "More" }).click();
+  await page.getByRole("button", { name: "Menu" }).click();
   await page.getByRole("button", { name: "Keyboard shortcuts" }).click();
   const dialog = page.getByRole("dialog");
   await expect(dialog.getByText("Undo", { exact: true })).toBeVisible();

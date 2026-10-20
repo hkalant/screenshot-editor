@@ -195,7 +195,7 @@ export function CanvasViewport({ onUpload, onSample }: Props) {
         )}
       </div>
       {loading && (
-        <div className="absolute top-3 right-3 flex items-center gap-2 rounded-full glass px-3 py-1.5 text-xs">
+        <div className="absolute top-3 right-3 flex items-center gap-2 rounded-md pane-float px-3 py-1.5 text-xs">
           <LoaderCircle className="size-3.5 animate-spin" aria-hidden />
           Loading image…
         </div>

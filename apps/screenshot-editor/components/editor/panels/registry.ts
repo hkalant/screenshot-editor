@@ -4,7 +4,7 @@ import type { PanelId } from "@/lib/store/editor";
 import { BackgroundPanel } from "./BackgroundPanel";
 import { StylePanel } from "./StylePanel";
 
-/** The settings panels, in rail order. The desktop rail and the mobile tabs both use this. */
+/** The settings panels of the mobile tabs. The desktop sidebar shows the same settings as sections. */
 export const PANELS: readonly {
   id: PanelId;
   label: string;

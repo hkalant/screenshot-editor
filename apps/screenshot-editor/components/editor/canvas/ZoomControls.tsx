@@ -28,7 +28,7 @@ export function ZoomControls({
     <div
       role="toolbar"
       aria-label="Zoom"
-      className="flex items-center gap-0.5 rounded-full glass p-0.5"
+      className="flex items-center gap-0.5 rounded-lg pane-float p-0.5"
     >
       <Button
         variant="ghost"

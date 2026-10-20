@@ -5,6 +5,7 @@ import { pickProjectFile, saveProject } from "@/lib/persist/projectActions";
 import { selectActiveImage, useEditorStore } from "@/lib/store/editor";
 import { cn } from "@/lib/utils";
 import { itemClass } from "./HelpMenu";
+import { MenuShortcut } from "./ShortcutList";
 
 /**
  * Save project and Open project, for a menu. A project keeps every
@@ -38,11 +39,7 @@ export function ProjectItems({
           <Save className="size-4" aria-hidden />
         </span>
         Save project
-        {shortcuts && (
-          <kbd className="ml-auto text-xs whitespace-nowrap text-muted-foreground">
-            {shortcuts.save}
-          </kbd>
-        )}
+        {shortcuts && <MenuShortcut keys={shortcuts.save} />}
       </button>
       <button
         type="button"
@@ -57,11 +54,7 @@ export function ProjectItems({
           <FolderOpen className="size-4" aria-hidden />
         </span>
         Open project…
-        {shortcuts && (
-          <kbd className="ml-auto text-xs whitespace-nowrap text-muted-foreground">
-            {shortcuts.open}
-          </kbd>
-        )}
+        {shortcuts && <MenuShortcut keys={shortcuts.open} />}
       </button>
     </div>
   );

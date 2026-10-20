@@ -55,7 +55,7 @@ export function ColorField({
         <PopoverTrigger
           aria-label={`${label}: ${value}`}
           title={label}
-          className="flex h-8 items-center gap-2 rounded-full border bg-background/70 px-1.5 pr-2.5 text-xs text-muted-foreground tabular-nums outline-none hover:bg-accent focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid"
+          className="flex h-8 items-center gap-2 rounded-md border bg-background/70 px-1.5 pr-2.5 text-xs text-muted-foreground tabular-nums outline-none hover:bg-accent focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid"
         >
           <span
             className="size-5 rounded-full border border-black/10 dark:border-white/15"
@@ -89,7 +89,7 @@ export function ColorField({
               onKeyDown={(event) => {
                 if (event.key === "Enter") commitDraft();
               }}
-              className="h-8 min-w-0 flex-1 rounded-full border border-input bg-background/70 px-2 font-mono text-sm outline-none focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid"
+              className="h-8 min-w-0 flex-1 rounded-md border border-input bg-background/70 px-2 font-mono text-sm outline-none focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid"
             />
           </div>
         </PopoverContent>
