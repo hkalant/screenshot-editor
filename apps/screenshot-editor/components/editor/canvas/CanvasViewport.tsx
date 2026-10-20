@@ -12,6 +12,11 @@ import { computePreviewScale } from "@/lib/design/layout";
 import { atZoomLimit, maxZoom, minZoom, stepZoom } from "@/lib/design/zoom";
 import { useElementSize } from "@/lib/hooks/useElementSize";
 import { CANVAS_FOCUS_ATTRIBUTE } from "@/lib/hooks/useShortcuts";
+import {
+  isKeyboardUse,
+  lastInputWasPointer,
+  trackInputModality,
+} from "@/lib/inputModality";
 import { selectActiveImage, useEditorStore } from "@/lib/store/editor";
 import { useDesignLayout } from "@/lib/store/hooks";
 import { cn } from "@/lib/utils";
@@ -39,6 +44,7 @@ export function CanvasViewport({ onUpload, onSample }: Props) {
   const revision = useEditorStore((state) => state.revision);
   const loading = useEditorStore((state) => state.loading);
   const restoring = useEditorStore((state) => state.restoring);
+  useEffect(trackInputModality, []);
   const transparent = useEditorStore(
     (state) => state.design.background.kind === "transparent",
   );
@@ -148,18 +154,23 @@ export function CanvasViewport({ onUpload, onSample }: Props) {
             <div
               {...{ [CANVAS_FOCUS_ATTRIBUTE]: "" }}
               tabIndex={0}
-              // The ring shows unless the last input was a click: browsers
-              // differ on :focus-visible for a focusable div (Safari shows it
-              // on click, Firefox not after a key press that follows one).
+              // The ring shows only after keyboard use: browsers differ on
+              // :focus-visible for a focusable div (Safari shows it on click,
+              // Firefox not after a key press that follows one). Shortcuts,
+              // modifiers and coming back to the window don't count.
               onPointerDownCapture={(event) =>
                 event.currentTarget.setAttribute("data-pointer", "")
               }
-              onKeyDownCapture={(event) =>
-                event.currentTarget.removeAttribute("data-pointer")
-              }
-              onBlur={(event) => {
-                if (event.target === event.currentTarget)
+              onKeyDownCapture={(event) => {
+                if (isKeyboardUse(event.nativeEvent))
                   event.currentTarget.removeAttribute("data-pointer");
+              }}
+              onFocus={(event) => {
+                if (event.target !== event.currentTarget) return;
+                event.currentTarget.toggleAttribute(
+                  "data-pointer",
+                  lastInputWasPointer(),
+                );
               }}
               aria-label={
                 layout.draggable
