@@ -4,7 +4,7 @@ import {
   exportButton,
   expectDesignSize,
   expectEmptyState,
-  openTab,
+  openStyleSections,
   RED,
   setSlider,
   stage,
@@ -40,7 +40,7 @@ test("the original screenshot downloads exactly as it was imported", async ({
   const original = makeSolidPng(1200, 750, RED);
   await upload(page, original, "My Dashboard.png");
   // Styling doesn't touch the original.
-  await openTab(page, "Style");
+  await openStyleSections(page);
   await setSlider(page, "Padding", "End");
   await exportOptions(page).click();
   await expect(page.getByTestId("original-size")).toContainText(
@@ -73,7 +73,7 @@ test("a saved project reopens with everything still editable", async ({
   baseURL,
 }) => {
   await upload(page, makeSolidPng(1200, 750, RED), "My Dashboard.png");
-  await openTab(page, "Style");
+  await openStyleSections(page);
   await setSlider(page, "Padding", "Home");
   await expectDesignSize(page, 1200, 750);
   // A numbered step on the screenshot.
@@ -130,7 +130,7 @@ test("a project file picked like an image opens as a project", async ({
   await page.getByRole("button", { name: /^Save project/ }).click();
   const saved = await download(page, () => confirmFileName(page));
   await page.keyboard.press("Escape");
-  await openTab(page, "Style");
+  await openStyleSections(page);
   await setSlider(page, "Padding", "Home");
   await expectDesignSize(page, 1200, 750);
 

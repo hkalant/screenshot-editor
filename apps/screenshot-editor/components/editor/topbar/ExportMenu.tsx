@@ -192,7 +192,14 @@ function OriginalSection() {
   );
 }
 
-function ExportButton({ className }: { className?: string }) {
+function ExportButton({
+  className,
+  inBar = false,
+}: {
+  className?: string;
+  /** In the top bar, which shortens the label when narrow. */
+  inBar?: boolean;
+}) {
   const options = useEditorStore((state) => state.exportOptions);
   const exporting = useEditorStore((state) => state.exporting);
   const canExport = useCanExport();
@@ -211,7 +218,13 @@ function ExportButton({ className }: { className?: string }) {
       ) : (
         <Download aria-hidden />
       )}
-      {exportLabel(options)}
+      <span>
+        Export
+        {/* In a narrow top bar the format and scale are only read out. */}
+        <span className={cn(inBar && "sr-only @min-[40rem]/bar:not-sr-only")}>
+          {exportLabel(options).slice("Export".length)}
+        </span>
+      </span>
     </Button>
   );
 }
@@ -246,7 +259,7 @@ export function ExportMenu({ compact = false }: { compact?: boolean }) {
 
   return (
     <div className="flex items-center" data-tour="export">
-      <ExportButton className="rounded-r-none" />
+      <ExportButton className="rounded-r-none" inBar />
       <Popover>
         <PopoverTrigger asChild>
           <Button

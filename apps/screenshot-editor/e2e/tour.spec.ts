@@ -13,7 +13,10 @@ test.use({ tourSeen: false });
 
 const welcome = (page: Page) => page.getByTestId("tour-welcome");
 const card = (page: Page) => page.getByTestId("tour-step");
-const tool = (page: Page) => page.getByRole("combobox", { name: "Tool" });
+const frameSection = (page: Page) =>
+  page
+    .getByRole("complementary", { name: "Settings" })
+    .getByRole("button", { name: "Frame", exact: true });
 
 test("shows the welcome once, and Skip leaves the editor empty", async ({
   page,
@@ -44,8 +47,8 @@ test("walks through the steps on a sample, then removes it", async ({
 
   await card(page).getByRole("button", { name: "Next" }).click();
   await expect(card(page)).toContainText("Frame & Style");
-  // The dropdown is shown switching to Style.
-  await expect(tool(page)).toHaveValue("style");
+  // The Frame section is shown opening.
+  await expect(frameSection(page)).toHaveAttribute("aria-expanded", "true");
 
   for (const title of ["Annotate", "Export", "Save your work"]) {
     await page.keyboard.press("ArrowRight");
@@ -57,7 +60,6 @@ test("walks through the steps on a sample, then removes it", async ({
 
   await expect(card(page)).toBeHidden();
   await expectEmptyState(page);
-  await expect(tool(page)).toHaveValue("background");
   // Nothing to undo: the sample left no trace in the history.
   await expect(
     page.getByRole("button", { name: "Undo", exact: true }).first(),

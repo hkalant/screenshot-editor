@@ -67,7 +67,7 @@ function NameForm({
           input.select();
         }
       }}
-      className="tour-pop fixed top-1/2 left-1/2 z-51 w-[min(28rem,calc(100vw-2rem))] -translate-1/2 rounded-2xl bg-background p-6 text-foreground shadow-2xl outline-none"
+      className="tour-pop fixed top-1/2 left-1/2 z-51 w-[min(28rem,calc(100vw-2rem))] -translate-1/2 rounded-xl bg-background p-6 text-foreground shadow-2xl outline-none"
     >
       <form
         onSubmit={(event) => {
@@ -87,7 +87,7 @@ function NameForm({
         >
           File name
         </label>
-        <div className="mt-1.5 flex h-10 items-center rounded-full border border-input bg-background/70 pr-4 focus-within:outline-3 focus-within:outline-offset-2 focus-within:outline-ring focus-within:outline-solid">
+        <div className="mt-1.5 flex h-10 items-center rounded-md border border-input bg-background/70 pr-4 focus-within:outline-3 focus-within:outline-offset-2 focus-within:outline-ring focus-within:outline-solid">
           <input
             id="save-file-name"
             value={name}
@@ -95,7 +95,7 @@ function NameForm({
             autoComplete="off"
             spellCheck={false}
             aria-describedby="save-file-extension"
-            className="h-full min-w-0 flex-1 rounded-full bg-transparent pl-4 text-sm outline-none"
+            className="h-full min-w-0 flex-1 rounded-md bg-transparent pl-4 text-sm outline-none"
           />
           <span
             id="save-file-extension"

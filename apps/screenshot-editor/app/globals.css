@@ -55,21 +55,12 @@
   --sheet-shadow: 0 8px 30px rgb(0 0 0 / 8%);
   --workspace: #f2f2f3;
   --surround-dot: rgb(66 74 82 / 14%);
-  --radius: 12px;
+  --radius: 6px;
 
-  /* Glass: translucent panes that float over a soft wash of the brand
-     colours. Text on glass keeps the solid theme's contrast, because the
-     fill is mostly opaque and the wash behind it is pale. */
-  --ambient:
-    radial-gradient(at 8% 0%, rgb(249 201 9 / 32%), transparent 42%),
-    radial-gradient(at 100% 100%, rgb(209 3 115 / 16%), transparent 48%),
-    var(--obu-charcoal-10);
-  --glass: rgb(255 255 255 / 68%);
-  /* Popovers and notices, which can sit over the design itself. */
-  --glass-thick: rgb(255 255 255 / 86%);
-  --glass-edge: rgb(255 255 255 / 85%);
-  --glass-line: rgb(66 74 82 / 12%);
-  --glass-shadow: rgb(66 74 82 / 16%);
+  /* Flat panes on a plain ground: solid fills and a hairline edge. Only
+     what floats over the design (popovers, notices) casts a shadow. */
+  --ground: var(--obu-charcoal-10);
+  --float-shadow: 0 4px 16px rgb(66 74 82 / 14%);
 }
 
 /* Only the interface changes: the design canvas never follows the theme.
@@ -101,15 +92,8 @@
   --sheet-shadow: 0 8px 30px rgb(0 0 0 / 35%);
   --workspace: #30363c;
   --surround-dot: rgb(255 255 255 / 9%);
-  --ambient:
-    radial-gradient(at 8% 0%, rgb(249 201 9 / 12%), transparent 42%),
-    radial-gradient(at 100% 100%, rgb(209 3 115 / 16%), transparent 48%),
-    #30363c;
-  --glass: rgb(66 74 82 / 66%);
-  --glass-thick: rgb(66 74 82 / 88%);
-  --glass-edge: rgb(255 255 255 / 16%);
-  --glass-line: rgb(255 255 255 / 10%);
-  --glass-shadow: rgb(0 0 0 / 35%);
+  --ground: #30363c;
+  --float-shadow: 0 4px 16px rgb(0 0 0 / 35%);
 }
 
 @theme inline {
@@ -132,17 +116,16 @@
   --color-selected: var(--selected);
   --color-selected-foreground: var(--selected-foreground);
   --color-workspace: var(--workspace);
-  /* Glass radii: rounder than the Brookes web radii (2-6px), so nested
-     shapes sit concentrically inside the panes. */
-  --radius-sm: 8px;
+  /* Close to the Brookes web radii (2-6px): slightly rounded, not pills. */
+  --radius-sm: 4px;
   --radius-md: var(--radius);
-  --radius-lg: 16px;
-  --radius-xl: 22px;
-  /* One shape language: panes (bars, panels, popovers, the canvas surround)
-     use xl; full-width controls and the items inside panes (tiles, menu
-     rows) use md, with sm for what nests inside those; buttons sized to
-     their label are pills. Inside a pane, padding + inner radius = outer
-     radius, so the curves stay parallel (22px pane, 10px padding, 12px rows). */
+  --radius-lg: 8px;
+  --radius-xl: 8px;
+  /* One shape language: panes (bars, panels, popovers, dialogs, the canvas
+     surround) use xl; controls and the items inside panes (buttons, inputs,
+     tiles, menu rows) use md, with sm for what nests inside those. Inside a
+     control, padding + inner radius = outer radius, so the curves stay
+     parallel (6px control, 2px padding, 4px highlight). */
   /* brookes.ac.uk sets text in the operating system's sans-serif. */
   --font-sans:
     BlinkMacSystemFont, -apple-system, "Segoe UI", Roboto, Oxygen, Ubuntu,
@@ -152,9 +135,9 @@
   --font-brand: Helvetica, Arial, sans-serif;
 }
 
-/* The brand wash the glass panes float over. */
-@utility ambient {
-  background: var(--ambient);
+/* The plain ground the desktop panes sit on. */
+@utility ground {
+  background-color: var(--ground);
 }
 
 /* The surround behind the design on desktop: a plain neutral ground with a
@@ -164,27 +147,21 @@
   background-image: radial-gradient(var(--surround-dot) 1px, transparent 1px);
   background-size: 16px 16px;
   border-radius: var(--radius-xl);
-  box-shadow: inset 0 0 0 1px var(--glass-line);
+  box-shadow: inset 0 0 0 1px var(--border);
 }
 
-/* A floating glass pane: frosted fill, a bright top edge and a soft drop
-   shadow. `--glass-fill` swaps in a thicker fill. */
-@utility glass {
-  background-color: var(--glass-fill, var(--glass));
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  backdrop-filter: blur(24px) saturate(180%);
-  box-shadow:
-    inset 0 1px 0 var(--glass-edge),
-    0 0 0 1px var(--glass-line),
-    var(--glass-drop, 0 8px 32px var(--glass-shadow));
+/* A pane of the interface: a solid fill and a hairline edge. */
+@utility pane {
+  background-color: var(--background);
+  box-shadow: 0 0 0 1px var(--border);
+}
 
-  /* Solid panes for people who ask for less transparency or more contrast. */
-  @media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
-    background-color: var(--background);
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
-    box-shadow: 0 0 0 1px var(--input);
-  }
+/* A pane that floats over the design, such as a popover or a notice. */
+@utility pane-float {
+  background-color: var(--background);
+  box-shadow:
+    0 0 0 1px var(--border),
+    var(--float-shadow);
 }
 
 /* The highlight along the top of a filled control (yellow, charcoal). */
@@ -304,12 +281,6 @@
   }
 }
 
-@keyframes tour-nudge {
-  50% {
-    translate: 0 2px;
-  }
-}
-
 .tour-fade {
   animation: ui-in 200ms ease-out both;
 }
@@ -323,15 +294,10 @@
   animation: tour-spot 160ms ease-out both;
 }
 
-.tour-nudge {
-  animation: tour-nudge 900ms ease-in-out infinite;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .tour-fade,
   .tour-pop,
-  .tour-spot,
-  .tour-nudge {
+  .tour-spot {
     animation: none;
   }
 }

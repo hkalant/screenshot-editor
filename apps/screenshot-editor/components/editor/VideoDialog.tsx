@@ -26,7 +26,7 @@ export function VideoDialog() {
         <Dialog.Content
           data-testid="video-dialog"
           aria-describedby={undefined}
-          className="tour-pop fixed top-1/2 left-1/2 z-50 w-[min(960px,calc(100vw-2rem))] -translate-1/2 overflow-hidden rounded-2xl bg-background text-foreground shadow-2xl outline-none"
+          className="tour-pop fixed top-1/2 left-1/2 z-50 w-[min(960px,calc(100vw-2rem))] -translate-1/2 overflow-hidden rounded-xl bg-background text-foreground shadow-2xl outline-none"
         >
           <div className="flex items-center gap-2 px-5 py-3">
             <Dialog.Title className="flex-1 text-base font-semibold">

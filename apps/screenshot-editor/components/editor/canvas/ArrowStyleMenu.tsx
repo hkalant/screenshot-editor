@@ -133,7 +133,7 @@ export function ArrowStyleMenu({ width, height }: Props) {
       ref={leaveOnRemove}
       onPointerEnter={() => setOverArrowMenu(true)}
       onPointerLeave={() => setOverArrowMenu(false)}
-      className="absolute flex items-center rounded-full glass p-1"
+      className="absolute flex items-center rounded-lg pane-float p-1"
       style={{ left, top }}
     >
       {styles.map((style) => (
@@ -151,7 +151,7 @@ export function ArrowStyleMenu({ width, height }: Props) {
               ?.focus({ preventScroll: true });
             setArrowStyle(arrow.id, style);
           }}
-          className="flex size-8 shrink-0 items-center justify-center rounded-full transition-colors outline-none hover:bg-accent focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid aria-checked:bg-accent aria-checked:ring-2 aria-checked:ring-foreground/25 aria-checked:ring-inset"
+          className="flex size-8 shrink-0 items-center justify-center rounded-sm transition-colors outline-none hover:bg-accent focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid aria-checked:bg-accent aria-checked:ring-2 aria-checked:ring-foreground/25 aria-checked:ring-inset"
         >
           <StylePreview style={style} color={arrow.color} />
         </button>

@@ -5,7 +5,7 @@ import {
   expectDesignSize,
   expectEmptyState,
   exportPng,
-  openTab,
+  openStyleSections,
   RED,
   setSlider,
   shadowOption,
@@ -114,7 +114,7 @@ test("the shadow is drawn below a screenshot with rounded corners", async ({
 }) => {
   await upload(page, makeSolidPng(1200, 750, RED));
   await page.getByRole("button", { name: "Stone" }).click(); // light background, so the shadow shows
-  await openTab(page, "Style");
+  await openStyleSections(page);
 
   // 20 export px below the bottom edge of the image, horizontally centred.
   const probe: [number, number] = [1344, (72 + 750) * 2 + 20];
@@ -145,7 +145,7 @@ test("clicking the active shadow option again keeps it selected", async ({
   page,
 }) => {
   await upload(page, makeSolidPng(400, 300, RED));
-  await openTab(page, "Style");
+  await openStyleSections(page);
   const floating = page.getByRole("radio", { name: "Floating" });
   await floating.click();
   await floating.click();
@@ -164,7 +164,7 @@ test("the sample image loads", async ({ page }) => {
 
 test("replacing the image keeps the style", async ({ page }) => {
   await upload(page, makeSolidPng(400, 300, RED));
-  await openTab(page, "Style");
+  await openStyleSections(page);
   await setSlider(page, "Border width", "End");
   await expectDesignSize(page, 544, 444);
   await chooseFile(

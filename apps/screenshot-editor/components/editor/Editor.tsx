@@ -88,10 +88,10 @@ export default function Editor() {
         // Colour, font and scheme here as well as on body, which a host page
         // (such as the artifact preview) may style over.
         "flex h-dvh flex-col overflow-hidden font-sans text-foreground scheme-light dark:scheme-dark",
-        // Desktop: glass panes floating over the brand wash, kept clear of
+        // Desktop: flat panes on a plain ground, kept clear of
         // side notches.
         desktop
-          ? "gap-2 py-2 pr-[max(0.5rem,env(safe-area-inset-right))] pl-[max(0.5rem,env(safe-area-inset-left))] ambient"
+          ? "gap-2 ground py-2 pr-[max(0.5rem,env(safe-area-inset-right))] pl-[max(0.5rem,env(safe-area-inset-left))]"
           : "bg-background pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)]",
       )}
     >
@@ -104,37 +104,41 @@ export default function Editor() {
           Screenshot Editor is best viewed on desktop
         </p>
       )}
-      {desktop ? (
-        <TopBar onReplace={openFilePicker} />
-      ) : (
-        <MobileBar onReplace={openFilePicker} />
-      )}
-      <div
-        className={cn("flex min-h-0 flex-1", desktop ? "gap-2" : "flex-col")}
-      >
+      {/* Desktop: the sidebar runs the full height, with the top bar
+          beside it over the canvas. */}
+      <div className={cn("flex min-h-0 flex-1", desktop && "gap-2")}>
         {desktop && <ToolRail />}
-        <main
-          className={cn(
-            "relative min-h-0 min-w-0 flex-1",
-            desktop ? "canvas-surround" : "bg-workspace",
+        <div className={cn("flex min-w-0 flex-1 flex-col", desktop && "gap-2")}>
+          {desktop ? (
+            <TopBar onReplace={openFilePicker} />
+          ) : (
+            <MobileBar onReplace={openFilePicker} />
           )}
-          aria-label="Canvas"
-          data-pane="canvas"
-        >
-          <CanvasViewport onUpload={openFilePicker} onSample={loadSample} />
-          {isDragging && <DropOverlay />}
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept={ACCEPT_ATTR}
-            className="sr-only"
-            tabIndex={-1}
-            aria-label="Upload image"
-            data-testid="file-input"
-            onChange={onFileChange}
-          />
-        </main>
-        {!desktop && <MobilePanel />}
+          <div className="flex min-h-0 flex-1 flex-col">
+            <main
+              className={cn(
+                "relative min-h-0 min-w-0 flex-1",
+                desktop ? "canvas-surround" : "bg-workspace",
+              )}
+              aria-label="Canvas"
+              data-pane="canvas"
+            >
+              <CanvasViewport onUpload={openFilePicker} onSample={loadSample} />
+              {isDragging && <DropOverlay />}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept={ACCEPT_ATTR}
+                className="sr-only"
+                tabIndex={-1}
+                aria-label="Upload image"
+                data-testid="file-input"
+                onChange={onFileChange}
+              />
+            </main>
+            {!desktop && <MobilePanel />}
+          </div>
+        </div>
       </div>
       {!desktop && <MobileTabs />}
       <Notice />

@@ -23,7 +23,7 @@ function PopoverContent({
         sideOffset={sideOffset}
         collisionPadding={8}
         className={cn(
-          "z-50 w-72 max-w-[calc(100vw-1rem)] rounded-xl glass p-4 font-sans text-foreground outline-none [--glass-fill:var(--glass-thick)]",
+          "z-50 w-72 max-w-[calc(100vw-1rem)] rounded-xl pane-float p-4 font-sans text-foreground outline-none",
           className,
         )}
         {...props}

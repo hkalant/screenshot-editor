@@ -1,58 +1,68 @@
 "use client";
 
 import { ChevronDown } from "lucide-react";
-import { useId } from "react";
-import type { PanelId } from "@/lib/store/editor";
-import { useEditorStore } from "@/lib/store/editor";
-import { PANELS } from "./panels/registry";
+import { Accordion } from "radix-ui";
+import { type ReactNode, useEffect } from "react";
+import { type SidebarSection, useSidebarStore } from "@/lib/store/sidebar";
+import { BackgroundPanel } from "./panels/BackgroundPanel";
+import { ResetStyleButton, STYLE_SECTIONS } from "./panels/StylePanel";
 
-/** The settings sidebar: a tool picker at the top and the chosen tool's panel (desktop layout). */
+const SECTIONS: readonly {
+  id: SidebarSection;
+  title: string;
+  Component: () => ReactNode;
+}[] = [
+  { id: "background", title: "Background", Component: BackgroundPanel },
+  ...STYLE_SECTIONS,
+];
+
+/**
+ * The settings sidebar (desktop layout): every setting in sections that
+ * open and close, any number at once.
+ */
 export function ToolRail() {
-  const activePanel = useEditorStore((state) => state.activePanel);
-  const setActivePanel = useEditorStore((state) => state.setActivePanel);
-  const id = useId();
-  const panel = PANELS.find((entry) => entry.id === activePanel) ?? PANELS[0];
-  const { Component, icon: Icon } = panel;
+  const open = useSidebarStore((state) => state.open);
+  const setOpen = useSidebarStore((state) => state.setOpen);
+  useEffect(() => useSidebarStore.getState().load(), []);
 
   return (
     <aside
       data-pane="side"
-      aria-label="Tools"
-      className="flex w-72 shrink-0 flex-col overflow-hidden rounded-xl glass lg:w-80"
+      aria-label="Settings"
+      className="flex w-60 shrink-0 flex-col overflow-y-auto rounded-xl pane lg:w-80"
     >
-      <div className="p-3 pb-0">
-        <label htmlFor={id} className="sr-only">
-          Tool
-        </label>
-        <div className="relative" data-tour="panel-picker">
-          <Icon
-            className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-foreground"
-            aria-hidden
-          />
-          <select
-            id={id}
-            value={panel.id}
-            onChange={(event) => setActivePanel(event.target.value as PanelId)}
-            className="h-10 w-full appearance-none rounded-md border border-input bg-background/50 pr-10 pl-10 text-sm font-semibold text-foreground outline-none focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid"
-          >
-            {PANELS.map((entry) => (
-              <option key={entry.id} value={entry.id}>
-                {entry.label}
-              </option>
-            ))}
-          </select>
-          <ChevronDown
-            className="pointer-events-none absolute top-1/2 right-3.5 size-4 -translate-y-1/2 text-foreground"
-            aria-hidden
-          />
-        </div>
-      </div>
-      <section
-        aria-label={panel.label}
-        className="min-h-0 flex-1 overflow-y-auto p-5"
+      <Accordion.Root
+        type="multiple"
+        value={open}
+        onValueChange={(value) => setOpen(value as SidebarSection[])}
       >
-        <Component />
-      </section>
+        {SECTIONS.map(({ id, title, Component }) => (
+          <Accordion.Item
+            key={id}
+            value={id}
+            data-tour={`section-${id}`}
+            className="border-b"
+          >
+            <Accordion.Header asChild>
+              <h2>
+                <Accordion.Trigger className="group flex w-full items-center justify-between px-5 py-4 text-left text-sm font-semibold tracking-wide uppercase outline-none hover:bg-accent/60 focus-visible:outline-3 focus-visible:-outline-offset-3 focus-visible:outline-ring focus-visible:outline-solid">
+                  {title}
+                  <ChevronDown
+                    className="size-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180 motion-reduce:transition-none"
+                    aria-hidden
+                  />
+                </Accordion.Trigger>
+              </h2>
+            </Accordion.Header>
+            <Accordion.Content className="space-y-5 px-5 pb-5">
+              <Component />
+            </Accordion.Content>
+          </Accordion.Item>
+        ))}
+      </Accordion.Root>
+      <div className="p-5">
+        <ResetStyleButton />
+      </div>
     </aside>
   );
 }

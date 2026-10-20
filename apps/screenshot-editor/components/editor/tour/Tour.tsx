@@ -1,9 +1,10 @@
 "use client";
 
-import { ChevronDown, X } from "lucide-react";
+import { X } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useEditorStore } from "@/lib/store/editor";
+import { type SidebarSection, useSidebarStore } from "@/lib/store/sidebar";
 import { tourSeen, useTourStore } from "@/lib/tour/tour";
 import { cn } from "@/lib/utils";
 import { TourIllustration } from "./TourIllustration";
@@ -20,31 +21,30 @@ type Step = {
   enter?: () => void;
 };
 
-const setPanel = (panel: "background" | "style") =>
-  useEditorStore.getState().setActivePanel(panel);
+const reveal = (section: SidebarSection) =>
+  useSidebarStore.getState().reveal(section);
 
-// How long the Frame & Style step shows Background before switching, so
-// the dropdown is seen to change.
+// How long the Frame & Style step waits before opening Frame, so the
+// section is seen to open.
 const SWITCH_DELAY_MS = 700;
 let switchTimer: number | undefined;
 
 const STEPS: Step[] = [
   {
-    target: '[data-pane="side"]',
+    target: '[data-tour="section-background"]',
     side: "right",
     title: "Background",
     body: "Choose a gradient, a solid colour or upload your own image behind the screenshot, then adjust the angle and blur.",
-    enter: () => setPanel("background"),
+    enter: () => reveal("background"),
   },
   {
-    target: '[data-tour="panel-picker"]',
+    target: '[data-tour="section-frame"]',
     side: "right",
     title: "Frame & Style",
-    body: "Switch to Style from this dropdown menu to add a browser frame, set padding, shadow and border.",
+    body: "Further down the sidebar, add a browser frame and set the padding, shadow and border. Open as many sections as you like.",
     enter: () => {
-      setPanel("background");
       window.clearTimeout(switchTimer);
-      switchTimer = window.setTimeout(() => setPanel("style"), SWITCH_DELAY_MS);
+      switchTimer = window.setTimeout(() => reveal("frame"), SWITCH_DELAY_MS);
     },
   },
   {
@@ -180,7 +180,7 @@ function Welcome() {
         aria-describedby="tour-description"
         data-testid="tour-welcome"
         data-tour-dialog
-        className="tour-pop w-full max-w-md overflow-hidden rounded-2xl bg-background text-foreground shadow-2xl"
+        className="tour-pop w-full max-w-md overflow-hidden rounded-xl bg-background text-foreground shadow-2xl"
       >
         <TourIllustration className="block h-auto w-full" />
         <div className="space-y-2 px-6 pt-5">
@@ -302,14 +302,6 @@ function StepCard({ index }: { index: number }) {
         <p id="tour-step-body" className="mt-1.5 text-sm text-muted-foreground">
           {step.body}
         </p>
-        {step.target === '[data-tour="panel-picker"]' && (
-          <p className="mt-3 flex items-center gap-2 text-xs font-medium">
-            <span className="grid size-6 place-items-center rounded-md border border-input">
-              <ChevronDown className="tour-nudge size-4" aria-hidden />
-            </span>
-            Background · Style
-          </p>
-        )}
         <div className="mt-4 flex items-center gap-2">
           <span
             className="flex-1 text-xs text-muted-foreground tabular-nums"

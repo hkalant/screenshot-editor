@@ -14,8 +14,9 @@ import { ThemeToggle } from "./topbar/ThemeToggle";
 type Props = { onReplace: () => void };
 
 /** The desktop top bar: the name on the left; the canvas size and history in
-    the middle (centred from 1360px, where the bar has room); then secondary actions
-    as icons, and Export, the main action, last. */
+    the middle (centred where the bar has room); then secondary actions as
+    icons, and Export, the main action, last. What it shows follows the bar's
+    own width, which the sidebar beside it takes from the window's. */
 export function TopBar({ onReplace }: Props) {
   const image = useEditorStore(selectActiveImage);
   const loading = useEditorStore((state) => state.loading);
@@ -23,19 +24,24 @@ export function TopBar({ onReplace }: Props) {
   return (
     <header
       data-pane="bar"
-      className="relative z-20 flex h-14 shrink-0 items-center gap-2 rounded-xl glass px-3 lg:gap-3 lg:px-4"
+      className="@container/bar relative z-20 flex h-14 shrink-0 items-center gap-2 rounded-xl pane px-3"
     >
       <h1 className="flex shrink-0 items-center gap-3 font-semibold whitespace-nowrap">
         {/* The logo only where the bar has room for it. */}
-        <BrookesLogo className="hidden h-8 w-auto text-(--obu-charcoal) lg:block dark:text-foreground" />
-        <span className="hidden h-6 w-px bg-border lg:block" aria-hidden />
-        Screenshot Editor
+        <BrookesLogo className="hidden h-8 w-auto text-(--obu-charcoal) @min-[63rem]/bar:block dark:text-foreground" />
+        <span
+          className="hidden h-6 w-px bg-border @min-[63rem]/bar:block"
+          aria-hidden
+        />
+        <span className="sr-only @min-[50rem]/bar:not-sr-only">
+          Screenshot Editor
+        </span>
       </h1>
       <div
-        className="mx-1 h-6 w-px bg-border min-[1360px]:hidden"
+        className="mx-1 hidden h-6 w-px bg-border @min-[50rem]/bar:block @min-[84rem]/bar:hidden"
         aria-hidden
       />
-      <div className="flex items-center gap-2 min-[1360px]:absolute min-[1360px]:left-1/2 min-[1360px]:-translate-x-1/2 lg:gap-3">
+      <div className="flex items-center gap-2 @min-[84rem]/bar:absolute @min-[84rem]/bar:left-1/2 @min-[84rem]/bar:-translate-x-1/2">
         <SizeMenu />
         <HistoryButtons />
       </div>
@@ -57,7 +63,10 @@ export function TopBar({ onReplace }: Props) {
         <ThemeToggle />
         <MoreMenu />
       </div>
-      <div className="mx-1 h-6 w-px bg-border" aria-hidden />
+      <div
+        className="mx-1 h-6 w-px bg-border @max-[34rem]/bar:hidden"
+        aria-hidden
+      />
       <ExportMenu />
     </header>
   );

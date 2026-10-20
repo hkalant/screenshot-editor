@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
-import { expectEmptyState, openTab, stage } from "./helpers/editor";
+import { expectEmptyState, openStyleSections, stage } from "./helpers/editor";
 import { expect, test } from "./helpers/fixtures";
 
 // Automated WCAG 2.2 A/AA checks of the main screens. They catch only part
@@ -63,7 +63,7 @@ test("the editor with a screenshot has no detectable WCAG violations", async ({
   await page.goto("./");
   await loadSample(page);
   await expectNoViolations(page);
-  await openTab(page, "Style");
+  await openStyleSections(page);
   await expectNoViolations(page);
 });
 
