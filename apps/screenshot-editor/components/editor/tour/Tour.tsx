@@ -350,8 +350,10 @@ export function Tour({ enabled }: { enabled: boolean }) {
 
   // Esc ends it, the arrow keys move between steps, and Tab stays in the
   // tour. Caught first and kept from the editor, whose shortcuts would act
-  // on the page underneath.
-  useEffect(() => {
+  // on the page underneath. A layout effect, so the keys are released in the
+  // same commit that hides the tour: a key pressed just after a narrowing
+  // must not reach a tour that is no longer shown.
+  useLayoutEffect(() => {
     if (step === null || !enabled) return;
     const onKey = (event: KeyboardEvent) => {
       event.stopPropagation();
