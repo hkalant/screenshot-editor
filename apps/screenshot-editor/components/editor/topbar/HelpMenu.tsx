@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/popover";
 
 const TEXT_TUTORIAL_URL =
-  "https://docs.google.com/document/d/10Ti4Hn1kNuVGtStQZHqFbMokCOVisJW8RJdkAg14KAE/edit?usp=sharing";
+  "https://docs.google.com/document/d/10Ti4Hn1kNuVGtStQZHqFbMokCOVisJW8RJdkAg14KAE/preview?tab=t.0#heading=h.hw8d1rceca1v";
 
 // Font Awesome Free icons (solid), CC BY 4.0.
 function FaIcon({ viewBox, path }: { viewBox: string; path: string }) {
