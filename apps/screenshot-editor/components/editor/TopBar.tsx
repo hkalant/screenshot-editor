@@ -1,5 +1,6 @@
 "use client";
 
+import { X } from "lucide-react";
 import { BrookesLogo } from "./BrookesLogo";
 import { CopyButton } from "./topbar/CopyButton";
 import { ExportMenu } from "./topbar/ExportMenu";
@@ -23,8 +24,10 @@ export function TopBar({ onReplace }: Props) {
       <h1 className="flex shrink-0 items-center gap-3 font-semibold whitespace-nowrap">
         {/* The logo only where the bar has room for it. */}
         <BrookesLogo className="hidden h-8 w-auto text-(--obu-charcoal) @min-[59rem]/bar:block dark:text-foreground" />
-        <span
-          className="hidden h-6 w-px bg-border @min-[59rem]/bar:block"
+        {/* A partnership mark: the university × the app. */}
+        <X
+          className="hidden size-4 text-muted-foreground @min-[59rem]/bar:block"
+          strokeWidth={1.75}
           aria-hidden
         />
         <span className="sr-only @min-[46rem]/bar:not-sr-only">
