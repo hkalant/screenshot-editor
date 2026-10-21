@@ -389,7 +389,6 @@ export function chromeLayout(
     case "phone":
     case "tablet":
     case "laptop":
-    case "monitor":
       return null;
   }
 }

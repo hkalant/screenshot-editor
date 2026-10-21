@@ -78,10 +78,8 @@ function fitHint(fitting: readonly DeviceKind[] | null): string {
       return "Shaped like a phone screenshot, so only Phone fits. Window frames are for computer screenshots.";
     case "tablet":
       return "Shaped like a tablet screenshot, so only Tablet fits.";
-    case "monitor":
-      return "Wider than most screens, so only Monitor fits.";
-    case "laptop,monitor":
-      return "Shaped like a computer screenshot, so Laptop or Monitor fits.";
+    case "laptop":
+      return "Shaped like a computer screenshot, so only Laptop fits.";
     default:
       return "Not shaped like a whole screen, so no device fits. Window frames fit any screenshot.";
   }
@@ -93,13 +91,11 @@ const itemClass =
 function FrameItem({
   kind,
   theme,
-  suggested = false,
   disabled = false,
   describedBy,
 }: {
   kind: FrameKind;
   theme: FrameTheme;
-  suggested?: boolean;
   disabled?: boolean;
   describedBy?: string;
 }) {
@@ -116,12 +112,6 @@ function FrameItem({
         className="ring-offset-[3px] ring-offset-background transition-shadow group-data-[state=on]:ring-[1.5px] group-data-[state=on]:ring-(--selection-ring)"
       />
       {FRAME_LABELS[kind]}
-      {/* Said by the hint it points to, so not part of the name. */}
-      {suggested && (
-        <span aria-hidden className="-mt-1 font-normal text-muted-foreground">
-          Suggested
-        </span>
-      )}
     </ToggleGroup.Item>
   );
 }
@@ -133,8 +123,6 @@ export function FrameOptions() {
   const image = useEditorStore(selectActiveImage);
   // Without a screenshot there is no shape to go by, so every device is offered.
   const fitting = image ? fittingDevices(image) : null;
-  // Only worth saying when there is a choice: Laptop over Monitor.
-  const suggestion = fitting && fitting.length > 1 ? fitting[0] : null;
   const hintId = useId();
   const device = isDeviceKind(frame.kind);
 
@@ -174,7 +162,6 @@ export function FrameOptions() {
                 key={kind}
                 kind={kind}
                 theme={frame.theme}
-                suggested={kind === suggestion}
                 disabled={!(fitting ?? DEVICE_KINDS).includes(kind)}
                 describedBy={hintId}
               />

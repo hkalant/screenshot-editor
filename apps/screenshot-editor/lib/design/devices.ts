@@ -6,7 +6,7 @@ import type { FrameKind } from "./schema";
 // no brands. The screen takes the screenshot's shape, so a landscape
 // screenshot gets a landscape device.
 
-export const DEVICE_KINDS = ["phone", "tablet", "laptop", "monitor"] as const;
+export const DEVICE_KINDS = ["phone", "tablet", "laptop"] as const;
 export type DeviceKind = (typeof DEVICE_KINDS)[number];
 
 export function isDeviceKind(kind: FrameKind): kind is DeviceKind {
@@ -18,7 +18,7 @@ export const DEVICE_COLORS = {
   body: "#1f2125",
   /** A lighter edge, so the outline shows on dark backgrounds too. */
   rim: "rgba(255, 255, 255, 0.16)",
-  /** Laptop base and monitor stand. */
+  /** The laptop base. */
   stand: "#2e3136",
   /** Behind transparent pixels of the screenshot. */
   screen: "#000000",
@@ -36,7 +36,7 @@ export type DeviceGeometry = Size & {
   body: DevicePart;
   /** The screenshot's place. */
   screen: DevicePart;
-  /** The laptop base, or the monitor's neck and foot. */
+  /** The laptop base. */
   stand: DevicePart[];
   /** Camera dots, the speaker slot and the laptop groove, drawn on top. */
   details: (DevicePart & { fill: string })[];
@@ -167,52 +167,14 @@ export function deviceGeometry(kind: DeviceKind, screen: Size): DeviceGeometry {
         rim,
       };
     }
-    case "monitor": {
-      const edge = px(0.02);
-      const footWidth = px(0.55);
-      const bodyWidth = screen.width + 2 * edge;
-      const width = Math.max(bodyWidth, footWidth);
-      const { body, screen: place } = framed(
-        screen,
-        [edge, edge, px(0.04), edge],
-        (width - bodyWidth) / 2,
-        all(px(0.014)),
-        px(0.003),
-      );
-      const neck = { width: px(0.17), height: px(0.13) };
-      const footHeight = px(0.018);
-      return {
-        width,
-        height: body.height + neck.height + footHeight,
-        body,
-        screen: place,
-        stand: [
-          {
-            x: (width - neck.width) / 2,
-            y: body.height,
-            ...neck,
-            radii: all(0),
-          },
-          {
-            x: (width - footWidth) / 2,
-            y: body.height + neck.height,
-            width: footWidth,
-            height: footHeight,
-            radii: [footHeight / 2, footHeight / 2, px(0.004), px(0.004)],
-          },
-        ],
-        details: [],
-        rim,
-      };
-    }
   }
 }
 
 /**
- * The devices a screenshot of this shape could have come from, best first.
- * Any other device would squash a phone into a laptop's screen, so the picker
- * greys them out. A laptop's and a monitor's screenshots look the same, so
- * both fit a computer-shaped one; a shape that is no screen's fits none.
+ * The device a screenshot of this shape could have come from, if any (as a
+ * list, so a shape could suit more than one). Any other device would squash
+ * a phone into a laptop's screen, so the picker greys them out; a shape that
+ * is no screen's, such as an ultrawide one, fits none.
  */
 export function fittingDevices(size: Size): DeviceKind[] {
   const long = Math.max(size.width, size.height);
@@ -223,9 +185,9 @@ export function fittingDevices(size: Size): DeviceKind[] {
     if (ratio >= 1.6) return ["phone"];
     return ratio >= 1.2 ? ["tablet"] : [];
   }
-  if (ratio > 2.3) return ["monitor"];
+  if (ratio > 2.3) return [];
   if (ratio >= 2) return ["phone"];
-  if (ratio >= 1.55) return ["laptop", "monitor"];
+  if (ratio >= 1.55) return ["laptop"];
   return ratio >= 1.2 ? ["tablet"] : [];
 }
 

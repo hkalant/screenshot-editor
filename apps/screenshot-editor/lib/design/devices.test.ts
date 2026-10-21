@@ -43,15 +43,6 @@ describe("deviceGeometry", () => {
     expect(laptop).toMatchObject({ width: 1856, height: 1108 });
   });
 
-  it("stands a monitor on a centred neck and foot", () => {
-    const monitor = deviceGeometry("monitor", { width: 1600, height: 900 });
-    const [neck, foot] = monitor.stand;
-    expect(monitor.width).toBe(monitor.body.width);
-    expect(neck.x + neck.width / 2).toBe(monitor.width / 2);
-    expect(foot.x + foot.width / 2).toBe(monitor.width / 2);
-    expect(foot.y + foot.height).toBe(monitor.height);
-  });
-
   it("looks the same at any resolution", () => {
     for (const kind of DEVICE_KINDS) {
       const small = deviceGeometry(kind, { width: 800, height: 500 });
@@ -63,25 +54,19 @@ describe("deviceGeometry", () => {
 });
 
 describe("fittingDevices", () => {
-  it("fits devices to the screenshot's shape, best first", () => {
+  it("fits devices to the screenshot's shape", () => {
     expect(fittingDevices({ width: 1179, height: 2556 })).toEqual(["phone"]);
     expect(fittingDevices({ width: 750, height: 1334 })).toEqual(["phone"]);
     expect(fittingDevices({ width: 2556, height: 1179 })).toEqual(["phone"]);
     expect(fittingDevices({ width: 1640, height: 2360 })).toEqual(["tablet"]);
     expect(fittingDevices({ width: 2048, height: 1536 })).toEqual(["tablet"]);
-    expect(fittingDevices({ width: 2880, height: 1800 })).toEqual([
-      "laptop",
-      "monitor",
-    ]);
-    expect(fittingDevices({ width: 1920, height: 1080 })).toEqual([
-      "laptop",
-      "monitor",
-    ]);
-    expect(fittingDevices({ width: 3440, height: 1440 })).toEqual(["monitor"]);
+    expect(fittingDevices({ width: 2880, height: 1800 })).toEqual(["laptop"]);
+    expect(fittingDevices({ width: 1920, height: 1080 })).toEqual(["laptop"]);
   });
 
   it("fits none to a shape that is no screen's", () => {
     expect(fittingDevices({ width: 1000, height: 1000 })).toEqual([]);
+    expect(fittingDevices({ width: 3440, height: 1440 })).toEqual([]);
     expect(fittingDevices({ width: 0, height: 0 })).toEqual([]);
   });
 });
@@ -100,7 +85,7 @@ describe("frameForScreenshot", () => {
   const laptopShot = { width: 1920, height: 1080 };
   it("keeps window frames and devices that still fit", () => {
     expect(frameForScreenshot("macos", laptopShot)).toBe("macos");
-    expect(frameForScreenshot("monitor", laptopShot)).toBe("monitor");
+    expect(frameForScreenshot("laptop", laptopShot)).toBe("laptop");
   });
 
   it("swaps a device that no longer fits for the best one that does", () => {

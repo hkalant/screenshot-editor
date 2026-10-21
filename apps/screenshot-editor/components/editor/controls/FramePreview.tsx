@@ -222,16 +222,6 @@ function DevicePicture({ kind }: { kind: DeviceKind }) {
           <span className="h-[5px] w-[70px] rounded-b-[5px]" style={stand} />
         </div>
       );
-    case "monitor":
-      return (
-        <div className="flex flex-col items-center">
-          <Shell padding="3px 3px 6px" radius="2px">
-            <DeviceScreen width={54} height={30} />
-          </Shell>
-          <span className="h-[6px] w-[6px]" style={stand} />
-          <span className="h-[3px] w-[22px] rounded-t-[2px]" style={stand} />
-        </div>
-      );
   }
 }
 

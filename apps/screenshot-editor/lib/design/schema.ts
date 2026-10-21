@@ -111,7 +111,6 @@ export const FRAME_KINDS = [
   "phone",
   "tablet",
   "laptop",
-  "monitor",
 ] as const;
 
 export const frameSpecSchema = z.object({

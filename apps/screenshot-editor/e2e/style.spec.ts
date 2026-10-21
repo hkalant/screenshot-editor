@@ -157,7 +157,7 @@ test("devices go around the screenshot, and only fitting ones are offered", asyn
       .getByRole("radiogroup", { name: "Frame", exact: true })
       .getByRole("radio", { name, exact: true });
 
-  for (const name of ["Tablet", "Laptop", "Monitor", "macOS browser"])
+  for (const name of ["Tablet", "Laptop", "macOS browser"])
     await expect(frame(name)).toBeDisabled();
   await expect(frame("macOS")).toHaveAccessibleDescription(
     /^Shaped like a phone screenshot, so only Phone fits\./,
@@ -182,14 +182,12 @@ test("devices go around the screenshot, and only fitting ones are offered", asyn
   expect(brightness(bezelPixel)).toBeLessThan(60);
   expect(isRed(screenPixel)).toBe(true);
 
-  // A computer screenshot swaps the phone for a laptop, the better of the two
-  // that fit. Its base is wider than its screen and adds height below it.
+  // A computer screenshot swaps the phone for a laptop. Its base is wider than its screen and adds height below it.
   await upload(page, makeSolidPng(1000, 625, RED));
   await expect(frame("Laptop")).toHaveAttribute("aria-checked", "true");
   await expect(frame("Phone")).toBeDisabled();
-  await expect(frame("Monitor")).toBeEnabled();
   await expect(frame("macOS browser")).toBeEnabled();
-  await expect(page.getByText("Suggested", { exact: true })).toBeVisible();
+  await expect(frame("Monitor")).toHaveCount(0);
   await expectDesignSize(page, 1162 + 144, 693 + 144);
   await frame("None").click();
   await expectDesignSize(page, 1144, 769);

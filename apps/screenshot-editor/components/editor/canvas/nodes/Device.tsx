@@ -43,7 +43,7 @@ type Props = {
   children: ReactNode;
 };
 
-/** A phone, tablet, laptop or monitor around the screenshot. */
+/** A phone, tablet or laptop around the screenshot. */
 export function DeviceNode({ device, shadow, listening, children }: Props) {
   const { body, screen, rim } = device;
   const half = rim / 2;

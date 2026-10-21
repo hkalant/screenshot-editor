@@ -14,7 +14,6 @@ export const FRAME_LABELS: Record<FrameKind, string> = {
   phone: "Phone",
   tablet: "Tablet",
   laptop: "Laptop",
-  monitor: "Monitor",
 };
 
 /**
@@ -49,7 +48,6 @@ const BASE: Record<FrameKind, { chromeTop: number; ring: number }> = {
   phone: { chromeTop: 0, ring: 0 },
   tablet: { chromeTop: 0, ring: 0 },
   laptop: { chromeTop: 0, ring: 0 },
-  monitor: { chromeTop: 0, ring: 0 },
 };
 
 export type FrameMetrics = {
