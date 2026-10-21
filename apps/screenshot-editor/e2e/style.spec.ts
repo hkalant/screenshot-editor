@@ -34,7 +34,7 @@ async function cornerPixel(page: Page) {
   return pixel;
 }
 
-test("solid and uploaded backgrounds are what gets exported", async ({
+test("solid, transparent and uploaded backgrounds are what gets exported", async ({
   page,
 }) => {
   await upload(page, makeSolidPng(400, 300, RED));
@@ -51,7 +51,8 @@ test("solid and uploaded backgrounds are what gets exported", async ({
   await page.keyboard.press("Escape");
   expectColor(await cornerPixel(page), "#123456", 2);
 
-  await expect(backgroundType(page, "None")).toHaveCount(0);
+  await backgroundType(page, "None").click();
+  expect((await cornerPixel(page))[3]).toBe(0);
 
   await backgroundType(page, "Image").click();
   await chooseFile(

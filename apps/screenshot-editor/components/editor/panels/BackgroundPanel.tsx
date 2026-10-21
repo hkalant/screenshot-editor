@@ -60,6 +60,9 @@ function chooseKind(choice: BackgroundChoice) {
     case "solid":
       state.setBackground({ kind: "solid", color: "#ffffff" });
       break;
+    case "none":
+      state.setTransparent();
+      break;
   }
 }
 
