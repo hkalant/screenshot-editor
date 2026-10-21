@@ -1,3 +1,4 @@
+import { DEVICE_KINDS, isDeviceKind, type DeviceKind } from "./devices";
 import { FRAME_KINDS, type FrameKind } from "./schema";
 
 export { FRAME_KINDS };
@@ -10,15 +11,21 @@ export const FRAME_LABELS: Record<FrameKind, string> = {
   "windows-browser": "Windows browser",
   minimal: "Minimal",
   glass: "Glass",
+  phone: "Phone",
+  tablet: "Tablet",
+  laptop: "Laptop",
 };
 
 /**
- * The frames the Frame picker offers. Glass is no longer offered, but saved
- * designs that use it still load and draw.
+ * The window frames the Frame picker offers, None first. Glass is no longer
+ * offered, but saved designs that use it still load and draw.
  */
 export const FRAME_OPTIONS: readonly FrameKind[] = FRAME_KINDS.filter(
-  (kind) => kind !== "glass",
+  (kind) => kind !== "glass" && !isDeviceKind(kind),
 );
+
+/** The devices the Frame picker offers after the window frames. */
+export const DEVICE_OPTIONS: readonly DeviceKind[] = DEVICE_KINDS;
 
 /** Frames with a title bar that shows `frame.title`. */
 export const FRAMES_WITH_TITLE: readonly FrameKind[] = ["macos", "windows"];
@@ -37,6 +44,10 @@ const BASE: Record<FrameKind, { chromeTop: number; ring: number }> = {
   "windows-browser": { chromeTop: 48, ring: 0 },
   minimal: { chromeTop: 22, ring: 0 },
   glass: { chromeTop: 0, ring: 10 },
+  // Devices are laid out from their own geometry (devices.ts).
+  phone: { chromeTop: 0, ring: 0 },
+  tablet: { chromeTop: 0, ring: 0 },
+  laptop: { chromeTop: 0, ring: 0 },
 };
 
 export type FrameMetrics = {

@@ -57,6 +57,18 @@ export function parseStepNumber(text: string): number | null {
   return value >= 1 && value <= MAX_STEP_NUMBER ? value : null;
 }
 
+/** Screenshots taller than this many widths don't get heavier annotations. */
+export const MAX_WEIGHT_ASPECT = 2.5;
+
+/**
+ * What annotation sizes (lines, steps, corners) are measured in, in image
+ * widths: the longer side, so a portrait phone screenshot's lines are as
+ * heavy as a landscape one's of the same height. Very tall captures are
+ * capped, or their steps would fill the width.
+ */
+export const annotationWeight = (aspect: number) =>
+  Number.isFinite(aspect) ? clamp(aspect, 1, MAX_WEIGHT_ASPECT) : 1;
+
 /** Image height in image widths. */
 export const imageAspect = (size: { width: number; height: number }) =>
   size.height / size.width;

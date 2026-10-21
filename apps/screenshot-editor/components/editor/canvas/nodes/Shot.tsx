@@ -20,6 +20,7 @@ import { NO_GUIDES, snapDrag } from "@/lib/render/snap";
 import { useEditorStore } from "@/lib/store/editor";
 import { AnnotationsNode } from "./Annotations";
 import { ChromeNode } from "./Chrome";
+import { DeviceNode } from "./Device";
 import { useGuides } from "./Guides";
 
 type Props = {
@@ -142,7 +143,8 @@ export function ShotNode({ image, shot, layout, zoom }: Props) {
     roundedRectPath(context, box.width, box.height, box.radius);
   // Around the outside, so the border never covers the screenshot.
   const borderBox = outsideStroke(size, box.radius, border.width);
-  const borderNode = borderBox && (
+  // A device has its own edge, and a border would box in a laptop's base.
+  const borderNode = borderBox && !box.device && (
     <Rect
       {...borderBox}
       stroke={hexToRgba(border.color, border.opacity)}
@@ -190,6 +192,12 @@ export function ShotNode({ image, shot, layout, zoom }: Props) {
       </>
     ) : (
       imageNode(true)
+    );
+  } else if (box.device) {
+    body = (
+      <DeviceNode device={box.device} shadow={shadow} listening={draggable}>
+        {imageNode(false)}
+      </DeviceNode>
     );
   } else if (frame.kind === "glass") {
     const ring = framePalette(frame.theme);

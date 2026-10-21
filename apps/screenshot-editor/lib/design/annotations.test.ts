@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  annotationWeight,
   clickArrow,
   clickBox,
   dragBox,
@@ -8,6 +9,7 @@ import {
   imageArea,
   canvasArea,
   isAnnotationColor,
+  MAX_WEIGHT_ASPECT,
   parseStepNumber,
   stepTextColor,
   snapEnd,
@@ -49,6 +51,16 @@ describe("annotation colours", () => {
         annotations: [{ ...step, color: "#424a52" }],
       }).success,
     ).toBe(true);
+  });
+});
+
+describe("annotationWeight", () => {
+  it("follows the longer side, up to a limit", () => {
+    expect(annotationWeight(0.5)).toBe(1);
+    expect(annotationWeight(1)).toBe(1);
+    expect(annotationWeight(2.17)).toBe(2.17);
+    expect(annotationWeight(6)).toBe(MAX_WEIGHT_ASPECT);
+    expect(annotationWeight(Number.NaN)).toBe(1);
   });
 });
 

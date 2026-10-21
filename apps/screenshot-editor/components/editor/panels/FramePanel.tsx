@@ -1,6 +1,14 @@
 import { ToggleGroup } from "radix-ui";
 import { useId } from "react";
 import {
+  DEVICE_KINDS,
+  fittingDevices,
+  frameFits,
+  isDeviceKind,
+  type DeviceKind,
+} from "@/lib/design/devices";
+import {
+  DEVICE_OPTIONS,
   FRAME_LABELS,
   FRAME_OPTIONS,
   FRAMES_WITH_TITLE,
@@ -9,7 +17,12 @@ import {
 } from "@/lib/design/frames";
 import { MAX_FRAME_TEXT } from "@/lib/design/limits";
 import type { FrameTheme } from "@/lib/render/frame";
-import { selectShot, useEditorStore } from "@/lib/store/editor";
+import type { FrameKind } from "@/lib/design/schema";
+import {
+  selectActiveImage,
+  selectShot,
+  useEditorStore,
+} from "@/lib/store/editor";
 import { FramePreview } from "../controls/FramePreview";
 import { Segmented } from "../controls/Segmented";
 
@@ -57,14 +70,66 @@ function TextField({
   );
 }
 
+/** Why only these devices are offered, by what fits the screenshot. */
+function fitHint(fitting: readonly DeviceKind[] | null): string {
+  if (!fitting) return "Devices turn to match the screenshot’s shape.";
+  switch (fitting.join()) {
+    case "phone":
+      return "Shaped like a phone screenshot, so only Phone fits. Window frames are for computer screenshots.";
+    case "tablet":
+      return "Shaped like a tablet screenshot, so only Tablet fits.";
+    case "laptop":
+      return "Shaped like a computer screenshot, so only Laptop fits.";
+    default:
+      return "Not shaped like a whole screen, so no device fits. Window frames fit any screenshot.";
+  }
+}
+
+const itemClass =
+  "group flex min-w-0 flex-col items-center gap-1.5 rounded-md p-1 text-xs font-medium text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid disabled:pointer-events-none disabled:opacity-40 data-[state=on]:text-foreground";
+
+function FrameItem({
+  kind,
+  theme,
+  disabled = false,
+  describedBy,
+}: {
+  kind: FrameKind;
+  theme: FrameTheme;
+  disabled?: boolean;
+  describedBy?: string;
+}) {
+  return (
+    <ToggleGroup.Item
+      value={kind}
+      className={itemClass}
+      disabled={disabled}
+      aria-describedby={describedBy}
+    >
+      <FramePreview
+        kind={kind}
+        theme={theme}
+        className="ring-offset-[3px] ring-offset-background transition-shadow group-data-[state=on]:ring-[1.5px] group-data-[state=on]:ring-(--selection-ring)"
+      />
+      {FRAME_LABELS[kind]}
+    </ToggleGroup.Item>
+  );
+}
+
 /** The frame choice and its options, shown at the top of the Style panel. */
 export function FrameOptions() {
   const frame = useEditorStore((state) => selectShot(state).frame);
   const setFrame = useEditorStore((state) => state.setFrame);
+  const image = useEditorStore(selectActiveImage);
+  // Without a screenshot there is no shape to go by, so every device is offered.
+  const fitting = image ? fittingDevices(image) : null;
+  const hintId = useId();
+  const device = isDeviceKind(frame.kind);
 
   return (
     <div className="space-y-6">
-      {/* The section heading already says "Frame", so the group isn't labelled twice on screen. */}
+      {/* One choice: a window frame or a device. The section heading already
+          says "Frame", so the group isn't labelled twice on screen. */}
       <ToggleGroup.Root
         type="single"
         aria-label="Frame"
@@ -73,25 +138,42 @@ export function FrameOptions() {
         onValueChange={(kind) => {
           if (isFrameKind(kind)) setFrame({ kind });
         }}
-        className="grid grid-cols-3 gap-2"
+        className="space-y-5"
       >
-        {FRAME_OPTIONS.map((kind) => (
-          <ToggleGroup.Item
-            key={kind}
-            value={kind}
-            className="group flex min-w-0 flex-col items-center gap-1.5 rounded-md p-1 text-xs font-medium text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid data-[state=on]:text-foreground"
-          >
-            <FramePreview
-              kind={kind}
-              theme={frame.theme}
-              className="ring-offset-[3px] ring-offset-background transition-shadow group-data-[state=on]:ring-[1.5px] group-data-[state=on]:ring-(--selection-ring)"
-            />
-            {FRAME_LABELS[kind]}
-          </ToggleGroup.Item>
-        ))}
+        <div className="grid grid-cols-3 gap-2">
+          {FRAME_OPTIONS.map((kind) => {
+            const fits = !image || frameFits(kind, image);
+            return (
+              <FrameItem
+                key={kind}
+                kind={kind}
+                theme={frame.theme}
+                disabled={!fits}
+                describedBy={fits ? undefined : hintId}
+              />
+            );
+          })}
+        </div>
+        <div className="space-y-3">
+          <h3 className="text-xs font-medium text-muted-foreground">Devices</h3>
+          <div className="grid grid-cols-3 gap-2">
+            {DEVICE_OPTIONS.map((kind) => (
+              <FrameItem
+                key={kind}
+                kind={kind}
+                theme={frame.theme}
+                disabled={!(fitting ?? DEVICE_KINDS).includes(kind)}
+                describedBy={hintId}
+              />
+            ))}
+          </div>
+          <p id={hintId} className="text-xs text-muted-foreground">
+            {fitHint(fitting)}
+          </p>
+        </div>
       </ToggleGroup.Root>
 
-      {frame.kind !== "none" && (
+      {frame.kind !== "none" && !device && (
         <Segmented
           label="Frame theme"
           glide

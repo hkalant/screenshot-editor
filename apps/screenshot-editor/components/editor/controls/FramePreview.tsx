@@ -1,3 +1,9 @@
+import {
+  DEVICE_COLORS,
+  isDeviceKind,
+  type DeviceKind,
+} from "@/lib/design/devices";
+import type { ReactNode } from "react";
 import type { FrameKind } from "@/lib/design/schema";
 import {
   framePalette,
@@ -64,7 +70,7 @@ function Bar({
   kind,
   theme,
 }: {
-  kind: Exclude<FrameKind, "none" | "glass">;
+  kind: Exclude<FrameKind, "none" | "glass" | DeviceKind>;
   theme: FrameTheme;
 }) {
   const palette = framePalette(theme);
@@ -132,6 +138,93 @@ function Bar({
   }
 }
 
+/** A small screen for the device pictures: `width` by `height` px. */
+function DeviceScreen({
+  width,
+  height,
+  radius = 1,
+  top = 5,
+}: {
+  width: number;
+  height: number;
+  radius?: number;
+  top?: number;
+}) {
+  return (
+    <div
+      className="flex flex-col gap-[3px] px-[5px] pb-[5px]"
+      style={{
+        width,
+        height,
+        paddingTop: top,
+        borderRadius: radius,
+        backgroundColor: SCREEN,
+      }}
+    >
+      <span
+        className="h-[3px] w-3/5 rounded-full"
+        style={{ backgroundColor: SCREEN_LINE }}
+      />
+      <span
+        className="h-[3px] w-2/5 rounded-full"
+        style={{ backgroundColor: SCREEN_LINE }}
+      />
+    </div>
+  );
+}
+
+/** The device's body around a screen. */
+function Shell({
+  padding,
+  radius,
+  children,
+}: {
+  padding: string;
+  radius: string;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      className="shadow-md"
+      style={{
+        padding,
+        borderRadius: radius,
+        backgroundColor: DEVICE_COLORS.body,
+        boxShadow: `inset 0 0 0 1px ${DEVICE_COLORS.rim}`,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function DevicePicture({ kind }: { kind: DeviceKind }) {
+  const stand = { backgroundColor: DEVICE_COLORS.stand };
+  switch (kind) {
+    case "phone":
+      return (
+        <Shell padding="3px" radius="8px">
+          <DeviceScreen width={22} height={46} radius={5} top={8} />
+        </Shell>
+      );
+    case "tablet":
+      return (
+        <Shell padding="5px" radius="7px">
+          <DeviceScreen width={46} height={32} radius={2} />
+        </Shell>
+      );
+    case "laptop":
+      return (
+        <div className="flex flex-col items-center">
+          <Shell padding="3px" radius="3px 3px 0 0">
+            <DeviceScreen width={52} height={32} />
+          </Shell>
+          <span className="h-[5px] w-[70px] rounded-b-[5px]" style={stand} />
+        </div>
+      );
+  }
+}
+
 type Props = {
   kind: FrameKind;
   theme: FrameTheme;
@@ -141,7 +234,10 @@ type Props = {
 export function FramePreview({ kind, theme, className }: Props) {
   const palette = framePalette(theme);
   let picture;
-  if (kind === "none") {
+  if (isDeviceKind(kind)) {
+    // Devices are drawn at their own size, not the window frames' width.
+    picture = <DevicePicture kind={kind} />;
+  } else if (kind === "none") {
     picture = <Screen className="rounded-[3px] shadow-md" />;
   } else if (kind === "glass") {
     picture = (
@@ -175,7 +271,7 @@ export function FramePreview({ kind, theme, className }: Props) {
       )}
       style={{ backgroundImage: BACKDROP }}
     >
-      <div className="w-[72%]">{picture}</div>
+      {isDeviceKind(kind) ? picture : <div className="w-[72%]">{picture}</div>}
     </div>
   );
 }
