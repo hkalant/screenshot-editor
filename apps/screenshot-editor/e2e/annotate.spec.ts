@@ -459,10 +459,17 @@ test("the handle moves the screenshot whatever tool is on", async ({
   };
   expect(isRed(await centre())).toBe(true);
 
+  // With a mouse it shows only while the pointer is over the screenshot.
   const handle = page.getByRole("button", { name: "Move screenshot" });
-  const from = await handle.boundingBox();
   const box = await stage(page).boundingBox();
-  if (!from || !box) throw new Error("No handle");
+  if (!box) throw new Error("No stage");
+  await page.mouse.move(box.x + 4, box.y + 4);
+  await expect(handle).toBeHidden();
+  const onShot = await onImage(page, 0.5, 0.5);
+  await page.mouse.move(onShot.x, onShot.y);
+  await expect(handle).toBeVisible();
+  const from = await handle.boundingBox();
+  if (!from) throw new Error("No handle");
   await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
   await page.mouse.down();
   await page.mouse.move(
@@ -474,6 +481,8 @@ test("the handle moves the screenshot whatever tool is on", async ({
 
   // Moved left, and no step added along the way.
   expect(isRed(await centre())).toBe(false);
+  await page.mouse.move(box.x + 4, box.y + 4);
+  await expect(handle).toBeHidden();
   await expect(tool(page, "Add step 1")).toHaveAttribute(
     "aria-pressed",
     "true",
