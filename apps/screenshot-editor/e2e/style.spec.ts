@@ -156,10 +156,10 @@ test("devices go around the screenshot, and only fitting ones are offered", asyn
       .getByRole("radiogroup", { name: "Frame", exact: true })
       .getByRole("radio", { name, exact: true });
 
-  for (const name of ["Tablet", "Laptop", "Monitor"])
+  for (const name of ["Tablet", "Laptop", "Monitor", "macOS browser"])
     await expect(frame(name)).toBeDisabled();
-  await expect(frame("Laptop")).toHaveAccessibleDescription(
-    "Shaped like a phone screenshot, so only Phone fits.",
+  await expect(frame("macOS")).toHaveAccessibleDescription(
+    /^Shaped like a phone screenshot, so only Phone fits\./,
   );
   await frame("Phone").click();
   await expect(frame("Phone")).toHaveAttribute("aria-checked", "true");
@@ -187,6 +187,7 @@ test("devices go around the screenshot, and only fitting ones are offered", asyn
   await expect(frame("Laptop")).toHaveAttribute("aria-checked", "true");
   await expect(frame("Phone")).toBeDisabled();
   await expect(frame("Monitor")).toBeEnabled();
+  await expect(frame("macOS browser")).toBeEnabled();
   await expect(page.getByText("Suggested", { exact: true })).toBeVisible();
   await expectDesignSize(page, 1162 + 144, 693 + 144);
   await frame("None").click();

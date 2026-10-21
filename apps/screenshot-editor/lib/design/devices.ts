@@ -229,9 +229,16 @@ export function fittingDevices(size: Size): DeviceKind[] {
   return ratio >= 1.2 ? ["tablet"] : [];
 }
 
-/** Whether `kind` suits a screenshot of `size`. Window frames suit any. */
+/**
+ * Whether `kind` suits a screenshot of `size`. No frame suits any. Window
+ * frames suit all but phone screenshots: no window is that shape, while
+ * window screenshots come in a tablet's or a computer's shapes.
+ */
 export function frameFits(kind: FrameKind, size: Size): boolean {
-  return !isDeviceKind(kind) || fittingDevices(size).includes(kind);
+  if (kind === "none") return true;
+  const fitting = fittingDevices(size);
+  if (isDeviceKind(kind)) return fitting.includes(kind);
+  return fitting[0] !== "phone";
 }
 
 /**

@@ -3,6 +3,7 @@ import {
   deviceGeometry,
   DEVICE_KINDS,
   fittingDevices,
+  frameFits,
   frameForScreenshot,
 } from "./devices";
 
@@ -85,6 +86,16 @@ describe("fittingDevices", () => {
   });
 });
 
+describe("frameFits", () => {
+  it("keeps window frames off phone screenshots only", () => {
+    const phone = { width: 1179, height: 2556 };
+    expect(frameFits("browser", phone)).toBe(false);
+    expect(frameFits("none", phone)).toBe(true);
+    expect(frameFits("browser", { width: 2048, height: 1536 })).toBe(true);
+    expect(frameFits("browser", { width: 1000, height: 1000 })).toBe(true);
+  });
+});
+
 describe("frameForScreenshot", () => {
   const laptopShot = { width: 1920, height: 1080 };
   it("keeps window frames and devices that still fit", () => {
@@ -94,6 +105,9 @@ describe("frameForScreenshot", () => {
 
   it("swaps a device that no longer fits for the best one that does", () => {
     expect(frameForScreenshot("phone", laptopShot)).toBe("laptop");
+    expect(frameForScreenshot("browser", { width: 1179, height: 2556 })).toBe(
+      "phone",
+    );
     expect(frameForScreenshot("laptop", { width: 600, height: 600 })).toBe(
       "none",
     );

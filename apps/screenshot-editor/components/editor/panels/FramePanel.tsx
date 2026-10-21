@@ -3,6 +3,7 @@ import { useId } from "react";
 import {
   DEVICE_KINDS,
   fittingDevices,
+  frameFits,
   isDeviceKind,
   type DeviceKind,
 } from "@/lib/design/devices";
@@ -74,7 +75,7 @@ function fitHint(fitting: readonly DeviceKind[] | null): string {
   if (!fitting) return "Devices turn to match the screenshot’s shape.";
   switch (fitting.join()) {
     case "phone":
-      return "Shaped like a phone screenshot, so only Phone fits.";
+      return "Shaped like a phone screenshot, so only Phone fits. Window frames are for computer screenshots.";
     case "tablet":
       return "Shaped like a tablet screenshot, so only Tablet fits.";
     case "monitor":
@@ -152,9 +153,18 @@ export function FrameOptions() {
         className="space-y-5"
       >
         <div className="grid grid-cols-3 gap-2">
-          {FRAME_OPTIONS.map((kind) => (
-            <FrameItem key={kind} kind={kind} theme={frame.theme} />
-          ))}
+          {FRAME_OPTIONS.map((kind) => {
+            const fits = !image || frameFits(kind, image);
+            return (
+              <FrameItem
+                key={kind}
+                kind={kind}
+                theme={frame.theme}
+                disabled={!fits}
+                describedBy={fits ? undefined : hintId}
+              />
+            );
+          })}
         </div>
         <div className="space-y-3">
           <h3 className="text-xs font-medium text-muted-foreground">Devices</h3>
