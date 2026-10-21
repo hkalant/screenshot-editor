@@ -171,10 +171,11 @@ export function deviceGeometry(kind: DeviceKind, screen: Size): DeviceGeometry {
 }
 
 /**
- * The device a screenshot of this shape could have come from, if any (as a
- * list, so a shape could suit more than one). Any other device would squash
- * a phone into a laptop's screen, so the picker greys them out; a shape that
- * is no screen's, such as an ultrawide one, fits none.
+ * The devices a screenshot of this shape could have come from, best first.
+ * Any other device would squash a phone into a laptop's screen, so the picker
+ * greys them out; a shape that is no screen's, such as an ultrawide one, fits
+ * none. A landscape tablet's shape suits a laptop too, and first, as it may
+ * be part of a laptop's screen rather than all of a tablet's.
  */
 export function fittingDevices(size: Size): DeviceKind[] {
   const long = Math.max(size.width, size.height);
@@ -188,7 +189,7 @@ export function fittingDevices(size: Size): DeviceKind[] {
   if (ratio > 2.3) return [];
   if (ratio >= 2) return ["phone"];
   if (ratio >= 1.55) return ["laptop"];
-  return ratio >= 1.2 ? ["tablet"] : [];
+  return ratio >= 1.2 ? ["laptop", "tablet"] : [];
 }
 
 /**
