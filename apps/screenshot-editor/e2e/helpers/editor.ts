@@ -133,9 +133,9 @@ export function shadowOption(page: Page, name: string) {
     .getByRole("radio", { name, exact: true });
 }
 
-/** Picks a canvas size from the top bar's size menu. */
+/** Picks a canvas size from the sidebar's size dropdown. */
 export async function chooseCanvasSize(page: Page, name: string | RegExp) {
-  await page.getByRole("button", { name: /^Canvas size/ }).click();
+  await page.getByRole("button", { name: /^Canvas size:/ }).click();
   await page.getByRole("radio", { name }).click();
 }
 
@@ -147,6 +147,6 @@ export async function chooseCanvasSize(page: Page, name: string | RegExp) {
 export async function useAutoSize(page: Page) {
   await chooseCanvasSize(page, /^Auto/);
   await expect(
-    page.getByRole("button", { name: "Canvas size: Auto size" }),
+    page.getByRole("button", { name: /^Canvas size: Auto size/ }),
   ).toBeVisible();
 }

@@ -1,8 +1,8 @@
 "use client";
 
-import { ChevronDown, Link2, Link2Off, Maximize2 } from "lucide-react";
+import { ChevronDown, Link2, Link2Off } from "lucide-react";
 import { ToggleGroup as ToggleGroupPrimitive } from "radix-ui";
-import { useId, useState } from "react";
+import { type ReactNode, useId, useState } from "react";
 import { create } from "zustand";
 import {
   Popover,
@@ -67,24 +67,34 @@ function lockedEdit(size: Size, side: "width" | "height", value: number) {
   return next;
 }
 
-function PresetItem({ preset }: { preset: SizePreset }) {
+function PresetItem({ preset, ratio }: { preset: SizePreset; ratio: boolean }) {
   return (
     <ToggleGroupPrimitive.Item value={preset.id} className={itemClass}>
       <span className="flex-1 truncate">{preset.label}</span>
       <span className="text-xs text-muted-foreground tabular-nums">
-        {dimensions(preset)} · {aspectLabel(preset.width, preset.height)}
+        {dimensions(preset)}
+        {ratio && ` · ${aspectLabel(preset.width, preset.height)}`}
       </span>
     </ToggleGroupPrimitive.Item>
   );
 }
 
-/** The canvas size choices, as a panel (the mobile Size tab shows this). */
-export function SizeOptions({ onPick }: { onPick?: () => void }) {
+/**
+ * The list of canvas sizes. Choosing Custom starts from the current size.
+ * `ratio` adds each size's aspect ratio, where there is room for it.
+ */
+function SizeList({
+  onPick,
+  ratio = true,
+}: {
+  /** Runs after any choice, Custom included. */
+  onPick?: () => void;
+  ratio?: boolean;
+}) {
   const canvas = useEditorStore((state) => state.design.canvas);
   const setCanvasPreset = useEditorStore((state) => state.setCanvasPreset);
   const setCustomSize = useEditorStore((state) => state.setCustomSize);
   const layout = useDesignLayout();
-  const { locked, setLocked } = useAspectLock();
 
   const onValueChange = (value: string) => {
     // Radix reports "" when the active item is clicked again.
@@ -92,68 +102,88 @@ export function SizeOptions({ onPick }: { onPick?: () => void }) {
     if (value === "custom") {
       const start = layout?.canvas ?? FALLBACK_CUSTOM;
       setCustomSize(start.width, start.height);
-      return;
+    } else {
+      setCanvasPreset(value);
     }
-    setCanvasPreset(value);
     onPick?.();
   };
 
   return (
-    <div className="space-y-3">
-      <ToggleGroupPrimitive.Root
-        type="single"
-        orientation="vertical"
-        aria-label="Canvas size"
-        value={canvas.preset}
-        onValueChange={onValueChange}
-        className="flex flex-col gap-0.5"
-      >
-        {/* The default size first, then Auto, then the rest. */}
-        <PresetItem preset={DEFAULT_SIZE_PRESET} />
-        <ToggleGroupPrimitive.Item value="auto" className={itemClass}>
-          <span className="flex-1">
-            Auto
-            <span className="block text-xs font-normal text-muted-foreground">
-              Fits the screenshot and padding
-            </span>
+    <ToggleGroupPrimitive.Root
+      type="single"
+      orientation="vertical"
+      aria-label="Canvas size"
+      value={canvas.preset}
+      onValueChange={onValueChange}
+      className="flex flex-col gap-0.5"
+    >
+      {/* The default size first, then Auto, then the rest. */}
+      <PresetItem preset={DEFAULT_SIZE_PRESET} ratio={ratio} />
+      <ToggleGroupPrimitive.Item value="auto" className={itemClass}>
+        <span className="flex-1">
+          Auto
+          <span className="block text-xs font-normal text-muted-foreground">
+            Fits the screenshot and padding
           </span>
-          {canvas.preset === "auto" && layout && (
-            <span className="text-xs text-muted-foreground tabular-nums">
-              {dimensions(layout.canvas)}
-            </span>
-          )}
-        </ToggleGroupPrimitive.Item>
-        {SIZE_PRESETS.filter(
-          (preset) => preset.id !== DEFAULT_SIZE_PRESET.id,
-        ).map((preset) => (
-          <PresetItem key={preset.id} preset={preset} />
-        ))}
-        <ToggleGroupPrimitive.Item value="custom" className={itemClass}>
-          <span className="flex-1">Custom</span>
-        </ToggleGroupPrimitive.Item>
-      </ToggleGroupPrimitive.Root>
+        </span>
+        {canvas.preset === "auto" && layout && (
+          <span className="text-xs text-muted-foreground tabular-nums">
+            {dimensions(layout.canvas)}
+          </span>
+        )}
+      </ToggleGroupPrimitive.Item>
+      {SIZE_PRESETS.filter(
+        (preset) => preset.id !== DEFAULT_SIZE_PRESET.id,
+      ).map((preset) => (
+        <PresetItem key={preset.id} preset={preset} ratio={ratio} />
+      ))}
+      <ToggleGroupPrimitive.Item value="custom" className={itemClass}>
+        <span className="flex-1">Custom</span>
+      </ToggleGroupPrimitive.Item>
+    </ToggleGroupPrimitive.Root>
+  );
+}
+
+/** The canvas size choices, as a panel (the mobile Size tab shows this). */
+export function SizeOptions() {
+  const canvas = useEditorStore((state) => state.design.canvas);
+  const setCustomSize = useEditorStore((state) => state.setCustomSize);
+  const { locked, setLocked } = useAspectLock();
+
+  return (
+    <div className="space-y-3">
+      <SizeList />
       {canvas.preset === "custom" && (
-        <CustomSizeFields
+        <SizeFields
           size={canvas}
           locked={locked}
           onLockedChange={setLocked}
           onChange={setCustomSize}
-        />
+          className="border-t pt-3"
+        >
+          {CUSTOM_SIZE.min}–{CUSTOM_SIZE.max} px per side ·{" "}
+          {aspectLabel(canvas.width, canvas.height)}
+        </SizeFields>
       )}
     </div>
   );
 }
 
-function CustomSizeFields({
+/** Width and height fields with the aspect lock, and a note under them. */
+function SizeFields({
   size,
   locked,
   onLockedChange,
   onChange,
+  className,
+  children,
 }: {
   size: Size;
   locked: boolean;
   onLockedChange: (locked: boolean, size: Size) => void;
   onChange: (width: number, height: number) => void;
+  className?: string;
+  children: ReactNode;
 }) {
   const id = useId();
   // Only what is being typed. Otherwise the fields show the current size, so
@@ -198,7 +228,7 @@ function CustomSizeFields({
   );
 
   return (
-    <div className="space-y-1.5 border-t pt-3">
+    <div className={cn("space-y-1.5", className)}>
       <div className="flex items-end gap-2">
         {field("width", "Width")}
         <button
@@ -220,46 +250,63 @@ function CustomSizeFields({
         </button>
         {field("height", "Height")}
       </div>
-      <p className="text-xs text-muted-foreground">
-        {CUSTOM_SIZE.min}–{CUSTOM_SIZE.max} px per side ·{" "}
-        {aspectLabel(size.width, size.height)}
-      </p>
+      <p className="text-xs text-muted-foreground">{children}</p>
     </div>
   );
 }
 
-/** The top bar's canvas size button and menu. */
-export function SizeMenu() {
+/**
+ * The sidebar's Canvas size section: the sizes in a dropdown, and the
+ * width and height, which make the size custom when changed.
+ */
+export function SizePanel() {
   const canvas = useEditorStore((state) => state.design.canvas);
+  const setCustomSize = useEditorStore((state) => state.setCustomSize);
+  const layout = useDesignLayout();
+  const { locked, setLocked } = useAspectLock();
   const [open, setOpen] = useState(false);
-  const label = canvasLabel(canvas);
-  const size = canvas.preset === "auto" ? null : canvas;
+  // Auto's size follows the screenshot, so there is none until one is added.
+  const size = canvas.preset === "auto" ? layout?.canvas : canvas;
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger className="flex h-7.5 shrink-0 items-center gap-2 rounded-md px-2.5 text-sm whitespace-nowrap outline-none hover:bg-accent focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid data-[state=open]:bg-accent">
-        <Maximize2 className="size-4 text-muted-foreground" aria-hidden />
-        {/* The name read out starts with the visible text's purpose and
-            keeps the visible text whole (WCAG 2.5.3). */}
-        <span className="sr-only">Canvas size: </span>
-        <span className="max-w-36 truncate @max-[37rem]/bar:sr-only">
-          {label}
-        </span>
-        {size && (
-          <span className="sr-only text-xs text-muted-foreground tabular-nums @min-[64rem]/bar:not-sr-only">
-            {" "}
-            {dimensions(size)}
+    <>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger className="flex h-10 w-full items-center gap-2 rounded-md border border-input bg-background/70 px-3 text-left text-sm outline-none hover:bg-accent focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid data-[state=open]:bg-accent">
+          {/* The name read out starts with the visible text's purpose and
+              keeps the visible text whole (WCAG 2.5.3). */}
+          <span className="sr-only">Canvas size: </span>
+          <span className="flex-1 truncate font-medium">
+            {canvasLabel(canvas)}
           </span>
-        )}
-        <ChevronDown className="size-3.5 text-muted-foreground" aria-hidden />
-      </PopoverTrigger>
-      <PopoverContent
-        align="start"
-        className="w-80 p-2.5"
-        aria-label="Choose canvas size"
-      >
-        <SizeOptions onPick={() => setOpen(false)} />
-      </PopoverContent>
-    </Popover>
+          {size && (
+            <span className="text-xs text-muted-foreground tabular-nums">
+              {" "}
+              {aspectLabel(size.width, size.height)}
+            </span>
+          )}
+          <ChevronDown className="size-4 text-muted-foreground" aria-hidden />
+        </PopoverTrigger>
+        <PopoverContent
+          align="start"
+          className="w-(--radix-popover-trigger-width) min-w-64 p-2.5"
+          aria-label="Choose canvas size"
+        >
+          {/* No room for the ratios; the chosen one shows on the button. */}
+          <SizeList ratio={false} onPick={() => setOpen(false)} />
+        </PopoverContent>
+      </Popover>
+      {size && (
+        <SizeFields
+          size={size}
+          locked={locked}
+          onLockedChange={setLocked}
+          onChange={setCustomSize}
+        >
+          {canvas.preset === "custom"
+            ? `${CUSTOM_SIZE.min}–${CUSTOM_SIZE.max} px per side`
+            : "Type a size to make it custom."}
+        </SizeFields>
+      )}
+    </>
   );
 }

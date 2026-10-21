@@ -5,6 +5,7 @@ import { readJsonPreference, writePreference } from "@/lib/persist/preferences";
 // once; this browser remembers them between visits.
 
 export const SIDEBAR_SECTIONS = [
+  "size",
   "background",
   "frame",
   "shadow",
@@ -13,8 +14,10 @@ export const SIDEBAR_SECTIONS = [
 
 export type SidebarSection = (typeof SIDEBAR_SECTIONS)[number];
 
-const PREFERENCE = "sidebar-open";
-const DEFAULT_OPEN: SidebarSection[] = ["background"];
+// Renamed from "sidebar-open" when Canvas size joined, so it starts open for
+// everyone.
+const PREFERENCE = "sidebar-sections";
+const DEFAULT_OPEN: SidebarSection[] = ["size", "background"];
 
 /** The saved sections, in sidebar order, or the default when none are saved. */
 export function savedOpenSections(saved: unknown): SidebarSection[] {

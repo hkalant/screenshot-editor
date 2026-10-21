@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import { savedOpenSections } from "./sidebar";
 
 describe("savedOpenSections", () => {
-  it("opens Background when nothing was saved", () => {
-    expect(savedOpenSections(null)).toEqual(["background"]);
-    expect(savedOpenSections("frame")).toEqual(["background"]);
+  it("opens Canvas size and Background when nothing was saved", () => {
+    expect(savedOpenSections(null)).toEqual(["size", "background"]);
+    expect(savedOpenSections("frame")).toEqual(["size", "background"]);
   });
 
   it("keeps known sections, in sidebar order", () => {

@@ -70,7 +70,7 @@ test("the editor with a screenshot has no detectable WCAG violations", async ({
 test("the open menus have no detectable WCAG violations", async ({ page }) => {
   await page.goto("./");
   await loadSample(page);
-  for (const name of [/^Canvas size/, /^Menu$/, /^Export options$/]) {
+  for (const name of [/^Canvas size:/, /^Menu$/, /^Export options$/]) {
     await page.getByRole("button", { name }).click();
     await expect(page.getByRole("dialog")).toBeVisible();
     await expectNoViolations(page);

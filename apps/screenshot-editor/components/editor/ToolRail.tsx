@@ -12,6 +12,7 @@ import {
 import { type SidebarSection, useSidebarStore } from "@/lib/store/sidebar";
 import { cn } from "@/lib/utils";
 import { BackgroundPanel } from "./panels/BackgroundPanel";
+import { SizePanel } from "./panels/SizePanel";
 import { ResetStyleButton, STYLE_SECTIONS } from "./panels/StylePanel";
 
 const SECTIONS: readonly {
@@ -19,6 +20,7 @@ const SECTIONS: readonly {
   title: string;
   Component: () => ReactNode;
 }[] = [
+  { id: "size", title: "Canvas size", Component: SizePanel },
   { id: "background", title: "Background", Component: BackgroundPanel },
   ...STYLE_SECTIONS,
 ];
