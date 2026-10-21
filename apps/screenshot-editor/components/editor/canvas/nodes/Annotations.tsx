@@ -14,6 +14,7 @@ import {
 } from "react-konva";
 import { create } from "zustand";
 import {
+  annotationWeight,
   clampStepSize,
   clampToArea,
   clickArrow,
@@ -159,14 +160,14 @@ function setCursor(node: Konva.Node | null, cursor: string) {
 
 function StepNode({
   step,
-  unit,
+  weight,
   zoom,
 }: {
   step: StepAnnotation;
-  unit: number;
+  weight: number;
   zoom: number;
 }) {
-  const radius = STEP_RADIUS * step.size * unit;
+  const radius = STEP_RADIUS * step.size * weight;
   // Small steps (zoomed out, on a phone) are still easy to press.
   const hitRadius = Math.max(radius, MIN_HIT / zoom);
   const digits = String(step.number).length;
@@ -209,10 +210,10 @@ const cornerRadius = (
   shape: Pick<ShapeAnnotation, "shape" | "rounded">,
   width: number,
   height: number,
-  unit: number,
+  weight: number,
 ) =>
   shape.shape === "rounded" || (shape.shape === "highlight" && shape.rounded)
-    ? Math.min(SHAPE_CORNER * unit, width / 2, height / 2)
+    ? Math.min(SHAPE_CORNER * weight, width / 2, height / 2)
     : 0;
 
 /** A shape drawn from its box's top-left corner. */
@@ -220,14 +221,14 @@ function ShapeBody({
   shape,
   width,
   height,
-  unit,
+  weight,
   zoom,
   borderOnly = false,
 }: {
   shape: Pick<ShapeAnnotation, "shape" | "color" | "filled" | "rounded">;
   width: number;
   height: number;
-  unit: number;
+  weight: number;
   zoom: number;
   /** An outline is pressed only by its border, so steps and shapes can go inside. */
   borderOnly?: boolean;
@@ -244,7 +245,7 @@ function ShapeBody({
         dash={[4 / zoom, 3 / zoom]}
       />
     );
-  const strokeWidth = SHAPE_STROKE * unit;
+  const strokeWidth = SHAPE_STROKE * weight;
   const paint =
     shape.shape === "highlight"
       ? // A see-through fill, no border.
@@ -273,7 +274,7 @@ function ShapeBody({
     <Rect
       width={width}
       height={height}
-      cornerRadius={cornerRadius(shape, width, height, unit)}
+      cornerRadius={cornerRadius(shape, width, height, weight)}
       {...paint}
     />
   );
@@ -424,12 +425,14 @@ function MagnifyBody({
   source,
   aspect,
   unit,
+  weight,
 }: {
   shape: ShapeAnnotation;
   source: LoadedImage;
   /** The screenshot's height over its width. */
   aspect: number;
   unit: number;
+  weight: number;
 }) {
   const width = shape.width * unit;
   const height = shape.height * unit;
@@ -445,8 +448,8 @@ function MagnifyBody({
     source.source instanceof HTMLImageElement
       ? source.source.naturalWidth
       : source.source.width;
-  const corner = Math.min(SHAPE_CORNER * unit, width / 2, height / 2);
-  const border = Math.min(MAGNIFY_BORDER * unit, width / 8, height / 8);
+  const corner = Math.min(SHAPE_CORNER * weight, width / 2, height / 2);
+  const border = Math.min(MAGNIFY_BORDER * weight, width / 8, height / 8);
   return (
     <>
       <LensOutline
@@ -457,8 +460,8 @@ function MagnifyBody({
         fill="#ffffff"
         shadowColor="#000000"
         shadowOpacity={0.3}
-        shadowBlur={0.02 * unit}
-        shadowOffsetY={0.005 * unit}
+        shadowBlur={0.02 * weight}
+        shadowOffsetY={0.005 * weight}
       />
       <Group
         listening={false}
@@ -497,12 +500,14 @@ function InsetSource({
   shape,
   aspect,
   unit,
+  weight,
   zoom,
   ...groupProps
 }: {
   shape: ShapeAnnotation;
   aspect: number;
   unit: number;
+  weight: number;
   zoom: number;
 } & Konva.ContainerConfig) {
   const lens = shape.lens ?? DEFAULT_MAGNIFY_LENS;
@@ -516,11 +521,11 @@ function InsetSource({
   const width = area.width * unit;
   const height = area.height * unit;
   const corner = Math.min(
-    (SHAPE_CORNER * unit) / (shape.zoom ?? DEFAULT_MAGNIFY_ZOOM),
+    (SHAPE_CORNER * weight) / (shape.zoom ?? DEFAULT_MAGNIFY_ZOOM),
     width / 2,
     height / 2,
   );
-  const border = Math.min(MAGNIFY_BORDER * unit, width / 6, height / 6);
+  const border = Math.min(MAGNIFY_BORDER * weight, width / 6, height / 6);
   return (
     <>
       {line && (
@@ -560,26 +565,26 @@ function ArrowBody({
   style,
   bend,
   color,
-  unit,
+  weight,
   zoom,
 }: {
   delta: Point;
   style: ArrowStyle | LineEnd;
   bend: number;
   color: AnnotationColor;
-  unit: number;
+  weight: number;
   zoom: number;
 }) {
   const { x: dx, y: dy } = delta;
   const shape = useMemo(
-    () => arrowShape(style, { x: 0, y: 0 }, { x: dx, y: dy }, bend, unit),
-    [style, dx, dy, bend, unit],
+    () => arrowShape(style, { x: 0, y: 0 }, { x: dx, y: dy }, bend, weight),
+    [style, dx, dy, bend, weight],
   );
   if (!shape) return null;
   const { bounds } = shape;
   // Thin arrows (zoomed out, on a phone) are still easy to press.
   const hitWidth = Math.max(
-    shape.stroke?.width ?? 0.006 * unit,
+    shape.stroke?.width ?? 0.006 * weight,
     MIN_HIT / zoom,
   );
   return (
@@ -634,7 +639,7 @@ function placeShape(
   group: Konva.Group,
   box: Box,
   shape: Pick<ShapeAnnotation, "shape" | "rounded">,
-  unit: number,
+  weight: number,
 ) {
   group.setAttrs({ x: box.x, y: box.y, scaleX: 1, scaleY: 1 });
   const body = group.getChildren()[0];
@@ -650,7 +655,7 @@ function placeShape(
     body?.setAttrs({
       width,
       height,
-      cornerRadius: cornerRadius(shape, width, height, unit),
+      cornerRadius: cornerRadius(shape, width, height, weight),
     });
 }
 
@@ -686,6 +691,9 @@ export function AnnotationsNode({
 
   // Lengths are in image widths; this turns them into canvas px.
   const unit = image.width;
+  // Sizes (lines, steps, corners) follow the longer side instead, so a
+  // portrait screenshot's annotations are as heavy as a landscape one's.
+  const weight = unit * annotationWeight(image.height / image.width);
   const selecting = tool === "select";
   // Any tool can pick up, move and delete an annotation.
   const selected =
@@ -929,7 +937,7 @@ export function AnnotationsNode({
           height: size.height * node.scaleY(),
         },
         shape,
-        unit,
+        weight,
       );
     },
     onTransformEnd: (event: KonvaEventObject<Event>) => {
@@ -955,7 +963,7 @@ export function AnnotationsNode({
           height: box.height * unit,
         },
         shape,
-        unit,
+        weight,
       );
       transformerRef.current?.forceUpdate();
       useEditorStore.getState().resizeShape(shape.id, box);
@@ -1147,6 +1155,7 @@ export function AnnotationsNode({
               shape={annotation}
               aspect={aspect}
               unit={unit}
+              weight={weight}
               zoom={zoom}
               {...sourceProps(annotation)}
             />
@@ -1168,7 +1177,7 @@ export function AnnotationsNode({
               style={annotation.style}
               bend={annotation.bend}
               color={annotation.color}
-              unit={unit}
+              weight={weight}
               zoom={zoom}
             />
           </Group>
@@ -1182,7 +1191,7 @@ export function AnnotationsNode({
             {...stepTransformProps(annotation)}
             {...dragProps(annotation)}
           >
-            <StepNode step={annotation} unit={unit} zoom={zoom} />
+            <StepNode step={annotation} weight={weight} zoom={zoom} />
           </Group>
         ) : (
           <Group
@@ -1208,13 +1217,14 @@ export function AnnotationsNode({
                 source={source}
                 aspect={image.height / image.width}
                 unit={unit}
+                weight={weight}
               />
             ) : (
               <ShapeBody
                 shape={annotation}
                 width={annotation.width * unit}
                 height={annotation.height * unit}
-                unit={unit}
+                weight={weight}
                 zoom={zoom}
                 borderOnly={!selecting}
               />
@@ -1247,7 +1257,7 @@ export function AnnotationsNode({
             }}
             width={draft.width * unit}
             height={draft.height * unit}
-            unit={unit}
+            weight={weight}
             zoom={zoom}
           />
         </Group>
@@ -1268,7 +1278,7 @@ export function AnnotationsNode({
             style={tool === "line" ? lineEnd : arrowStyle}
             bend={0}
             color={color}
-            unit={unit}
+            weight={weight}
             zoom={zoom}
           />
         </Group>
@@ -1358,7 +1368,7 @@ export function AnnotationsNode({
             if (selected.kind !== "step") return next;
             // A step stays between its smallest and largest size. The box is
             // in screen px, with the selection's padding on each side.
-            const standard = 2 * STEP_RADIUS * unit * zoom;
+            const standard = 2 * STEP_RADIUS * weight * zoom;
             const size = (Math.abs(next.width) - 6) / standard;
             return size < MIN_STEP_SIZE || size > MAX_STEP_SIZE
               ? previous
