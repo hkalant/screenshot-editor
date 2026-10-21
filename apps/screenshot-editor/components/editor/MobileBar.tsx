@@ -16,7 +16,7 @@ export function MobileBar({ onReplace }: Props) {
   const loading = useEditorStore((state) => state.loading);
 
   return (
-    // The shared top bar buttons are 36px; at least 40px suits fingers.
+    // The shared top bar buttons are 32px or less; at least 40px suits fingers.
     <header
       data-pane="bar"
       className="relative z-20 flex h-13 shrink-0 items-center gap-1 border-b bg-background px-2 [&_[data-slot=button]]:min-h-10 [&_[data-slot=button]]:min-w-10"

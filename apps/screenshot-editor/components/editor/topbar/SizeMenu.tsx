@@ -237,7 +237,7 @@ export function SizeMenu() {
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger className="flex h-8 shrink-0 items-center gap-2 rounded-md px-3 text-sm whitespace-nowrap outline-none hover:bg-accent focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid data-[state=open]:bg-accent">
+      <PopoverTrigger className="flex h-7.5 shrink-0 items-center gap-2 rounded-md px-2.5 text-sm whitespace-nowrap outline-none hover:bg-accent focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid data-[state=open]:bg-accent">
         <Maximize2 className="size-4 text-muted-foreground" aria-hidden />
         {/* The name read out starts with the visible text's purpose and
             keeps the visible text whole (WCAG 2.5.3). */}

@@ -61,7 +61,7 @@ export function MainMenu({ onReplace }: { onReplace: () => void }) {
       <PopoverTrigger asChild>
         <Button
           variant="ghost"
-          size="icon"
+          size="bar-icon"
           aria-label="Menu"
           title="Menu"
           data-tour="menu"
