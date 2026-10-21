@@ -29,6 +29,8 @@ const inside = (box: Box, x: number, y: number) =>
 /**
  * Whether a mouse is over `zones` of the element's parent. Always true where
  * nothing can hover (touchscreens), so the handle stays there to be found.
+ * A mouse moving anywhere counts as hovering too, as some browsers (headless
+ * Firefox among them) say they can't hover.
  */
 function useHovered(
   element: RefObject<HTMLElement | null>,
@@ -45,10 +47,17 @@ function useHovered(
 
   useEffect(() => {
     const query = window.matchMedia("(hover: hover)");
-    const update = () => setCanHover(query.matches);
+    const update = () => setCanHover((can) => can || query.matches);
+    const onMouse = (event: PointerEvent) => {
+      if (event.pointerType === "mouse") setCanHover(true);
+    };
     update();
     query.addEventListener("change", update);
-    return () => query.removeEventListener("change", update);
+    window.addEventListener("pointermove", onMouse);
+    return () => {
+      query.removeEventListener("change", update);
+      window.removeEventListener("pointermove", onMouse);
+    };
   }, []);
 
   useEffect(() => {
