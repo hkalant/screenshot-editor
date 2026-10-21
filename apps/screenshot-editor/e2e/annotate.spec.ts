@@ -290,7 +290,8 @@ test("the button by a selected annotation deletes it, as does Delete", async ({
   await expect(page.getByRole("button", { name: "Delete step 1" })).toHaveCount(
     0,
   );
-  // Pressing the step (step tool still on) selects it.
+  // Pressing the step (step tool still on) selects it, once it's drawn.
+  await expect(tool(page, "Add step 2")).toBeVisible();
   await nextFrame(page);
   await page.mouse.click(point.x, point.y);
   await page.getByRole("button", { name: "Delete step 1" }).click();
@@ -499,6 +500,8 @@ test("a step can be resized from a corner, and the next step matches", async ({
   await tool(page, "Add step 1").click();
   const point = await onImage(page, 0.3, 0.4);
   await page.mouse.click(point.x, point.y);
+  // Added and drawn, so the next press picks it up rather than adding step 2.
+  await expect(tool(page, "Add step 2")).toBeVisible();
   await nextFrame(page);
   await page.mouse.click(point.x, point.y);
   await expect(
