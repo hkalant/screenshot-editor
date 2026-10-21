@@ -37,7 +37,7 @@ export function CopyButton({ compact = false }: { compact?: boolean }) {
     <div className="relative">
       <Button
         variant="outline"
-        size={compact ? "icon" : "sm"}
+        size={compact ? "icon" : "bar"}
         // Straight from the click: the clipboard write must start in the gesture.
         onClick={runCopy}
         disabled={!image || busy}

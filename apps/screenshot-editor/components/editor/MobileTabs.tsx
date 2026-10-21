@@ -5,9 +5,9 @@ import type { ComponentType } from "react";
 import type { MobilePanelId } from "@/lib/store/editor";
 import { useEditorStore } from "@/lib/store/editor";
 import { PANELS } from "./panels/registry";
-import { SizeOptions } from "./topbar/SizeMenu";
+import { SizeOptions } from "./panels/SizePanel";
 
-/** The rail's panels plus Size, which lives in the top bar on desktop. */
+/** The rail's panels plus Size, which has its own sidebar section on desktop. */
 export const MOBILE_PANELS: readonly {
   id: MobilePanelId;
   label: string;

@@ -27,7 +27,7 @@ export function HistoryButtons() {
     <div className="flex items-center">
       <Button
         variant="ghost"
-        size="icon"
+        size="bar-icon"
         onClick={undo}
         disabled={!canUndo}
         aria-label="Undo"
@@ -37,7 +37,7 @@ export function HistoryButtons() {
       </Button>
       <Button
         variant="ghost"
-        size="icon"
+        size="bar-icon"
         onClick={redo}
         disabled={!canRedo}
         aria-label="Redo"

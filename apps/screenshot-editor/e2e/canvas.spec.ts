@@ -71,8 +71,10 @@ test("canvas size presets and custom sizes", async ({ page }) => {
   expect(readPngSize(og.data)).toEqual({ width: 2400, height: 1260 });
 
   // Custom starts from the current size.
-  await page.getByRole("button", { name: /^Canvas size/ }).click();
-  await page.getByRole("radio", { name: "Custom" }).click();
+  await chooseCanvasSize(page, "Custom");
+  await expect(
+    page.getByRole("button", { name: /^Canvas size: Custom/ }),
+  ).toBeVisible();
   const width = page.getByRole("spinbutton", { name: "Width" });
   await expect(width).toHaveValue("1200");
   await width.fill("1000");
@@ -85,9 +87,7 @@ test("canvas size presets and custom sizes", async ({ page }) => {
   await width.press("Enter");
   await expectDesignSize(page, 2000, 1260);
 
-  // The lock survives closing the menu, and keeps the ratio at the limits.
-  await page.keyboard.press("Escape");
-  await page.getByRole("button", { name: /^Canvas size/ }).click();
+  // The lock keeps the ratio at the limits.
   await expect(lock).toHaveAttribute("aria-pressed", "true");
   await width.fill("100");
   await width.press("Enter");
@@ -97,8 +97,23 @@ test("canvas size presets and custom sizes", async ({ page }) => {
   await width.press("Enter");
   await expectDesignSize(page, 1000, 630);
 
-  await page.getByRole("radio", { name: /^Auto/ }).click();
+  await chooseCanvasSize(page, /^Auto/);
   await expectDesignSize(page, 1344, 894);
+});
+
+test("typing a size into a preset's fields makes it custom", async ({
+  page,
+}) => {
+  await upload(page, makeSolidPng(1200, 750, RED));
+  await chooseCanvasSize(page, /^X post/);
+  const height = page.getByRole("spinbutton", { name: "Height" });
+  await expect(height).toHaveValue("900");
+  await height.fill("1000");
+  await height.press("Enter");
+  await expectDesignSize(page, 1600, 1000);
+  await expect(
+    page.getByRole("button", { name: /^Canvas size: Custom/ }),
+  ).toBeVisible();
 });
 
 test("the export button keeps focus while it exports", async ({ page }) => {
@@ -347,8 +362,7 @@ test("very large exports are capped to what the browser allows", async ({
   page,
 }) => {
   await upload(page, makeSolidPng(400, 300, RED));
-  await page.getByRole("button", { name: /^Canvas size/ }).click();
-  await page.getByRole("radio", { name: "Custom" }).click();
+  await chooseCanvasSize(page, "Custom");
   const width = page.getByRole("spinbutton", { name: "Width" });
   const height = page.getByRole("spinbutton", { name: "Height" });
   await width.fill("4000");
@@ -451,6 +465,14 @@ test("copies the design to the clipboard as a PNG", async ({
 
   // The keyboard shortcut does the same when no text is selected.
   await page.keyboard.press("ControlOrMeta+c");
+  await expect(tooltip).toHaveText("Copied!");
+  await expect(tooltip).toHaveCount(0);
+
+  // And so does the menu's item, with the same tooltip.
+  await page.getByRole("button", { name: "Menu" }).click();
+  const menu = page.getByRole("dialog", { name: "Menu" });
+  await menu.getByRole("button", { name: /^Copy image/ }).click();
+  await expect(menu).toHaveCount(0);
   await expect(tooltip).toHaveText("Copied!");
 });
 

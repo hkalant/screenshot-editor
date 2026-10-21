@@ -20,6 +20,9 @@ const buttonVariants = cva(
         sm: "h-8 gap-1.5 px-3",
         lg: "h-10 px-6",
         icon: "size-9",
+        // The desktop top bar's.
+        bar: "h-7.5 gap-1.5 px-2.5",
+        "bar-icon": "size-8",
       },
     },
     defaultVariants: { variant: "default", size: "default" },

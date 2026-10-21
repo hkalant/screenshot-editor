@@ -1,6 +1,14 @@
 "use client";
 
-import { ChevronLeft, Compass, Contrast, ImageUp, Menu } from "lucide-react";
+import {
+  ChevronLeft,
+  Compass,
+  Contrast,
+  Copy,
+  ImagePlus,
+  ImageUp,
+  Menu,
+} from "lucide-react";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -8,6 +16,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { runCopy } from "@/lib/export/controller";
+import { canCopyImages } from "@/lib/export/exportImage";
 import { useTheme } from "@/lib/hooks/useTheme";
 import { selectActiveImage, useEditorStore } from "@/lib/store/editor";
 import { currentPlatform, isApplePlatform } from "@/lib/platform";
@@ -25,13 +35,15 @@ type View = "menu" | "shortcuts";
 
 /**
  * The menu at the start of the top bar, for everything secondary: projects,
- * replacing the screenshot, the keyboard shortcuts, the tour, the tutorials
+ * copying, adding and replacing the screenshot, the keyboard shortcuts, the tour, the tutorials
  * and the theme.
  */
 export function MainMenu({ onReplace }: { onReplace: () => void }) {
   const { preference, setPreference } = useTheme();
   const hasImage = useEditorStore((state) => !!selectActiveImage(state));
   const loading = useEditorStore((state) => state.loading);
+  const busy = useEditorStore((state) => state.loading || state.restoring);
+  const canCopy = useSyncExternalStore(subscribe, canCopyImages, () => false);
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<View>("menu");
   const apple = useSyncExternalStore(
@@ -61,7 +73,7 @@ export function MainMenu({ onReplace }: { onReplace: () => void }) {
       <PopoverTrigger asChild>
         <Button
           variant="ghost"
-          size="icon"
+          size="bar-icon"
           aria-label="Menu"
           title="Menu"
           data-tour="menu"
@@ -80,36 +92,60 @@ export function MainMenu({ onReplace }: { onReplace: () => void }) {
                 : { save: "Ctrl+Shift+S", open: "Ctrl+Shift+O" }
             }
           />
-          {hasImage && (
-            <>
-              <button
-                type="button"
-                className={cn(
-                  itemClass,
-                  "mt-0.5 disabled:pointer-events-none disabled:opacity-50",
-                )}
-                disabled={loading}
-                aria-describedby="replace-hint"
-                onClick={() => {
-                  setOpen(false);
-                  onReplace();
-                }}
-              >
-                <span className="flex w-5 justify-center text-muted-foreground">
-                  <ImageUp className="size-4" aria-hidden />
-                </span>
-                Replace screenshot…
-                <MenuShortcut keys={apple ? "⌘O" : "Ctrl+O"} />
-              </button>
-              {/* Pasting or dropping replaces it too, which few would guess. */}
-              <p
-                id="replace-hint"
-                className="pr-2 pb-1 pl-10 text-xs text-muted-foreground"
-              >
-                Or paste or drop a new one onto the page.
-              </p>
-            </>
+          {canCopy && (
+            <button
+              type="button"
+              className={cn(
+                itemClass,
+                "mt-0.5 disabled:pointer-events-none disabled:opacity-50",
+              )}
+              disabled={!hasImage || busy}
+              onClick={() => {
+                setOpen(false);
+                // Straight from the click: the clipboard write must start in the gesture.
+                runCopy();
+              }}
+            >
+              <span className="flex w-5 justify-center text-muted-foreground">
+                <Copy className="size-4" aria-hidden />
+              </span>
+              Copy image
+              <MenuShortcut keys={apple ? "⌘C" : "Ctrl+C"} />
+            </button>
           )}
+          {/* Replace once there is a screenshot; until then, Add. */}
+          <button
+            type="button"
+            className={cn(
+              itemClass,
+              "mt-0.5 disabled:pointer-events-none disabled:opacity-50",
+            )}
+            disabled={loading}
+            aria-describedby="replace-hint"
+            onClick={() => {
+              setOpen(false);
+              onReplace();
+            }}
+          >
+            <span className="flex w-5 justify-center text-muted-foreground">
+              {hasImage ? (
+                <ImageUp className="size-4" aria-hidden />
+              ) : (
+                <ImagePlus className="size-4" aria-hidden />
+              )}
+            </span>
+            {hasImage ? "Replace screenshot…" : "Add screenshot…"}
+            <MenuShortcut keys={apple ? "⌘O" : "Ctrl+O"} />
+          </button>
+          {/* Pasting or dropping works too, which few would guess. */}
+          <p
+            id="replace-hint"
+            className="pr-2.5 pb-1 pl-10.5 text-xs text-muted-foreground"
+          >
+            {hasImage
+              ? "Or paste or drop a new one onto the page."
+              : "Or paste or drop one onto the page."}
+          </p>
           <div className="my-1 h-px bg-border" aria-hidden />
           <button
             type="button"

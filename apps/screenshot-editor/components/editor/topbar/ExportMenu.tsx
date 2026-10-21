@@ -205,7 +205,7 @@ function ExportButton({
   const canExport = useCanExport();
   return (
     <Button
-      size="sm"
+      size={inBar ? "bar" : "sm"}
       onClick={() => void runExport()}
       // Busy but not disabled while exporting, so the button keeps keyboard
       // focus (runExport ignores clicks until the export is done).
@@ -263,7 +263,7 @@ export function ExportMenu({ compact = false }: { compact?: boolean }) {
       <Popover>
         <PopoverTrigger asChild>
           <Button
-            size="sm"
+            size="bar"
             aria-label="Export options"
             title="Export options"
             className="rounded-l-none border-l border-primary-foreground/20 px-2"

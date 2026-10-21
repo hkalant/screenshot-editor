@@ -31,6 +31,13 @@ let switchTimer: number | undefined;
 
 const STEPS: Step[] = [
   {
+    target: '[data-tour="section-size"]',
+    side: "right",
+    title: "Canvas size",
+    body: "Start with the size the image is for, such as a slide, a LinkedIn post or an Instagram story, or type your own width and height.",
+    enter: () => reveal("size"),
+  },
+  {
     target: '[data-tour="section-background"]',
     side: "right",
     title: "Background",

@@ -15,12 +15,20 @@ test("a new design starts on the Desktop size, listed above Auto", async ({
 }) => {
   await page.goto("./");
   await expectEmptyState(page);
-  const sizeButton = page.getByRole("button", { name: /^Canvas size/ });
-  await expect(sizeButton).toHaveAccessibleName(
-    "Canvas size: Desktop 1920 × 1080",
-  );
+  const sizeButton = page.getByRole("button", { name: /^Canvas size:/ });
+  await expect(sizeButton).toHaveAccessibleName("Canvas size: Desktop 16:9");
+  // It is in the sidebar's Canvas size section, not the top bar.
+  await expect(
+    page.getByRole("complementary", { name: "Settings" }).getByRole("button", {
+      name: /^Canvas size:/,
+    }),
+  ).toHaveCount(1);
+  await expect(page.locator("header").getByText("Desktop")).toHaveCount(0);
   await upload(page, makeSolidPng(1200, 750, RED));
   await expectDesignSize(page, 1920, 1080);
+  await expect(page.getByRole("spinbutton", { name: "Width" })).toHaveValue(
+    "1920",
+  );
 
   await sizeButton.click();
   const options = page.locator('[aria-label="Canvas size"]').getByRole("radio");

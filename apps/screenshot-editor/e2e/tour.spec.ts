@@ -42,9 +42,17 @@ test("walks through the steps on a sample, then removes it", async ({
 }) => {
   await page.goto("./");
   await welcome(page).getByRole("button", { name: "Start" }).click();
-  await expect(card(page)).toContainText("Background");
+  await expect(card(page)).toContainText("Canvas size");
   await expect(stage(page)).toBeVisible();
 
+  // Each sidebar step opens its section.
+  const sizeSection = page
+    .getByRole("complementary", { name: "Settings" })
+    .getByRole("button", { name: "Canvas size", exact: true });
+  await expect(sizeSection).toHaveAttribute("aria-expanded", "true");
+
+  await card(page).getByRole("button", { name: "Next" }).click();
+  await expect(card(page)).toContainText("Background");
   await card(page).getByRole("button", { name: "Next" }).click();
   await expect(card(page)).toContainText("Frame & Style");
   // The Frame section is shown opening.
@@ -55,7 +63,7 @@ test("walks through the steps on a sample, then removes it", async ({
     await expect(card(page)).toContainText(title);
   }
   await card(page).getByRole("button", { name: "Next" }).click();
-  await expect(card(page)).toContainText("6 of 6");
+  await expect(card(page)).toContainText("7 of 7");
   await card(page).getByRole("button", { name: "Done" }).click();
 
   await expect(card(page)).toBeHidden();
@@ -77,7 +85,7 @@ test("Esc from the More menu's tour puts the user's screenshot back", async ({
   await page.getByRole("button", { name: "Menu" }).click();
   await page.getByRole("button", { name: "Take the tour" }).click();
   await welcome(page).getByRole("button", { name: "Start" }).click();
-  await expect(card(page)).toContainText("Background");
+  await expect(card(page)).toContainText("Canvas size");
   await page.keyboard.press("Escape");
   await expect(card(page)).toBeHidden();
 
@@ -99,7 +107,7 @@ test("closing the page mid-tour reopens on the user's own design", async ({
   await page.getByRole("button", { name: "Menu" }).click();
   await page.getByRole("button", { name: "Take the tour" }).click();
   await welcome(page).getByRole("button", { name: "Start" }).click();
-  await expect(card(page)).toContainText("Background");
+  await expect(card(page)).toContainText("Canvas size");
   await expect(stage(page)).not.toHaveAttribute("data-width", mine ?? "");
   // Long enough for an autosave to have run, were it not held off.
   await page.waitForTimeout(1500);
