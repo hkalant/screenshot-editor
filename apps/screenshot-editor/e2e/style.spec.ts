@@ -191,6 +191,14 @@ test("devices go around the screenshot, and only fitting ones are offered", asyn
   await expectDesignSize(page, 1162 + 144, 693 + 144);
   await frame("None").click();
   await expectDesignSize(page, 1144, 769);
+
+  // A less wide one could be part of a laptop's screen or a whole tablet's.
+  await upload(page, makeSolidPng(1000, 700, RED));
+  await expect(frame("Laptop")).toBeEnabled();
+  await expect(frame("Tablet")).toBeEnabled();
+  await expect(frame("Laptop")).toHaveAccessibleDescription(
+    "Shaped like a laptop or tablet screenshot, so either fits.",
+  );
 });
 
 test("border and shadow", async ({ page }) => {

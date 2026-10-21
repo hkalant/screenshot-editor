@@ -54,12 +54,20 @@ describe("deviceGeometry", () => {
 });
 
 describe("fittingDevices", () => {
-  it("fits devices to the screenshot's shape", () => {
+  it("fits devices to the screenshot's shape, best first", () => {
     expect(fittingDevices({ width: 1179, height: 2556 })).toEqual(["phone"]);
     expect(fittingDevices({ width: 750, height: 1334 })).toEqual(["phone"]);
     expect(fittingDevices({ width: 2556, height: 1179 })).toEqual(["phone"]);
     expect(fittingDevices({ width: 1640, height: 2360 })).toEqual(["tablet"]);
-    expect(fittingDevices({ width: 2048, height: 1536 })).toEqual(["tablet"]);
+    // Part of a laptop's screen, or all of a tablet's.
+    expect(fittingDevices({ width: 2048, height: 1536 })).toEqual([
+      "laptop",
+      "tablet",
+    ]);
+    expect(fittingDevices({ width: 2000, height: 1354 })).toEqual([
+      "laptop",
+      "tablet",
+    ]);
     expect(fittingDevices({ width: 2880, height: 1800 })).toEqual(["laptop"]);
     expect(fittingDevices({ width: 1920, height: 1080 })).toEqual(["laptop"]);
   });

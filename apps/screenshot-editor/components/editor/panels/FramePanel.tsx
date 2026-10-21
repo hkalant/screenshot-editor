@@ -80,6 +80,8 @@ function fitHint(fitting: readonly DeviceKind[] | null): string {
       return "Shaped like a tablet screenshot, so only Tablet fits.";
     case "laptop":
       return "Shaped like a computer screenshot, so only Laptop fits.";
+    case "laptop,tablet":
+      return "Shaped like a laptop or tablet screenshot, so either fits.";
     default:
       return "Not shaped like a whole screen, so no device fits. Window frames fit any screenshot.";
   }
