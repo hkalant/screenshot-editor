@@ -145,6 +145,48 @@ test("window frames add a title bar above the screenshot", async ({ page }) => {
   await expectDesignSize(page, 1144, 744);
 });
 
+test("devices go around the screenshot and suggest themselves", async ({
+  page,
+}) => {
+  // Phone shaped: 500 x 1000, so the phone's bezel is 18 px.
+  await upload(page, makeSolidPng(500, 1000, RED));
+  await openStyleSections(page);
+  const frame = (name: string) =>
+    page
+      .getByRole("radiogroup", { name: "Frame", exact: true })
+      .getByRole("radio", { name, exact: true });
+
+  await expect(frame("Phone")).toHaveAccessibleDescription(
+    /^Shaped like a phone screenshot\./,
+  );
+  await expect(frame("Laptop")).not.toHaveAccessibleDescription(/./);
+  await frame("Phone").click();
+  await expect(frame("Phone")).toHaveAttribute("aria-checked", "true");
+  await expect(frame("None")).toHaveAttribute("aria-checked", "false");
+  await expectDesignSize(page, 536 + 144, 1036 + 144);
+  // Devices are always dark and have no border.
+  await expect(page.getByRole("radio", { name: "Dark" })).toHaveCount(0);
+  await expect(
+    page.getByText("Devices are drawn without a border."),
+  ).toBeVisible();
+
+  const bezel: [number, number] = [(72 + 9) * 2, (72 + 518) * 2];
+  const screen: [number, number] = [(72 + 268) * 2, (72 + 518) * 2];
+  const [bezelPixel, screenPixel] = await samplePixels(
+    page,
+    (await exportImage(page)).data,
+    [bezel, screen],
+  );
+  expect(brightness(bezelPixel)).toBeLessThan(60);
+  expect(isRed(screenPixel)).toBe(true);
+
+  // A laptop's base is wider than its screen and adds height below it.
+  await frame("Laptop").click();
+  await expectDesignSize(page, 628 + 144, 1054 + 144);
+  await frame("None").click();
+  await expectDesignSize(page, 644, 1144);
+});
+
 test("border and shadow", async ({ page }) => {
   await upload(page, makeSolidPng(400, 300, RED));
   await openStyleSections(page);

@@ -113,6 +113,19 @@ describe("computeLayout on an auto canvas", () => {
     expect(shot.imageRadii).toEqual([0, 0, 15, 15]);
   });
 
+  it("puts a device around the screenshot, with the device's corners", () => {
+    const { shot, canvas } = computeLayout(
+      { width: 500, height: 1000 },
+      design({ frame: frame("phone"), radius: 24 }),
+    );
+    expect(canvas).toEqual({ width: 536 + 144, height: 1036 + 144 });
+    expect(shot.image).toMatchObject({ x: 18, y: 18, width: 500 });
+    expect(shot.imageRadii).toEqual([55, 55, 55, 55]);
+    expect(shot.radius).toBe(0);
+    expect(shot.chrome).toBeNull();
+    expect(shot.device?.body.width).toBe(536);
+  });
+
   it("puts the glass ring around everything", () => {
     const { shot } = computeLayout(
       { width: 1000, height: 600 },
@@ -152,6 +165,18 @@ describe("computeLayout on a fixed canvas", () => {
     expect(shot).toMatchObject({ x: 100, y: 100 });
     expect(shot.width).toBeCloseTo(1400);
     expect(shot.height).toBeCloseTo(700);
+  });
+
+  it("scales a device with the shot", () => {
+    const { shot } = computeLayout(
+      { width: 1600, height: 1000 },
+      design({ padding: 100, frame: frame("laptop") }, fixed),
+    );
+    // The 1856 x 1108 laptop fits the 700 px tall space.
+    expect(shot.scale).toBeCloseTo(700 / 1108);
+    expect(shot.height).toBeCloseTo(700);
+    expect(shot.device?.stand[0].width).toBeCloseTo(shot.width);
+    expect(shot.image.width).toBeCloseTo(1600 * shot.scale);
   });
 
   it("scales and moves the shot", () => {

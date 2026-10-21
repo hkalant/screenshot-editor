@@ -1,6 +1,8 @@
 import { ToggleGroup } from "radix-ui";
 import { useId } from "react";
+import { isDeviceKind, suggestDevice } from "@/lib/design/devices";
 import {
+  DEVICE_OPTIONS,
   FRAME_LABELS,
   FRAME_OPTIONS,
   FRAMES_WITH_TITLE,
@@ -9,7 +11,12 @@ import {
 } from "@/lib/design/frames";
 import { MAX_FRAME_TEXT } from "@/lib/design/limits";
 import type { FrameTheme } from "@/lib/render/frame";
-import { selectShot, useEditorStore } from "@/lib/store/editor";
+import type { FrameKind } from "@/lib/design/schema";
+import {
+  selectActiveImage,
+  selectShot,
+  useEditorStore,
+} from "@/lib/store/editor";
 import { FramePreview } from "../controls/FramePreview";
 import { Segmented } from "../controls/Segmented";
 
@@ -57,14 +64,61 @@ function TextField({
   );
 }
 
+const SUGGESTION_HINTS = {
+  phone: "Shaped like a phone screenshot.",
+  tablet: "Shaped like a tablet screenshot.",
+  laptop: "Shaped like a computer screenshot, so Laptop or Monitor suits it.",
+} as const;
+
+const itemClass =
+  "group flex min-w-0 flex-col items-center gap-1.5 rounded-md p-1 text-xs font-medium text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid data-[state=on]:text-foreground";
+
+function FrameItem({
+  kind,
+  theme,
+  suggested = false,
+  describedBy,
+}: {
+  kind: FrameKind;
+  theme: FrameTheme;
+  suggested?: boolean;
+  describedBy?: string;
+}) {
+  return (
+    <ToggleGroup.Item
+      value={kind}
+      className={itemClass}
+      aria-describedby={describedBy}
+    >
+      <FramePreview
+        kind={kind}
+        theme={theme}
+        className="ring-offset-[3px] ring-offset-background transition-shadow group-data-[state=on]:ring-[1.5px] group-data-[state=on]:ring-(--selection-ring)"
+      />
+      {FRAME_LABELS[kind]}
+      {/* Said by the hint it points to, so not part of the name. */}
+      {suggested && (
+        <span aria-hidden className="-mt-1 font-normal text-muted-foreground">
+          Suggested
+        </span>
+      )}
+    </ToggleGroup.Item>
+  );
+}
+
 /** The frame choice and its options, shown at the top of the Style panel. */
 export function FrameOptions() {
   const frame = useEditorStore((state) => selectShot(state).frame);
   const setFrame = useEditorStore((state) => state.setFrame);
+  const image = useEditorStore(selectActiveImage);
+  const suggestion = image ? suggestDevice(image) : null;
+  const hintId = useId();
+  const device = isDeviceKind(frame.kind);
 
   return (
     <div className="space-y-6">
-      {/* The section heading already says "Frame", so the group isn't labelled twice on screen. */}
+      {/* One choice: a window frame or a device. The section heading already
+          says "Frame", so the group isn't labelled twice on screen. */}
       <ToggleGroup.Root
         type="single"
         aria-label="Frame"
@@ -73,25 +127,34 @@ export function FrameOptions() {
         onValueChange={(kind) => {
           if (isFrameKind(kind)) setFrame({ kind });
         }}
-        className="grid grid-cols-3 gap-2"
+        className="space-y-5"
       >
-        {FRAME_OPTIONS.map((kind) => (
-          <ToggleGroup.Item
-            key={kind}
-            value={kind}
-            className="group flex min-w-0 flex-col items-center gap-1.5 rounded-md p-1 text-xs font-medium text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid data-[state=on]:text-foreground"
-          >
-            <FramePreview
-              kind={kind}
-              theme={frame.theme}
-              className="ring-offset-[3px] ring-offset-background transition-shadow group-data-[state=on]:ring-[1.5px] group-data-[state=on]:ring-(--selection-ring)"
-            />
-            {FRAME_LABELS[kind]}
-          </ToggleGroup.Item>
-        ))}
+        <div className="grid grid-cols-3 gap-2">
+          {FRAME_OPTIONS.map((kind) => (
+            <FrameItem key={kind} kind={kind} theme={frame.theme} />
+          ))}
+        </div>
+        <div className="space-y-3">
+          <h3 className="text-xs font-medium text-muted-foreground">Devices</h3>
+          <div className="grid grid-cols-3 gap-2">
+            {DEVICE_OPTIONS.map((kind) => (
+              <FrameItem
+                key={kind}
+                kind={kind}
+                theme={frame.theme}
+                suggested={kind === suggestion}
+                describedBy={kind === suggestion ? hintId : undefined}
+              />
+            ))}
+          </div>
+          <p id={hintId} className="text-xs text-muted-foreground">
+            {suggestion && `${SUGGESTION_HINTS[suggestion]} `}
+            Devices turn to match the screenshot&rsquo;s shape.
+          </p>
+        </div>
       </ToggleGroup.Root>
 
-      {frame.kind !== "none" && (
+      {frame.kind !== "none" && !device && (
         <Segmented
           label="Frame theme"
           glide

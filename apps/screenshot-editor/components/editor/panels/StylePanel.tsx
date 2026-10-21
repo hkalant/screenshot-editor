@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { defaultShotStyle } from "@/lib/design/defaults";
+import { isDeviceKind } from "@/lib/design/devices";
 import { BORDER_WIDTH, PADDING } from "@/lib/design/limits";
 import type { ShadowPresetId } from "@/lib/design/schema";
 import { SHADOW_LABELS, SHADOW_PRESET_ORDER } from "@/lib/design/shadows";
@@ -20,7 +21,7 @@ const percent = (value: number) => Math.round(value * 100);
 /** Where the sliders go back to when their thumb is double-clicked. */
 const defaults = defaultShotStyle();
 
-/** A browser or window frame, and the space around the screenshot. */
+/** A window frame or device, and the space around the screenshot. */
 export function FrameSettings() {
   const padding = useEditorStore((state) => selectShot(state).padding);
   const setPadding = useEditorStore((state) => state.setPadding);
@@ -59,9 +60,17 @@ export function ShadowSettings() {
 
 export function BorderSettings() {
   const border = useEditorStore((state) => selectShot(state).border);
+  const device = useEditorStore((state) =>
+    isDeviceKind(selectShot(state).frame.kind),
+  );
   const setBorder = useEditorStore((state) => state.setBorder);
   return (
     <>
+      {device && (
+        <p className="text-xs text-muted-foreground">
+          Devices are drawn without a border.
+        </p>
+      )}
       <LabeledSlider
         label="Border width"
         value={border.width}

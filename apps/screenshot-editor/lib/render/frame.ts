@@ -386,6 +386,10 @@ export function chromeLayout(
       };
     case "glass":
     case "none":
+    case "phone":
+    case "tablet":
+    case "laptop":
+    case "monitor":
       return null;
   }
 }

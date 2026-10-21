@@ -108,6 +108,10 @@ export const FRAME_KINDS = [
   "windows-browser",
   "minimal",
   "glass",
+  "phone",
+  "tablet",
+  "laptop",
+  "monitor",
 ] as const;
 
 export const frameSpecSchema = z.object({

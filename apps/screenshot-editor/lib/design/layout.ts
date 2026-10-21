@@ -1,3 +1,9 @@
+import {
+  deviceGeometry,
+  isDeviceKind,
+  type DeviceGeometry,
+  type DevicePart,
+} from "./devices";
 import { frameMetrics } from "./frames";
 import { MAX_DESIGN_SIDE } from "./limits";
 import type { Design } from "./schema";
@@ -31,6 +37,8 @@ export type ShotLayout = Rect & {
   chrome: Rect | null;
   /** Size multiplier for chrome details (buttons, text), in canvas px. */
   unit: number;
+  /** The device drawn around the screenshot, in canvas px, if the frame is one. */
+  device: DeviceGeometry | null;
 };
 
 export type DesignLayout = {
@@ -51,7 +59,10 @@ export function computeLayout(source: Size, design: Design): DesignLayout {
   const shot = design.layers[0];
   const image = fitWithin(source, MAX_DESIGN_SIDE);
   const { chromeTop, ring, unit } = frameMetrics(shot.frame.kind, image.width);
-  const natural = {
+  const device = isDeviceKind(shot.frame.kind)
+    ? deviceGeometry(shot.frame.kind, image)
+    : null;
+  const natural = device ?? {
     width: image.width + 2 * ring,
     height: image.height + 2 * ring + chromeTop,
   };
@@ -86,6 +97,30 @@ export function computeLayout(source: Size, design: Design): DesignLayout {
 
   const width = natural.width * scale;
   const height = natural.height * scale;
+
+  if (device) {
+    const scaled = scaleDevice(device, scale);
+    return {
+      canvas,
+      draggable: design.canvas.preset !== "auto",
+      shot: {
+        x,
+        y,
+        width,
+        height,
+        scale,
+        rotation: shot.rotation,
+        // The device has its own corners.
+        radius: 0,
+        image: scaled.screen,
+        imageRadii: scaled.screen.radii,
+        chrome: null,
+        unit: unit * scale,
+        device: scaled,
+      },
+    };
+  }
+
   const radius = Math.max(0, Math.min(shot.radius, width / 2, height / 2));
   const imageRect: Rect = {
     x: ring * scale,
@@ -122,7 +157,31 @@ export function computeLayout(source: Size, design: Design): DesignLayout {
             }
           : null,
       unit: unit * scale,
+      device: null,
     },
+  };
+}
+
+function scalePart<T extends DevicePart>(part: T, scale: number): T {
+  return {
+    ...part,
+    x: part.x * scale,
+    y: part.y * scale,
+    width: part.width * scale,
+    height: part.height * scale,
+    radii: part.radii.map((radius) => radius * scale) as CornerRadii,
+  };
+}
+
+function scaleDevice(device: DeviceGeometry, scale: number): DeviceGeometry {
+  return {
+    width: device.width * scale,
+    height: device.height * scale,
+    body: scalePart(device.body, scale),
+    screen: scalePart(device.screen, scale),
+    stand: device.stand.map((part) => scalePart(part, scale)),
+    details: device.details.map((part) => scalePart(part, scale)),
+    rim: device.rim * scale,
   };
 }
 
