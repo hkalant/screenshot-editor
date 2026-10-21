@@ -1,6 +1,13 @@
 "use client";
 
-import { ChevronLeft, Compass, Contrast, ImageUp, Menu } from "lucide-react";
+import {
+  ChevronLeft,
+  Compass,
+  Contrast,
+  Copy,
+  ImageUp,
+  Menu,
+} from "lucide-react";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -8,6 +15,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { runCopy } from "@/lib/export/controller";
+import { canCopyImages } from "@/lib/export/exportImage";
 import { useTheme } from "@/lib/hooks/useTheme";
 import { selectActiveImage, useEditorStore } from "@/lib/store/editor";
 import { currentPlatform, isApplePlatform } from "@/lib/platform";
@@ -25,13 +34,15 @@ type View = "menu" | "shortcuts";
 
 /**
  * The menu at the start of the top bar, for everything secondary: projects,
- * replacing the screenshot, the keyboard shortcuts, the tour, the tutorials
+ * copying and replacing the screenshot, the keyboard shortcuts, the tour, the tutorials
  * and the theme.
  */
 export function MainMenu({ onReplace }: { onReplace: () => void }) {
   const { preference, setPreference } = useTheme();
   const hasImage = useEditorStore((state) => !!selectActiveImage(state));
   const loading = useEditorStore((state) => state.loading);
+  const busy = useEditorStore((state) => state.loading || state.restoring);
+  const canCopy = useSyncExternalStore(subscribe, canCopyImages, () => false);
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<View>("menu");
   const apple = useSyncExternalStore(
@@ -80,6 +91,27 @@ export function MainMenu({ onReplace }: { onReplace: () => void }) {
                 : { save: "Ctrl+Shift+S", open: "Ctrl+Shift+O" }
             }
           />
+          {canCopy && (
+            <button
+              type="button"
+              className={cn(
+                itemClass,
+                "mt-0.5 disabled:pointer-events-none disabled:opacity-50",
+              )}
+              disabled={!hasImage || busy}
+              onClick={() => {
+                setOpen(false);
+                // Straight from the click: the clipboard write must start in the gesture.
+                runCopy();
+              }}
+            >
+              <span className="flex w-5 justify-center text-muted-foreground">
+                <Copy className="size-4" aria-hidden />
+              </span>
+              Copy image
+              <MenuShortcut keys={apple ? "⌘C" : "Ctrl+C"} />
+            </button>
+          )}
           {hasImage && (
             <>
               <button

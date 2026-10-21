@@ -452,6 +452,14 @@ test("copies the design to the clipboard as a PNG", async ({
   // The keyboard shortcut does the same when no text is selected.
   await page.keyboard.press("ControlOrMeta+c");
   await expect(tooltip).toHaveText("Copied!");
+  await expect(tooltip).toHaveCount(0);
+
+  // And so does the menu's item, with the same tooltip.
+  await page.getByRole("button", { name: "Menu" }).click();
+  const menu = page.getByRole("dialog", { name: "Menu" });
+  await menu.getByRole("button", { name: /^Copy image/ }).click();
+  await expect(menu).toHaveCount(0);
+  await expect(tooltip).toHaveText("Copied!");
 });
 
 test("the empty editor shows a dotted drop area with the ways to start", async ({
