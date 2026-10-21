@@ -140,7 +140,7 @@ export function MainMenu({ onReplace }: { onReplace: () => void }) {
           {/* Pasting or dropping works too, which few would guess. */}
           <p
             id="replace-hint"
-            className="pr-2 pb-1 pl-10 text-xs text-muted-foreground"
+            className="pr-2.5 pb-1 pl-10.5 text-xs text-muted-foreground"
           >
             {hasImage
               ? "Or paste or drop a new one onto the page."
