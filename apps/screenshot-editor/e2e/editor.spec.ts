@@ -162,6 +162,20 @@ test("the sample image loads", async ({ page }) => {
   expect(readPngSize(png)).toEqual({ width: 3488, height: 2454 });
 });
 
+test("the menu adds a screenshot to the empty editor", async ({ page }) => {
+  await page.getByRole("button", { name: "Menu" }).click();
+  const menu = page.getByRole("dialog", { name: "Menu" });
+  await expect(
+    menu.getByRole("button", { name: /^Replace screenshot/ }),
+  ).toHaveCount(0);
+  await chooseFile(page, /^Add screenshot/, makeSolidPng(400, 300, RED));
+  await expectDesignSize(page, 544, 444);
+  await page.getByRole("button", { name: "Menu" }).click();
+  await expect(
+    menu.getByRole("button", { name: /^Replace screenshot/ }),
+  ).toBeVisible();
+});
+
 test("replacing the image keeps the style", async ({ page }) => {
   await upload(page, makeSolidPng(400, 300, RED));
   await openStyleSections(page);

@@ -5,6 +5,7 @@ import {
   Compass,
   Contrast,
   Copy,
+  ImagePlus,
   ImageUp,
   Menu,
 } from "lucide-react";
@@ -34,7 +35,7 @@ type View = "menu" | "shortcuts";
 
 /**
  * The menu at the start of the top bar, for everything secondary: projects,
- * copying and replacing the screenshot, the keyboard shortcuts, the tour, the tutorials
+ * copying, adding and replacing the screenshot, the keyboard shortcuts, the tour, the tutorials
  * and the theme.
  */
 export function MainMenu({ onReplace }: { onReplace: () => void }) {
@@ -112,36 +113,39 @@ export function MainMenu({ onReplace }: { onReplace: () => void }) {
               <MenuShortcut keys={apple ? "⌘C" : "Ctrl+C"} />
             </button>
           )}
-          {hasImage && (
-            <>
-              <button
-                type="button"
-                className={cn(
-                  itemClass,
-                  "mt-0.5 disabled:pointer-events-none disabled:opacity-50",
-                )}
-                disabled={loading}
-                aria-describedby="replace-hint"
-                onClick={() => {
-                  setOpen(false);
-                  onReplace();
-                }}
-              >
-                <span className="flex w-5 justify-center text-muted-foreground">
-                  <ImageUp className="size-4" aria-hidden />
-                </span>
-                Replace screenshot…
-                <MenuShortcut keys={apple ? "⌘O" : "Ctrl+O"} />
-              </button>
-              {/* Pasting or dropping replaces it too, which few would guess. */}
-              <p
-                id="replace-hint"
-                className="pr-2 pb-1 pl-10 text-xs text-muted-foreground"
-              >
-                Or paste or drop a new one onto the page.
-              </p>
-            </>
-          )}
+          {/* Replace once there is a screenshot; until then, Add. */}
+          <button
+            type="button"
+            className={cn(
+              itemClass,
+              "mt-0.5 disabled:pointer-events-none disabled:opacity-50",
+            )}
+            disabled={loading}
+            aria-describedby="replace-hint"
+            onClick={() => {
+              setOpen(false);
+              onReplace();
+            }}
+          >
+            <span className="flex w-5 justify-center text-muted-foreground">
+              {hasImage ? (
+                <ImageUp className="size-4" aria-hidden />
+              ) : (
+                <ImagePlus className="size-4" aria-hidden />
+              )}
+            </span>
+            {hasImage ? "Replace screenshot…" : "Add screenshot…"}
+            <MenuShortcut keys={apple ? "⌘O" : "Ctrl+O"} />
+          </button>
+          {/* Pasting or dropping works too, which few would guess. */}
+          <p
+            id="replace-hint"
+            className="pr-2 pb-1 pl-10 text-xs text-muted-foreground"
+          >
+            {hasImage
+              ? "Or paste or drop a new one onto the page."
+              : "Or paste or drop one onto the page."}
+          </p>
           <div className="my-1 h-px bg-border" aria-hidden />
           <button
             type="button"
