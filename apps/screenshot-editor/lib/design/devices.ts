@@ -209,22 +209,36 @@ export function deviceGeometry(kind: DeviceKind, screen: Size): DeviceGeometry {
 }
 
 /**
- * The device a screenshot of this shape most likely came from, or null when
- * its shape doesn't say. Laptop stands for computers in general: a laptop's
- * and a monitor's screenshots look the same.
+ * The devices a screenshot of this shape could have come from, best first.
+ * Any other device would squash a phone into a laptop's screen, so the picker
+ * greys them out. A laptop's and a monitor's screenshots look the same, so
+ * both fit a computer-shaped one; a shape that is no screen's fits none.
  */
-export function suggestDevice(
-  size: Size,
-): Exclude<DeviceKind, "monitor"> | null {
+export function fittingDevices(size: Size): DeviceKind[] {
   const long = Math.max(size.width, size.height);
   const short = Math.min(size.width, size.height);
-  if (!(short > 0)) return null;
+  if (!(short > 0)) return [];
   const ratio = long / short;
   if (size.height > size.width) {
-    if (ratio >= 1.6) return "phone";
-    return ratio >= 1.2 ? "tablet" : null;
+    if (ratio >= 1.6) return ["phone"];
+    return ratio >= 1.2 ? ["tablet"] : [];
   }
-  if (ratio >= 2 && ratio <= 2.3) return "phone";
-  if (ratio >= 1.55 && ratio < 2) return "laptop";
-  return ratio >= 1.2 && ratio < 1.55 ? "tablet" : null;
+  if (ratio > 2.3) return ["monitor"];
+  if (ratio >= 2) return ["phone"];
+  if (ratio >= 1.55) return ["laptop", "monitor"];
+  return ratio >= 1.2 ? ["tablet"] : [];
+}
+
+/** Whether `kind` suits a screenshot of `size`. Window frames suit any. */
+export function frameFits(kind: FrameKind, size: Size): boolean {
+  return !isDeviceKind(kind) || fittingDevices(size).includes(kind);
+}
+
+/**
+ * The frame to keep when the screenshot changes to one of `size`: the same
+ * one if it still fits, else the best fitting device, else none.
+ */
+export function frameForScreenshot(kind: FrameKind, size: Size): FrameKind {
+  if (frameFits(kind, size)) return kind;
+  return fittingDevices(size)[0] ?? "none";
 }

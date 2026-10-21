@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { deviceGeometry, DEVICE_KINDS, suggestDevice } from "./devices";
+import {
+  deviceGeometry,
+  DEVICE_KINDS,
+  fittingDevices,
+  frameForScreenshot,
+} from "./devices";
 
 describe("deviceGeometry", () => {
   it("puts the screen inside an even phone bezel", () => {
@@ -56,20 +61,41 @@ describe("deviceGeometry", () => {
   });
 });
 
-describe("suggestDevice", () => {
-  it("suggests a device from the screenshot's shape", () => {
-    expect(suggestDevice({ width: 1179, height: 2556 })).toBe("phone");
-    expect(suggestDevice({ width: 750, height: 1334 })).toBe("phone");
-    expect(suggestDevice({ width: 2556, height: 1179 })).toBe("phone");
-    expect(suggestDevice({ width: 1640, height: 2360 })).toBe("tablet");
-    expect(suggestDevice({ width: 2048, height: 1536 })).toBe("tablet");
-    expect(suggestDevice({ width: 2880, height: 1800 })).toBe("laptop");
-    expect(suggestDevice({ width: 1920, height: 1080 })).toBe("laptop");
+describe("fittingDevices", () => {
+  it("fits devices to the screenshot's shape, best first", () => {
+    expect(fittingDevices({ width: 1179, height: 2556 })).toEqual(["phone"]);
+    expect(fittingDevices({ width: 750, height: 1334 })).toEqual(["phone"]);
+    expect(fittingDevices({ width: 2556, height: 1179 })).toEqual(["phone"]);
+    expect(fittingDevices({ width: 1640, height: 2360 })).toEqual(["tablet"]);
+    expect(fittingDevices({ width: 2048, height: 1536 })).toEqual(["tablet"]);
+    expect(fittingDevices({ width: 2880, height: 1800 })).toEqual([
+      "laptop",
+      "monitor",
+    ]);
+    expect(fittingDevices({ width: 1920, height: 1080 })).toEqual([
+      "laptop",
+      "monitor",
+    ]);
+    expect(fittingDevices({ width: 3440, height: 1440 })).toEqual(["monitor"]);
   });
 
-  it("suggests nothing when the shape doesn't say", () => {
-    expect(suggestDevice({ width: 1000, height: 1000 })).toBeNull();
-    expect(suggestDevice({ width: 3440, height: 1440 })).toBeNull();
-    expect(suggestDevice({ width: 0, height: 0 })).toBeNull();
+  it("fits none to a shape that is no screen's", () => {
+    expect(fittingDevices({ width: 1000, height: 1000 })).toEqual([]);
+    expect(fittingDevices({ width: 0, height: 0 })).toEqual([]);
+  });
+});
+
+describe("frameForScreenshot", () => {
+  const laptopShot = { width: 1920, height: 1080 };
+  it("keeps window frames and devices that still fit", () => {
+    expect(frameForScreenshot("macos", laptopShot)).toBe("macos");
+    expect(frameForScreenshot("monitor", laptopShot)).toBe("monitor");
+  });
+
+  it("swaps a device that no longer fits for the best one that does", () => {
+    expect(frameForScreenshot("phone", laptopShot)).toBe("laptop");
+    expect(frameForScreenshot("laptop", { width: 600, height: 600 })).toBe(
+      "none",
+    );
   });
 });

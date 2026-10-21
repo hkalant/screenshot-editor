@@ -145,7 +145,7 @@ test("window frames add a title bar above the screenshot", async ({ page }) => {
   await expectDesignSize(page, 1144, 744);
 });
 
-test("devices go around the screenshot and suggest themselves", async ({
+test("devices go around the screenshot, and only fitting ones are offered", async ({
   page,
 }) => {
   // Phone shaped: 500 x 1000, so the phone's bezel is 18 px.
@@ -156,10 +156,11 @@ test("devices go around the screenshot and suggest themselves", async ({
       .getByRole("radiogroup", { name: "Frame", exact: true })
       .getByRole("radio", { name, exact: true });
 
-  await expect(frame("Phone")).toHaveAccessibleDescription(
-    /^Shaped like a phone screenshot\./,
+  for (const name of ["Tablet", "Laptop", "Monitor"])
+    await expect(frame(name)).toBeDisabled();
+  await expect(frame("Laptop")).toHaveAccessibleDescription(
+    "Shaped like a phone screenshot, so only Phone fits.",
   );
-  await expect(frame("Laptop")).not.toHaveAccessibleDescription(/./);
   await frame("Phone").click();
   await expect(frame("Phone")).toHaveAttribute("aria-checked", "true");
   await expect(frame("None")).toHaveAttribute("aria-checked", "false");
@@ -180,11 +181,16 @@ test("devices go around the screenshot and suggest themselves", async ({
   expect(brightness(bezelPixel)).toBeLessThan(60);
   expect(isRed(screenPixel)).toBe(true);
 
-  // A laptop's base is wider than its screen and adds height below it.
-  await frame("Laptop").click();
-  await expectDesignSize(page, 628 + 144, 1054 + 144);
+  // A computer screenshot swaps the phone for a laptop, the better of the two
+  // that fit. Its base is wider than its screen and adds height below it.
+  await upload(page, makeSolidPng(1000, 625, RED));
+  await expect(frame("Laptop")).toHaveAttribute("aria-checked", "true");
+  await expect(frame("Phone")).toBeDisabled();
+  await expect(frame("Monitor")).toBeEnabled();
+  await expect(page.getByText("Suggested", { exact: true })).toBeVisible();
+  await expectDesignSize(page, 1162 + 144, 693 + 144);
   await frame("None").click();
-  await expectDesignSize(page, 644, 1144);
+  await expectDesignSize(page, 1144, 769);
 });
 
 test("border and shadow", async ({ page }) => {

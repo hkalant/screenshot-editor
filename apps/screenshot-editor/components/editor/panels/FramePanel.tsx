@@ -1,6 +1,11 @@
 import { ToggleGroup } from "radix-ui";
 import { useId } from "react";
-import { isDeviceKind, suggestDevice } from "@/lib/design/devices";
+import {
+  DEVICE_KINDS,
+  fittingDevices,
+  isDeviceKind,
+  type DeviceKind,
+} from "@/lib/design/devices";
 import {
   DEVICE_OPTIONS,
   FRAME_LABELS,
@@ -64,30 +69,44 @@ function TextField({
   );
 }
 
-const SUGGESTION_HINTS = {
-  phone: "Shaped like a phone screenshot.",
-  tablet: "Shaped like a tablet screenshot.",
-  laptop: "Shaped like a computer screenshot, so Laptop or Monitor suits it.",
-} as const;
+/** Why only these devices are offered, by what fits the screenshot. */
+function fitHint(fitting: readonly DeviceKind[] | null): string {
+  if (!fitting) return "Devices turn to match the screenshot’s shape.";
+  switch (fitting.join()) {
+    case "phone":
+      return "Shaped like a phone screenshot, so only Phone fits.";
+    case "tablet":
+      return "Shaped like a tablet screenshot, so only Tablet fits.";
+    case "monitor":
+      return "Wider than most screens, so only Monitor fits.";
+    case "laptop,monitor":
+      return "Shaped like a computer screenshot, so Laptop or Monitor fits.";
+    default:
+      return "Not shaped like a whole screen, so no device fits. Window frames fit any screenshot.";
+  }
+}
 
 const itemClass =
-  "group flex min-w-0 flex-col items-center gap-1.5 rounded-md p-1 text-xs font-medium text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid data-[state=on]:text-foreground";
+  "group flex min-w-0 flex-col items-center gap-1.5 rounded-md p-1 text-xs font-medium text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid disabled:pointer-events-none disabled:opacity-40 data-[state=on]:text-foreground";
 
 function FrameItem({
   kind,
   theme,
   suggested = false,
+  disabled = false,
   describedBy,
 }: {
   kind: FrameKind;
   theme: FrameTheme;
   suggested?: boolean;
+  disabled?: boolean;
   describedBy?: string;
 }) {
   return (
     <ToggleGroup.Item
       value={kind}
       className={itemClass}
+      disabled={disabled}
       aria-describedby={describedBy}
     >
       <FramePreview
@@ -111,7 +130,10 @@ export function FrameOptions() {
   const frame = useEditorStore((state) => selectShot(state).frame);
   const setFrame = useEditorStore((state) => state.setFrame);
   const image = useEditorStore(selectActiveImage);
-  const suggestion = image ? suggestDevice(image) : null;
+  // Without a screenshot there is no shape to go by, so every device is offered.
+  const fitting = image ? fittingDevices(image) : null;
+  // Only worth saying when there is a choice: Laptop over Monitor.
+  const suggestion = fitting && fitting.length > 1 ? fitting[0] : null;
   const hintId = useId();
   const device = isDeviceKind(frame.kind);
 
@@ -143,13 +165,13 @@ export function FrameOptions() {
                 kind={kind}
                 theme={frame.theme}
                 suggested={kind === suggestion}
-                describedBy={kind === suggestion ? hintId : undefined}
+                disabled={!(fitting ?? DEVICE_KINDS).includes(kind)}
+                describedBy={hintId}
               />
             ))}
           </div>
           <p id={hintId} className="text-xs text-muted-foreground">
-            {suggestion && `${SUGGESTION_HINTS[suggestion]} `}
-            Devices turn to match the screenshot&rsquo;s shape.
+            {fitHint(fitting)}
           </p>
         </div>
       </ToggleGroup.Root>

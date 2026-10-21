@@ -25,6 +25,7 @@ import {
 } from "@/lib/design/magnify";
 import { isHexColor } from "@/lib/design/colors";
 import { createDefaultDesign, defaultShotStyle } from "@/lib/design/defaults";
+import { frameFits, frameForScreenshot } from "@/lib/design/devices";
 import { isFrameKind } from "@/lib/design/frames";
 import {
   DEFAULT_GRADIENT,
@@ -474,7 +475,14 @@ export const useEditorStore = create<EditorState>()((set, get) => {
       set((state) =>
         commitDesign(
           state,
-          updateShot(withoutAnnotations(state.design), { imageId: image.id }),
+          updateShot(withoutAnnotations(state.design), {
+            imageId: image.id,
+            // A phone around a laptop screenshot looks wrong: swap the device.
+            frame: {
+              ...shotOf(state.design).frame,
+              kind: frameForScreenshot(shotOf(state.design).frame.kind, image),
+            },
+          }),
           undefined,
           {
             images: { ...state.images, [image.id]: image },
@@ -806,6 +814,8 @@ export const useEditorStore = create<EditorState>()((set, get) => {
           const next = { ...shot.frame };
           if (patch.kind !== undefined) {
             if (!isFrameKind(patch.kind)) return null;
+            const image = selectActiveImage(get());
+            if (image && !frameFits(patch.kind, image)) return null;
             next.kind = patch.kind;
           }
           if (patch.theme !== undefined) {

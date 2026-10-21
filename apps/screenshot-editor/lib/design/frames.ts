@@ -1,4 +1,4 @@
-import { DEVICE_KINDS, isDeviceKind } from "./devices";
+import { DEVICE_KINDS, isDeviceKind, type DeviceKind } from "./devices";
 import { FRAME_KINDS, type FrameKind } from "./schema";
 
 export { FRAME_KINDS };
@@ -26,7 +26,7 @@ export const FRAME_OPTIONS: readonly FrameKind[] = FRAME_KINDS.filter(
 );
 
 /** The devices the Frame picker offers after the window frames. */
-export const DEVICE_OPTIONS: readonly FrameKind[] = DEVICE_KINDS;
+export const DEVICE_OPTIONS: readonly DeviceKind[] = DEVICE_KINDS;
 
 /** Frames with a title bar that shows `frame.title`. */
 export const FRAMES_WITH_TITLE: readonly FrameKind[] = ["macos", "windows"];
