@@ -4,6 +4,7 @@ import {
   type Box,
   type Point,
 } from "@/lib/design/annotations";
+import type { DeviceKind } from "@/lib/design/devices";
 import { DEFAULT_MAGNIFY_ZOOM, magnifyArea } from "@/lib/design/magnify";
 import {
   LINE_ENDS,
@@ -234,15 +235,26 @@ function describeArrow(
     : `A ${colour} arrow points to ${placeOf(tip, aspect)}.`;
 }
 
+/** "a phone": the device a frame shows the screenshot on. */
+const DEVICE_NAMES: Record<DeviceKind, string> = {
+  phone: "a phone",
+  tablet: "a tablet",
+  laptop: "a laptop",
+};
+
 /**
  * The suggested alt text: steps first, in number order, then the other
- * annotations from the top down. `lines` is the screenshot's text, or empty
- * when it couldn't be read. Text under blur boxes is never quoted.
+ * annotations from the top down, after the device the screenshot is shown
+ * on, if any ("On a phone: …"), as that is often why the frame was chosen.
+ * Window frames are decoration and go unsaid. `lines` is the screenshot's
+ * text, or empty when it couldn't be read. Text under blur boxes is never
+ * quoted.
  */
 export function describeAnnotations(
   annotations: readonly Annotation[],
   aspect: number,
   lines: readonly FoundLine[],
+  device: DeviceKind | null = null,
 ): string {
   const blurs = annotations.filter(
     (annotation): annotation is ShapeAnnotation =>
@@ -287,5 +299,10 @@ export function describeAnnotations(
   if (blurred.length > 1) rest.push(`${blurred.length} areas are blurred.`);
   else rest.push(...blurred);
 
-  return [...steps, ...rest].join(" ");
+  const text = [...steps, ...rest].join(" ");
+  if (!device) return text;
+  const on = DEVICE_NAMES[device];
+  if (!text) return `Shown on ${on}.`;
+  // The first sentence carries on after the colon.
+  return `On ${on}: ${text.charAt(0).toLowerCase()}${text.slice(1)}`;
 }

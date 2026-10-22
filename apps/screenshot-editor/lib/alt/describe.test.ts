@@ -155,6 +155,19 @@ describe("describeAnnotations", () => {
     expect(text).toBe("A yellow box surrounds the ‘Assessment’ section.");
   });
 
+  it("says which device the screenshot is shown on", () => {
+    expect(
+      describeAnnotations([step(1, 0.07, 0.06)], ASPECT, LINES, "phone"),
+    ).toBe("On a phone: step 1 marks ‘Assessment’.");
+    expect(describeAnnotations([], ASPECT, LINES, "laptop")).toBe(
+      "Shown on a laptop.",
+    );
+    // Window frames go unsaid: no device.
+    expect(describeAnnotations([step(1, 0.07, 0.06)], ASPECT, LINES)).toBe(
+      "Step 1 marks ‘Assessment’.",
+    );
+  });
+
   it("falls back to places when the text couldn't be read", () => {
     expect(describeAnnotations([step(1, 0.07, 0.06)], ASPECT, [])).toBe(
       "Step 1 is at the top left.",

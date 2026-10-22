@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expectEmptyState } from "./helpers/editor";
+import { expectEmptyState, openStyleSections } from "./helpers/editor";
 import { expect, test } from "./helpers/fixtures";
 
 test.beforeEach(async ({ page }) => {
@@ -54,4 +54,14 @@ test("the export options suggest alt text from the annotations", async ({
   await expect(
     page.getByRole("button", { name: "Copy alt text" }),
   ).toBeEnabled();
+  await page.keyboard.press("Escape");
+
+  // A device frame is part of the meaning: it opens the suggestion.
+  await openStyleSections(page);
+  await page
+    .getByRole("radiogroup", { name: "Frame", exact: true })
+    .getByRole("radio", { name: "Laptop", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Export options" }).click();
+  await expect(field(page)).toHaveValue(/^On a laptop: step 1 /);
 });

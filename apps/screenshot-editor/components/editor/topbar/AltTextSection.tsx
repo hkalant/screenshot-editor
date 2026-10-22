@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { describeAnnotations, type FoundLine } from "@/lib/alt/describe";
 import { readText } from "@/lib/alt/ocr";
 import { imageAspect } from "@/lib/design/annotations";
+import { isDeviceKind } from "@/lib/design/devices";
 import { selectActiveImage, useEditorStore } from "@/lib/store/editor";
 
 /** Said under the alt text whatever its state: the suggestion is a start. */
@@ -45,6 +46,9 @@ const useWrittenAlt = create<{
 export function AltTextSection() {
   const image = useEditorStore(selectActiveImage);
   const annotations = useEditorStore((state) => state.design.annotations);
+  const frameKind = useEditorStore(
+    (state) => state.design.layers[0].frame.kind,
+  );
   const written = useWrittenAlt((state) =>
     image ? state.byImage[image.id] : undefined,
   );
@@ -86,13 +90,16 @@ export function AltTextSection() {
     annotations,
     imageAspect(image),
     lines,
+    isDeviceKind(frameKind) ? frameKind : null,
   );
   const text = written ?? suggestion;
 
   const note = written
     ? "Your own wording."
     : !needsText
-      ? "Add steps, boxes or arrows for a suggestion, or write your own."
+      ? suggestion
+        ? "Add steps, boxes or arrows for a fuller suggestion, or write your own."
+        : "Add steps, boxes or arrows for a suggestion, or write your own."
       : stillReading
         ? "Reading the screenshot’s text…"
         : reading.state === "failed"
