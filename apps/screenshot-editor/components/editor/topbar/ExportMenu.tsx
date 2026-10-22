@@ -61,9 +61,14 @@ const formatOptions = () =>
       title: supported ? undefined : "This browser can't save this format",
     };
   });
+/** What each scale is for, beside its number. */
+const SCALE_NAMES: Record<ExportOptions["scale"], string> = {
+  1: "Normal",
+  2: "Sharp",
+};
 const SCALE_OPTIONS = EXPORT_SCALES.map((scale) => ({
   value: String(scale),
-  label: `${scale}×`,
+  label: `${scale}× ${SCALE_NAMES[scale]}`,
 }));
 
 function useCanExport() {

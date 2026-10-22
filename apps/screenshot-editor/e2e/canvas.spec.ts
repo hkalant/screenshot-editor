@@ -319,7 +319,7 @@ test("exports JPEG and WebP at other scales and remembers the choice", async ({
   await upload(page, makeSolidPng(1200, 750, RED));
   await page.getByRole("button", { name: "Export options" }).click();
   await page.getByRole("radio", { name: "JPEG" }).click();
-  await page.getByRole("radio", { name: "1×" }).click();
+  await page.getByRole("radio", { name: "1× Normal" }).click();
   await expect(page.getByTestId("export-size")).toContainText("1344 × 894 px");
   await page.keyboard.press("Escape");
   await expect(exportButton(page)).toHaveText("Export JPEG 1×");
@@ -344,7 +344,7 @@ test("exports JPEG and WebP at other scales and remembers the choice", async ({
   }
   await expect(note).toHaveCount(0);
   await webp.click();
-  await page.getByRole("radio", { name: "1×" }).click();
+  await page.getByRole("radio", { name: "1× Normal" }).click();
   await page.keyboard.press("Escape");
   const webpFile = await exportImage(page);
   expect(webpFile.name).toBe("fixture.webp");
@@ -373,7 +373,7 @@ test("very large exports are capped to what the browser allows", async ({
   await expectDesignSize(page, 4000, 4000);
   await page.getByRole("button", { name: "Export options" }).click();
   await expect(page.getByRole("radio", { name: "3×" })).toHaveCount(0);
-  await page.getByRole("radio", { name: "2×" }).click();
+  await page.getByRole("radio", { name: "2× Sharp" }).click();
   // 8,000 px a side is over the 16,777,216 px area limit: 4096 x 4096 instead.
   await expect(page.getByTestId("export-size")).toContainText("4096 × 4096 px");
 });
