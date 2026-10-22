@@ -493,7 +493,7 @@ test("the handle moves the screenshot whatever tool is on", async ({
   expect(isRed(await centre())).toBe(true);
 });
 
-test("the screenshot resizes from its corners, up to its fitted size", async ({
+test("the screenshot resizes from its corners, up to half as big again", async ({
   page,
 }) => {
   await upload(page, makeSolidPng(IMAGE.width, IMAGE.height, RED));
@@ -543,10 +543,10 @@ test("the screenshot resizes from its corners, up to its fitted size", async ({
   expect(await isRedAt(400, 100)).toBe(true);
   expect(await isRedAt(1400, 900)).toBe(false);
 
-  // Dragged well past the canvas, it stops at its fitted size.
+  // Bigger than fits: past the padding, cropped by the canvas edge.
   await drag(at(1900, 1070));
   expect(await isRedAt(1400, 900)).toBe(true);
-  expect(await isRedAt(1600, 540)).toBe(false);
+  expect(await isRedAt(1700, 540)).toBe(true);
 
   // Each resize is one undo step.
   await page.getByRole("button", { name: "Undo", exact: true }).first().click();

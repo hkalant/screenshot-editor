@@ -33,7 +33,7 @@ describe("resizeFromCorner", () => {
     expect(next.position.y * canvas.height).toBeCloseTo(700 - 125);
   });
 
-  it("never grows past fitting inside the padding", () => {
+  it("grows past the canvas edge, up to half as big again as fitting", () => {
     const small = { x: 300, y: 200, width: 500, height: 250 };
     const next = resizeFromCorner(
       small,
@@ -42,23 +42,7 @@ describe("resizeFromCorner", () => {
       { x: 5000, y: 5000 },
       canvas,
     );
-    expect(next.scale).toBe(1);
-  });
-
-  it("stops at the canvas edge, so nothing is cropped", () => {
-    // Moved right: growing to the right meets the edge before full size.
-    const moved = { x: 1000, y: 200, width: 500, height: 250 };
-    const next = resizeFromCorner(
-      moved,
-      0.5,
-      { x: 1, y: 1 },
-      { x: 5000, y: 5000 },
-      canvas,
-    );
-    expect(next.scale).toBeCloseTo(0.6);
-    expect(
-      next.position.x * canvas.width + (1000 * next.scale) / 2,
-    ).toBeCloseTo(1600);
+    expect(next.scale).toBe(1.5);
   });
 
   it("doesn't shrink past the smallest size", () => {

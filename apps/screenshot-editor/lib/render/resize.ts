@@ -22,8 +22,8 @@ export type ShotResize = {
 /**
  * The shot resized by dragging `corner` to `pointer` (canvas px), with the
  * opposite corner staying put and the shape kept. `box` is the shot at
- * `scale`. It never grows past fitting inside the padding, nor past the
- * canvas's edges, so resizing never crops it.
+ * `scale`. It grows up to half as big again as fitting inside the padding,
+ * so past the canvas's edges, which crop it.
  */
 export function resizeFromCorner(
   box: Rect,
@@ -44,17 +44,7 @@ export function resizeFromCorner(
     ((pointer.x - anchor.x) * diagonal.x +
       (pointer.y - anchor.y) * diagonal.y) /
     (diagonal.x ** 2 + diagonal.y ** 2);
-  // Room to grow towards the dragged corner before the canvas edge. A shot
-  // that's already past an edge keeps its size but can't grow.
-  const room = Math.min(
-    (corner.x > 0 ? canvas.width - anchor.x : anchor.x) / base.width,
-    (corner.y > 0 ? canvas.height - anchor.y : anchor.y) / base.height,
-  );
-  const largest = Math.min(
-    SHOT_SCALE.fit,
-    Math.max(room, Math.min(scale, SHOT_SCALE.fit)),
-  );
-  const next = clamp(along, SHOT_SCALE.min, Math.max(SHOT_SCALE.min, largest));
+  const next = clamp(along, SHOT_SCALE.min, SHOT_SCALE.max);
   return {
     scale: next,
     position: {
