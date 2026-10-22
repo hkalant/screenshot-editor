@@ -493,6 +493,71 @@ test("the handle moves the screenshot whatever tool is on", async ({
   expect(isRed(await centre())).toBe(true);
 });
 
+test("the screenshot resizes from its corners, up to its fitted size", async ({
+  page,
+}) => {
+  await upload(page, makeSolidPng(IMAGE.width, IMAGE.height, RED));
+  const corner = page.getByRole("button", {
+    name: "Resize screenshot from the bottom right corner",
+  });
+  // With Auto, the canvas is the screenshot's size: nothing to resize.
+  await expect(corner).toHaveCount(0);
+
+  await chooseCanvasSize(page, /^Desktop/);
+  // 1920 x 1080 with 72 px padding: the 400 x 300 shot fits at 1248 x 936,
+  // from (336, 72) to (1584, 1008).
+  const box = await stage(page).boundingBox();
+  if (!box) throw new Error("No stage");
+  const zoom = box.width / 1920;
+  const at = (x: number, y: number) => ({
+    x: box.x + x * zoom,
+    y: box.y + y * zoom,
+  });
+  const isRedAt = async (x: number, y: number) => {
+    const [pixel] = await samplePixels(page, (await exportImage(page)).data, [
+      [x * 2, y * 2],
+    ]);
+    return isRed(pixel);
+  };
+  const middle = at(960, 540);
+  const drag = async (to: { x: number; y: number }) => {
+    // Exporting moved the pointer away: back over the screenshot first.
+    await page.mouse.move(middle.x, middle.y);
+    await expect(corner).toBeVisible();
+    const from = await corner.boundingBox();
+    if (!from) throw new Error("No corner");
+    await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(to.x, to.y, { steps: 8 });
+    await page.mouse.up();
+  };
+
+  // Hidden until the pointer is over the screenshot.
+  await page.mouse.move(box.x + 4, box.y + 4);
+  await expect(corner).toBeHidden();
+  await page.mouse.move(middle.x, middle.y);
+  await expect(corner).toBeVisible();
+
+  // Half size, with the top-left corner where it was.
+  await drag(middle);
+  expect(await isRedAt(400, 100)).toBe(true);
+  expect(await isRedAt(1400, 900)).toBe(false);
+
+  // Dragged well past the canvas, it stops at its fitted size.
+  await drag(at(1900, 1070));
+  expect(await isRedAt(1400, 900)).toBe(true);
+  expect(await isRedAt(1600, 540)).toBe(false);
+
+  // Each resize is one undo step.
+  await page.getByRole("button", { name: "Undo", exact: true }).first().click();
+  expect(await isRedAt(1400, 900)).toBe(false);
+
+  // A double-click fits it again.
+  await page.mouse.move(middle.x, middle.y);
+  await corner.dblclick();
+  expect(await isRedAt(1400, 900)).toBe(true);
+});
+
 test("a step can be resized from a corner, and the next step matches", async ({
   page,
 }) => {

@@ -11,6 +11,11 @@ export const ANGLE = { min: 0, max: 359, step: 1 } as const;
 export const SHOT_SCALE = {
   min: 0.2,
   max: 1.5,
+  /**
+   * The largest a resize goes: fitting inside the padding, so the shot isn't
+   * cropped. Older designs may be saved larger, up to max.
+   */
+  fit: 1,
   step: 0.01,
   default: 1,
 } as const;

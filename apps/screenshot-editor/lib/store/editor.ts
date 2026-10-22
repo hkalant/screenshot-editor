@@ -170,6 +170,8 @@ export type EditorState = {
 
   setPadding: (pixels: number) => void;
   setScale: (scale: number) => void;
+  /** Resizes the shot from a corner: its new scale and centre together. */
+  resizeShot: (scale: number, x: number, y: number) => void;
   setPosition: (x: number, y: number) => void;
   /** Moves the shot by canvas pixels (fixed canvases only). */
   nudge: (dx: number, dy: number) => void;
@@ -692,6 +694,20 @@ export const useEditorStore = create<EditorState>()((set, get) => {
           scale: round(clamp(scale, SHOT_SCALE.min, SHOT_SCALE.max), 2),
         }),
         "scale",
+      );
+    },
+
+    resizeShot: (scale, x, y) => {
+      if (!finite(scale) || !finite(x) || !finite(y)) return;
+      commitShot(
+        () => ({
+          scale: round(clamp(scale, SHOT_SCALE.min, SHOT_SCALE.max), 3),
+          position: {
+            x: round(clamp(x, 0, 1), 4),
+            y: round(clamp(y, 0, 1), 4),
+          },
+        }),
+        "resize",
       );
     },
 
