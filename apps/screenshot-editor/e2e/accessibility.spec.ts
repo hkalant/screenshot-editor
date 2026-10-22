@@ -16,11 +16,16 @@ const WCAG_TAGS = [
 ];
 
 async function expectNoViolations(page: Page) {
-  // Text fading in reads as low contrast, so wait for it to settle.
+  // Text fading in reads as low contrast, so wait for it to settle. An
+  // animation that never ends is left out, so it can't stall the check.
   await page.waitForFunction(() =>
     document
       .getAnimations()
-      .every((animation) => animation.playState !== "running"),
+      .every(
+        (animation) =>
+          animation.playState !== "running" ||
+          animation.effect?.getComputedTiming().endTime === Infinity,
+      ),
   );
   const { violations } = await new AxeBuilder({ page })
     .withTags(WCAG_TAGS)
@@ -41,9 +46,11 @@ test.describe("welcome tour", () => {
   test.use({ tourSeen: false });
 
   test("has no detectable WCAG violations", async ({ page }) => {
-    await page.goto("./");
     // Often the first test a browser runs, so the app may still be loading
-    // into a cold browser (WebKit on CI has taken over 5 s).
+    // into a cold browser (WebKit on CI has taken over 5 s), and the scan
+    // is slow there too: together they have run past the usual 30 s.
+    test.slow();
+    await page.goto("./");
     await expect(page.getByTestId("tour-welcome")).toBeVisible({
       timeout: 15_000,
     });
