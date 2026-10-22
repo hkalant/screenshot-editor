@@ -27,6 +27,7 @@ import { selectActiveImage, useEditorStore } from "@/lib/store/editor";
 import { useDesignLayout } from "@/lib/store/hooks";
 import { cn } from "@/lib/utils";
 import { LabeledSlider } from "../controls/LabeledSlider";
+import { AltTextSection } from "./AltTextSection";
 import { Segmented } from "../controls/Segmented";
 
 const PREFERENCE = "export-options";
@@ -256,6 +257,7 @@ export function ExportMenu({ compact = false }: { compact?: boolean }) {
         >
           <ExportOptionsForm />
           <ExportButton className="w-full rounded-md" />
+          <AltTextSection />
           <OriginalSection />
         </PopoverContent>
       </Popover>
@@ -282,6 +284,7 @@ export function ExportMenu({ compact = false }: { compact?: boolean }) {
           aria-label="Export options"
         >
           <ExportOptionsForm />
+          <AltTextSection />
           <OriginalSection />
         </PopoverContent>
       </Popover>
