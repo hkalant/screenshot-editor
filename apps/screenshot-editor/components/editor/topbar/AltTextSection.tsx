@@ -9,6 +9,10 @@ import { readText } from "@/lib/alt/ocr";
 import { imageAspect } from "@/lib/design/annotations";
 import { selectActiveImage, useEditorStore } from "@/lib/store/editor";
 
+/** Said under the alt text whatever its state: the suggestion is a start. */
+const GUIDELINES =
+  "Always follow digital accessibility guidelines for alt text.";
+
 type Reading =
   | { state: "reading" }
   | { state: "done"; lines: FoundLine[] }
@@ -111,7 +115,7 @@ export function AltTextSection() {
         className="block w-full resize-y rounded-md border border-input bg-background/70 px-3 py-2 text-sm leading-snug outline-none placeholder:text-muted-foreground focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid"
       />
       <p id={noteId} className="text-xs text-muted-foreground" role="status">
-        {note}
+        {note} {GUIDELINES}
       </p>
       <div className="flex gap-2">
         <Button

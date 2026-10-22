@@ -39,7 +39,11 @@ test("the export options suggest alt text from the annotations", async ({
 
   // Written over, it stays the user's until they go back to the suggestion.
   await field(page).fill("The course menu, with Assessment selected.");
-  await expect(page.getByText("Your own wording.")).toBeVisible();
+  await expect(
+    page.getByText(
+      "Your own wording. Always follow digital accessibility guidelines for alt text.",
+    ),
+  ).toBeVisible();
   await page.keyboard.press("Escape");
   await page.getByRole("button", { name: "Export options" }).click();
   await expect(field(page)).toHaveValue(
