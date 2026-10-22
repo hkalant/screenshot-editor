@@ -1,7 +1,7 @@
 "use client";
 
 import { Move } from "lucide-react";
-import { type RefObject, useEffect, useRef, useState } from "react";
+import { type RefObject, useEffect, useId, useRef, useState } from "react";
 import type { DesignLayout, Rect } from "@/lib/design/layout";
 import { SHOT_SCALE } from "@/lib/design/limits";
 import { CORNERS, resizeFromCorner, type Corner } from "@/lib/render/resize";
@@ -15,6 +15,12 @@ const SIZE = 32;
 const GAP = 8;
 // The corner handles' size: inside the gap, so reaching one keeps them up.
 const CORNER = 12;
+// The corner tooltip: how long the pointer rests before it shows, and half
+// its width, to keep it inside the stage.
+const TIP_DELAY = 300;
+const TIP_HALF = 112;
+const RESIZE_TIP =
+  "Drag to resize. Double-click to return to the original size.";
 
 type Props = {
   layout: DesignLayout;
@@ -105,6 +111,16 @@ export function ShotHandle({ layout, scale, width, height }: Props) {
   );
   const [dragging, setDragging] = useState(false);
   const button = useRef<HTMLButtonElement>(null);
+  // The corner whose tooltip shows, if any.
+  const [tip, setTip] = useState<Corner | null>(null);
+  const tipTimer = useRef<number | undefined>(undefined);
+  const tipId = useId();
+  useEffect(() => () => window.clearTimeout(tipTimer.current), []);
+  const showTip = (corner: Corner | null, delay = 0) => {
+    window.clearTimeout(tipTimer.current);
+    if (!corner || !delay) setTip(corner);
+    else tipTimer.current = window.setTimeout(() => setTip(corner), delay);
+  };
 
   const shot = layout.shot;
   const centre = { x: shot.x + shot.width / 2, y: shot.y + shot.height / 2 };
@@ -151,6 +167,19 @@ export function ShotHandle({ layout, scale, width, height }: Props) {
     sealHistory();
   };
 
+  // Outside the screenshot, beyond the corner: above the top corners, below
+  // the bottom ones, unless the stage's edge is in the way.
+  const tipPlace = (corner: Corner) => {
+    const x = (corner.x > 0 ? shot.x + shot.width : shot.x) * scale;
+    const y = (corner.y > 0 ? shot.y + shot.height : shot.y) * scale;
+    const above = corner.y < 0 ? y > 56 : y > height - 56;
+    return {
+      left: clamp(x, TIP_HALF, Math.max(TIP_HALF, width - TIP_HALF)),
+      top: above ? y - CORNER : y + CORNER,
+      transform: `translate(-50%, ${above ? "-100%" : "0"})`,
+    };
+  };
+
   const corners = shot.rotation === 0 && (
     <>
       {CORNERS.map((corner) => {
@@ -161,10 +190,17 @@ export function ShotHandle({ layout, scale, width, height }: Props) {
             key={corner.name}
             type="button"
             aria-label={`Resize screenshot from the ${corner.name.replace("-", " ")} corner`}
-            title="Drag to resize the screenshot. Double-click to fit it again."
+            aria-describedby={tipId}
+            onPointerEnter={(event) => {
+              if (event.pointerType !== "touch") showTip(corner, TIP_DELAY);
+            }}
+            onPointerLeave={() => showTip(null)}
+            onFocus={() => showTip(corner)}
+            onBlur={() => showTip(null)}
             onPointerDown={(event) => {
               if (event.button !== 0) return;
               event.preventDefault();
+              showTip(null);
               event.currentTarget.setPointerCapture(event.pointerId);
               resize.current = {
                 corner,
@@ -203,7 +239,7 @@ export function ShotHandle({ layout, scale, width, height }: Props) {
             // Back to the size and place it started at.
             onDoubleClick={() => resizeShot(SHOT_SCALE.default, 0.5, 0.5)}
             className={cn(
-              "absolute rounded-full border-[1.5px] border-[#0a84ff] bg-white shadow-sm transition-[opacity,visibility] duration-150 outline-none focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid motion-reduce:transition-none",
+              "absolute touch-none rounded-full border-[1.5px] border-[#0a84ff] bg-white shadow-sm transition-[opacity,visibility] duration-150 outline-none focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid motion-reduce:transition-none",
               corner.x === corner.y
                 ? "cursor-nwse-resize"
                 : "cursor-nesw-resize",
@@ -218,6 +254,19 @@ export function ShotHandle({ layout, scale, width, height }: Props) {
           />
         );
       })}
+      <span id={tipId} className="sr-only">
+        {RESIZE_TIP}
+      </span>
+      {tip && shown && !dragging && (
+        <span
+          aria-hidden
+          data-testid="resize-tooltip"
+          className="pointer-events-none absolute z-50 w-max max-w-56 rounded-md bg-foreground px-2.5 py-1.5 text-center text-xs font-medium text-background shadow-md"
+          style={tipPlace(tip)}
+        >
+          {RESIZE_TIP}
+        </span>
+      )}
     </>
   );
 

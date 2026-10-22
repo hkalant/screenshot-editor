@@ -538,6 +538,23 @@ test("the screenshot resizes from its corners, up to half as big again", async (
   await page.mouse.move(middle.x, middle.y);
   await expect(corner).toBeVisible();
 
+  // Resting on a corner says what it does.
+  const tip = page.getByTestId("resize-tooltip");
+  const handle = await corner.boundingBox();
+  if (!handle) throw new Error("No corner");
+  await page.mouse.move(
+    handle.x + handle.width / 2,
+    handle.y + handle.height / 2,
+  );
+  await expect(tip).toHaveText(
+    "Drag to resize. Double-click to return to the original size.",
+  );
+  await expect(corner).toHaveAccessibleDescription(
+    "Drag to resize. Double-click to return to the original size.",
+  );
+  await page.mouse.move(middle.x, middle.y);
+  await expect(tip).toHaveCount(0);
+
   // Half size, with the top-left corner where it was.
   await drag(middle);
   expect(await isRedAt(400, 100)).toBe(true);
