@@ -28,3 +28,6 @@ npm-debug.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# the text reader, copied from node_modules by scripts/copy-ocr.mjs
+/public/ocr/

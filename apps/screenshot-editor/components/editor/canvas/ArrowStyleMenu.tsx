@@ -2,6 +2,8 @@
 
 import { useEffect, useRef } from "react";
 import { arrowShape, paintArrow } from "@/lib/design/arrowShape";
+import { useTheme } from "@/lib/hooks/useTheme";
+import type { ResolvedTheme } from "@/lib/theme";
 import {
   ARROW_STYLES,
   isLineEnd,
@@ -47,19 +49,37 @@ const WIDTH = ARROW_STYLES.length * BUTTON + 2 * PADDING;
 const HEIGHT = BUTTON + 2 * PADDING;
 const PREVIEW = 22;
 
-/** A small picture of an arrow style or line end, in the arrow's colour. */
+/**
+ * Annotation colours that barely show on the menu in each theme: charcoal on
+ * the dark menu, yellow on the light one. Their previews use the menu's text
+ * colour instead.
+ */
+const FAINT_ON: Record<ResolvedTheme, readonly string[]> = {
+  dark: ["#424a52"],
+  light: ["#f9c909"],
+};
+
+/**
+ * A small picture of an arrow style or line end, in the arrow's colour when
+ * it shows on the menu, else in the menu's text colour.
+ */
 function StylePreview({
   style,
   color,
+  theme,
 }: {
   style: ArrowStyle | LineEnd;
   color: string;
+  theme: ResolvedTheme;
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const canvas = ref.current;
     const context = canvas?.getContext("2d");
     if (!canvas || !context) return;
+    const paint = FAINT_ON[theme].includes(color)
+      ? getComputedStyle(canvas).color
+      : color;
     const ratio = window.devicePixelRatio || 1;
     canvas.width = PREVIEW * ratio;
     canvas.height = PREVIEW * ratio;
@@ -76,8 +96,8 @@ function StylePreview({
       0,
       line ? 480 : 300,
     );
-    if (shape) paintArrow(context, shape, color);
-  }, [style, color]);
+    if (shape) paintArrow(context, shape, paint);
+  }, [style, color, theme]);
   return (
     <canvas ref={ref} aria-hidden style={{ width: PREVIEW, height: PREVIEW }} />
   );
@@ -103,6 +123,7 @@ export function ArrowStyleMenu({ width, height }: Props) {
   const annotations = useEditorStore((state) => state.design.annotations);
   const selectedId = useEditorStore((state) => state.selectedAnnotationId);
   const setArrowStyle = useEditorStore((state) => state.setArrowStyle);
+  const { theme } = useTheme();
 
   const frame =
     hover ?? (selection && selection.id === selectedId ? selection : null);
@@ -153,7 +174,7 @@ export function ArrowStyleMenu({ width, height }: Props) {
           }}
           className="flex size-8 shrink-0 items-center justify-center rounded-sm transition-colors outline-none hover:bg-accent focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid aria-checked:bg-accent aria-checked:ring-2 aria-checked:ring-foreground/25 aria-checked:ring-inset"
         >
-          <StylePreview style={style} color={arrow.color} />
+          <StylePreview style={style} color={arrow.color} theme={theme} />
         </button>
       ))}
     </div>

@@ -16,6 +16,8 @@ const eslintConfig = defineConfig([
   globalIgnores([
     ".next/**",
     "out/**",
+    // The text reader, copied in by scripts/copy-ocr.mjs.
+    "public/ocr/**",
     "build/**",
     "next-env.d.ts",
     "playwright-report/**",
