@@ -38,6 +38,7 @@ import {
 import { pasteAnnotation } from "@/lib/annotationClipboard";
 import { useAnimatedWidth } from "@/lib/hooks/useAnimatedWidth";
 import { currentPlatform, isApplePlatform } from "@/lib/platform";
+import { ToolbarTooltip } from "./ToolbarTooltip";
 import { ToolOptions } from "./ToolOptions";
 import { cn } from "@/lib/utils";
 import {
@@ -71,7 +72,7 @@ function ToolButton({
     <button
       type="button"
       aria-label={label}
-      title={hint ? `${label} (${hint})` : label}
+      data-tip={hint ? `${label} (${hint})` : label}
       aria-pressed={pressed}
       disabled={disabled}
       onClick={onClick}
@@ -251,7 +252,7 @@ function ToolMenu<T extends AnnotationTool>({
             <button
               type="button"
               aria-label={chooseLabel}
-              title={chooseLabel}
+              data-tip={chooseLabel}
               aria-haspopup="menu"
               className="flex h-8 w-6 shrink-0 items-center justify-center rounded-sm text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid [&_svg]:size-3"
             >
@@ -553,7 +554,7 @@ export function AnnotationToolbar() {
         <button
           type="button"
           aria-label={`Add step ${nextStep}`}
-          title={`Add step ${nextStep}`}
+          data-tip={`Add step ${nextStep}`}
           aria-pressed={tool === "step"}
           onClick={() => toggleTool("step")}
           className={cn(buttonClass, "group")}
@@ -657,7 +658,7 @@ export function AnnotationToolbar() {
                   role="radio"
                   aria-checked={color === swatch}
                   aria-label={ANNOTATION_COLOR_NAMES[swatch]}
-                  title={ANNOTATION_COLOR_NAMES[swatch]}
+                  data-tip={ANNOTATION_COLOR_NAMES[swatch]}
                   onClick={() => setColor(swatch)}
                   className="flex size-7 shrink-0 items-center justify-center rounded-full outline-none focus-visible:outline-3 focus-visible:outline-offset-1 focus-visible:outline-ring focus-visible:outline-solid"
                 >
@@ -696,6 +697,7 @@ export function AnnotationToolbar() {
           )}
         </ToolOptions>
       </div>
+      <ToolbarTooltip toolbar={boxRef} />
     </div>
   );
 }

@@ -108,6 +108,27 @@ test("the toolbar appears with a screenshot and offers three colours", async ({
     await expect(toolbar(page).getByRole("radio", { name })).toBeVisible();
 });
 
+test("the toolbar's buttons name themselves in a tooltip on hover", async ({
+  page,
+}) => {
+  await upload(page, makeSolidPng(IMAGE.width, IMAGE.height, RED));
+  const tip = page.getByTestId("toolbar-tooltip");
+  await tool(page, "Blur").hover();
+  await expect(tip).toHaveText("Blur");
+  // The next button's name shows straight away.
+  await tool(page, "Magnifier").hover();
+  await expect(tip).toHaveText(/^Magnifier/);
+  await toolbar(page).getByRole("radio", { name: "Yellow" }).hover();
+  await expect(tip).toHaveText("Yellow");
+  // Gone when the pointer leaves, or presses the button.
+  await page.mouse.move(5, 5);
+  await expect(tip).toHaveCount(0);
+  await tool(page, "Blur").hover();
+  await expect(tip).toHaveText("Blur");
+  await tool(page, "Blur").click();
+  await expect(tip).toHaveCount(0);
+});
+
 test("steps count up, take only numbers and can start again from 1", async ({
   page,
 }) => {
