@@ -47,6 +47,7 @@ import {
 } from "@/lib/design/limits";
 import { referencedImageIds } from "@/lib/design/refs";
 import {
+  annotationSchema,
   ARROW_STYLES,
   isLineEnd,
   LINE_ENDS,
@@ -227,6 +228,11 @@ export type EditorState = {
   resizeStep: (id: string, centre: Point, size: number) => void;
   setStepNumber: (id: string, number: number) => void;
   removeAnnotation: (id: string) => void;
+  /**
+   * Adds a copy of `annotation` a little below and to the right of it, and
+   * selects it. A copied step takes the next number. Returns the copy's id.
+   */
+  pasteAnnotation: (annotation: Annotation) => string | null;
   /** The next step is numbered 1 again. */
   resetStepCount: () => void;
 
@@ -301,6 +307,8 @@ const arrowDelta = (from: Point, to: Point) => ({
 
 /** Adding an annotation leaves the old selection behind. */
 const NO_SELECTION = { selectedAnnotationId: null };
+/** How far a pasted copy sits from its original, across and down, in image widths. */
+const PASTE_OFFSET = 0.02;
 
 /** A new screenshot starts without the old one's annotations. */
 const withoutAnnotations = (design: Design): Design =>
@@ -1331,6 +1339,58 @@ export const useEditorStore = create<EditorState>()((set, get) => {
           },
         );
       }),
+
+    pasteAnnotation: (annotation) => {
+      const state = get();
+      const area = annotationArea(state) ?? FAR;
+      const id = newAnnotationId();
+      const moved = {
+        x: annotation.x + PASTE_OFFSET,
+        y: annotation.y + PASTE_OFFSET,
+      };
+      const to = roundPoint(
+        annotation.kind === "step"
+          ? clampToArea(moved, area)
+          : annotation.kind === "arrow"
+            ? fitArrow(moved, { x: annotation.dx, y: annotation.dy }, area)
+            : fitBox(
+                { ...annotation, ...moved },
+                area,
+                isSquareShape(annotation),
+              ),
+      );
+      const number = state.design.nextStep;
+      const copy: Annotation =
+        annotation.kind === "step"
+          ? { ...annotation, id, ...to, number }
+          : annotation.kind === "shape" && annotation.from
+            ? {
+                ...annotation,
+                id,
+                x: to.x,
+                y: to.y,
+                // An inset keeps enlarging the same spot, moved with it.
+                from: roundPoint({
+                  x: annotation.from.x + to.x - annotation.x,
+                  y: annotation.from.y + to.y - annotation.y,
+                }),
+              }
+            : { ...annotation, id, x: to.x, y: to.y };
+      const parsed = annotationSchema.safeParse(copy);
+      if (!parsed.success) return null;
+      commit(
+        (design) => ({
+          ...design,
+          annotations: [...design.annotations, parsed.data],
+          ...(annotation.kind === "step" && {
+            nextStep: Math.min(number + 1, MAX_STEP_NUMBER),
+          }),
+        }),
+        undefined,
+        { selectedAnnotationId: id },
+      );
+      return id;
+    },
 
     resetStepCount: () =>
       commit((design) =>

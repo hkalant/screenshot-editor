@@ -1,6 +1,11 @@
 "use client";
 
 import { useEffect, useEffectEvent } from "react";
+import {
+  copyAnnotation,
+  pasteAnnotation,
+  writeCopiedAnnotation,
+} from "@/lib/annotationClipboard";
 import { isEditableTarget } from "@/lib/dom";
 import { runCopy, runExport } from "@/lib/export/controller";
 import { currentPlatform, isApplePlatform } from "@/lib/platform";
@@ -36,7 +41,7 @@ function focusContext(event: KeyboardEvent): ShortcutContext {
   };
 }
 
-/** Undo, redo, export, copy, open, delete, escape, nudge, zoom and the shortcuts list from the keyboard. */
+/** Undo, redo, export, copy, duplicate, open, delete, escape, nudge, zoom and the shortcuts list from the keyboard. */
 export function useShortcuts({ onOpen }: { onOpen: () => void }) {
   const open = useEffectEvent(onOpen);
 
@@ -57,9 +62,23 @@ export function useShortcuts({ onOpen }: { onOpen: () => void }) {
         case "export":
           void runExport();
           break;
-        case "copy":
+        case "copy": {
+          // The selected annotation, else the image. The browser's copy
+          // event that follows puts the annotation on the clipboard.
+          const selected = selectSelectedAnnotation(state);
+          if (selected) {
+            copyAnnotation(selected);
+            return;
+          }
           runCopy();
           break;
+        }
+        case "duplicate": {
+          const selected = selectSelectedAnnotation(state);
+          if (selected) pasteAnnotation(selected);
+          // Even with nothing selected: not the browser's bookmark.
+          break;
+        }
         case "open":
           open();
           break;
@@ -102,7 +121,14 @@ export function useShortcuts({ onOpen }: { onOpen: () => void }) {
       }
       event.preventDefault();
     };
+    const onCopy = (event: ClipboardEvent) => {
+      if (writeCopiedAnnotation(event)) event.preventDefault();
+    };
     window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    window.addEventListener("copy", onCopy);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("copy", onCopy);
+    };
   }, []);
 }

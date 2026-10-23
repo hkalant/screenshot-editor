@@ -108,6 +108,27 @@ test("the toolbar appears with a screenshot and offers three colours", async ({
     await expect(toolbar(page).getByRole("radio", { name })).toBeVisible();
 });
 
+test("the toolbar's buttons name themselves in a tooltip on hover", async ({
+  page,
+}) => {
+  await upload(page, makeSolidPng(IMAGE.width, IMAGE.height, RED));
+  const tip = page.getByTestId("toolbar-tooltip");
+  await tool(page, "Blur").hover();
+  await expect(tip).toHaveText("Blur");
+  // The next button's name shows straight away.
+  await tool(page, "Magnifier").hover();
+  await expect(tip).toHaveText(/^Magnifier/);
+  await toolbar(page).getByRole("radio", { name: "Yellow" }).hover();
+  await expect(tip).toHaveText("Yellow");
+  // Gone when the pointer leaves, or presses the button.
+  await page.mouse.move(5, 5);
+  await expect(tip).toHaveCount(0);
+  await tool(page, "Blur").hover();
+  await expect(tip).toHaveText("Blur");
+  await tool(page, "Blur").click();
+  await expect(tip).toHaveCount(0);
+});
+
 test("steps count up, take only numbers and can start again from 1", async ({
   page,
 }) => {
@@ -811,6 +832,117 @@ test("holding Shift keeps an arrow or line to 45 degree steps", async ({
   ]);
   expectColor(upright, "#424a52", 20);
   expect(isRed(leaning)).toBe(true);
+});
+
+/** Draws a charcoal rectangle and selects it. */
+async function selectedRectangle(page: Page) {
+  await upload(page, makeSolidPng(IMAGE.width, IMAGE.height, RED));
+  await pickShape(page, "Rectangle");
+  await tool(page, "Filled shape").click();
+  await toolbar(page).getByRole("radio", { name: "Charcoal" }).click();
+  await drag(page, [0.3, 0.3], [0.5, 0.5]);
+  await tool(page, "Select and move").click();
+  const at = await onImage(page, 0.4, 0.4);
+  await page.mouse.click(at.x, at.y);
+}
+
+/** Just right of the rectangle's `copies`th copy: each sits 8 px (0.02 of the width) right of and below the last. */
+const rightOfCopy = (copies: number) =>
+  [0.5 + (copies * 8 - 4) / IMAGE.width, 0.4] as [number, number];
+
+test("an annotation is duplicated with its button or a shortcut", async ({
+  page,
+}) => {
+  await selectedRectangle(page);
+  const [none] = await pixelsOnImage(page, [rightOfCopy(1)]);
+  expect(isRed(none)).toBe(true);
+  await page.getByRole("button", { name: "Duplicate rectangle" }).click();
+  await page.keyboard.press("Control+D");
+  await nextFrame(page);
+  const copies = await pixelsOnImage(page, [1, 2, 3].map(rightOfCopy));
+  expectColor(copies[0], "#424a52", 20);
+  expectColor(copies[1], "#424a52", 20);
+  expect(isRed(copies[2])).toBe(true);
+  // The last copy is selected.
+  await expect(
+    page.getByRole("button", { name: "Delete rectangle" }),
+  ).toBeVisible();
+});
+
+test("a selected annotation is copied and pasted", async ({
+  page,
+  browserName,
+}) => {
+  test.skip(browserName !== "chromium", "Synthetic paste events need Chromium");
+  await selectedRectangle(page);
+  await page.keyboard.press("Control+C");
+  const paste = () =>
+    page.evaluate(() =>
+      (document.activeElement ?? document.body).dispatchEvent(
+        new ClipboardEvent("paste", {
+          clipboardData: new DataTransfer(),
+          bubbles: true,
+          cancelable: true,
+        }),
+      ),
+    );
+  // Pasting again puts each copy past the last.
+  await paste();
+  await paste();
+  await nextFrame(page);
+  const copies = await pixelsOnImage(page, [1, 2, 3].map(rightOfCopy));
+  expectColor(copies[0], "#424a52", 20);
+  expectColor(copies[1], "#424a52", 20);
+  expect(isRed(copies[2])).toBe(true);
+});
+
+test("a step placed or dragged near the end of a line is centred on it", async ({
+  page,
+}) => {
+  await upload(page, makeSolidPng(IMAGE.width, IMAGE.height, RED));
+  await toolbar(page).getByRole("radio", { name: "Charcoal" }).click();
+  await pickArrowTool(page, "Line");
+  await drag(page, [0.2, 0.5], [0.8, 0.5]);
+  await toolbar(page).getByRole("radio", { name: "Yellow" }).click();
+  await tool(page, "Add step 1").click();
+  // 4 px up and left of the line's end.
+  const near = await onImage(
+    page,
+    0.8 - 4 / IMAGE.width,
+    0.5 - 4 / IMAGE.height,
+  );
+  await page.mouse.click(near.x, near.y);
+  await nextFrame(page);
+  const yellow = (pixel: number[]) =>
+    pixel[0] > 200 && pixel[1] > 150 && pixel[2] < 90;
+  // Centred on the end, the step reaches 6 px right of it and below it.
+  const sides: [number, number][] = [
+    [0.8 + 6 / IMAGE.width, 0.5],
+    [0.8, 0.5 + 6 / IMAGE.height],
+  ];
+  for (const pixel of await pixelsOnImage(page, sides))
+    expect(yellow(pixel)).toBe(true);
+
+  // Dragged away and back near the end, it snaps again; with Alt, it doesn't.
+  await tool(page, "Select and move").click();
+  const step = await onImage(page, 0.8, 0.5);
+  const away = await onImage(page, 0.6, 0.2);
+  await page.mouse.move(step.x, step.y);
+  await page.mouse.down();
+  await page.mouse.move(away.x, away.y, { steps: 6 });
+  await page.mouse.move(near.x, near.y, { steps: 6 });
+  await page.mouse.up();
+  for (const pixel of await pixelsOnImage(page, sides))
+    expect(yellow(pixel)).toBe(true);
+  await page.mouse.move(step.x, step.y);
+  await page.keyboard.down("Alt");
+  await page.mouse.down();
+  await page.mouse.move(away.x, away.y, { steps: 6 });
+  await page.mouse.move(near.x, near.y, { steps: 6 });
+  await page.mouse.up();
+  await page.keyboard.up("Alt");
+  const [right] = await pixelsOnImage(page, sides);
+  expect(yellow(right)).toBe(false);
 });
 
 test("a blur box blurs the screenshot under it, and its slider sets how much", async ({
