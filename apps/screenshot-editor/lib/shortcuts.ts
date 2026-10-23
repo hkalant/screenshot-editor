@@ -6,6 +6,7 @@ export type ShortcutCommand =
   | { type: "redo" }
   | { type: "export" }
   | { type: "copy" }
+  | { type: "duplicate" }
   | { type: "open" }
   | { type: "delete" }
   | { type: "escape" }
@@ -45,6 +46,7 @@ export function matchShortcut(
     if (key === "y" && !apple && !event.shiftKey) return { type: "redo" };
     if (key === "s") return { type: event.shiftKey ? "saveProject" : "export" };
     if (key === "c") return { type: "copy" };
+    if (key === "d" && !event.shiftKey) return { type: "duplicate" };
     if (key === "o") return { type: event.shiftKey ? "openProject" : "open" };
     // "=" is the plus key without Shift; "+" with it, or on the number pad.
     if (key === "=" || key === "+") return { type: "zoom", direction: "in" };

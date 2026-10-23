@@ -3,6 +3,7 @@
 import {
   ChevronDown,
   Circle,
+  CopyPlus,
   Highlighter,
   MousePointer2,
   MoveUpRight,
@@ -34,7 +35,9 @@ import {
   useEditorStore,
   type AnnotationTool,
 } from "@/lib/store/editor";
+import { pasteAnnotation } from "@/lib/annotationClipboard";
 import { useAnimatedWidth } from "@/lib/hooks/useAnimatedWidth";
+import { currentPlatform, isApplePlatform } from "@/lib/platform";
 import { ToolOptions } from "./ToolOptions";
 import { cn } from "@/lib/utils";
 import {
@@ -676,6 +679,13 @@ export function AnnotationToolbar() {
             <>
               <Divider />
               {selected.kind === "step" && <StepNumberField step={selected} />}
+              <ToolButton
+                label="Duplicate annotation"
+                hint={`${isApplePlatform(currentPlatform()) ? "⌘" : "Ctrl"}+D`}
+                onClick={() => pasteAnnotation(selected)}
+              >
+                <CopyPlus aria-hidden />
+              </ToolButton>
               <ToolButton
                 label="Delete annotation"
                 onClick={() => removeAnnotation(selected.id)}

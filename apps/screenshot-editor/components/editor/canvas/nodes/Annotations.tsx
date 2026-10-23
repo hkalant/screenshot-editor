@@ -53,6 +53,13 @@ import {
   magnifyArea,
 } from "@/lib/design/magnify";
 import type { Rect as LayoutRect } from "@/lib/design/layout";
+import {
+  arrowEndNear,
+  SNAP_DISTANCE,
+  snapMove,
+  snapPoint,
+  snapTargets,
+} from "@/lib/design/snap";
 import type {
   Annotation,
   AnnotationColor,
@@ -684,6 +691,8 @@ export function AnnotationsNode({
   const moving = useRef(false);
   const hovered = useRef<Konva.Node | null>(null);
   const [draft, setDraft] = useState<Box | null>(null);
+  /** The point a dragged annotation has snapped to, marked while it holds. */
+  const [snapGuide, setSnapGuide] = useState<Point | null>(null);
   const [arrowDraft, setArrowDraft] = useState<{
     start: Point;
     end: Point;
@@ -759,19 +768,40 @@ export function AnnotationsNode({
         .closest<HTMLElement>(`[${CANVAS_FOCUS_ATTRIBUTE}]`);
       canvas?.focus({ preventScroll: true });
       if (event.evt.button !== undefined && event.evt.button !== 0) return;
-      // An annotation selects itself; the selection box resizes.
+      // An annotation selects itself; the selection box resizes. With the
+      // step tool, though, the end of an arrow or line takes a step centred
+      // on it, so a step can be put at the end of a line.
       const target = event.target;
-      if (
-        target.findAncestor(`.${ANNOTATION_NAME}`, true) ||
-        target.findAncestor("Transformer", true)
-      )
-        return;
+      const pressed = target.findAncestor(`.${ANNOTATION_NAME}`, true);
+      if (tool === "step" && pressed && !event.evt.altKey) {
+        const point = pointer();
+        const end =
+          point &&
+          arrowEndNear(
+            point,
+            store().design.annotations,
+            SNAP_DISTANCE / (unit * zoom),
+          );
+        if (end) {
+          store().addStep(end);
+          return;
+        }
+      }
+      if (pressed || target.findAncestor("Transformer", true)) return;
       store().selectAnnotation(null);
       if (tool === "select") return;
       const point = pointer();
       if (!point || !inArea(point, area)) return;
       if (tool === "step") {
-        store().addStep(point);
+        // Centred on a key point of another annotation when near one.
+        const target = event.evt.altKey
+          ? null
+          : snapPoint(
+              point,
+              store().design.annotations.flatMap(snapTargets),
+              SNAP_DISTANCE / (unit * zoom),
+            );
+        store().addStep(target ?? point);
         return;
       }
       start = end = point;
@@ -801,7 +831,7 @@ export function AnnotationsNode({
       cancel();
       setCursor(root, "");
     };
-  }, [tool, unit, area, magnifyLens]);
+  }, [tool, unit, zoom, area, magnifyLens]);
 
   // The selection box follows the selected annotation's node (a step's
   // node is replaced when the font loads).
@@ -855,6 +885,12 @@ export function AnnotationsNode({
     else nodes.current.delete(id);
   };
 
+  /** The points the annotation `id` can snap to: every other annotation's. */
+  const targetsBesides = (id: string) =>
+    annotations
+      .filter((annotation) => annotation.id !== id)
+      .flatMap(snapTargets);
+
   const startMoving = () => {
     moving.current = true;
     setFrame(null);
@@ -870,6 +906,20 @@ export function AnnotationsNode({
     draggable: true,
     onPointerDown: (event: KonvaEventObject<PointerEvent>) => {
       if (event.evt.button !== undefined && event.evt.button !== 0) return;
+      // The step tool puts a step on an arrow's end instead (see onDown).
+      const position = rootRef.current?.getRelativePointerPosition();
+      if (
+        tool === "step" &&
+        annotation.kind === "arrow" &&
+        !event.evt.altKey &&
+        position &&
+        arrowEndNear(
+          { x: position.x / unit, y: position.y / unit },
+          annotations,
+          SNAP_DISTANCE / (unit * zoom),
+        )
+      )
+        return;
       useEditorStore.getState().selectAnnotation(annotation.id);
     },
     onDragStart: (event: KonvaEventObject<DragEvent>) => {
@@ -882,20 +932,26 @@ export function AnnotationsNode({
     onDragMove: (event: KonvaEventObject<DragEvent>) => {
       event.cancelBubble = true;
       const node = event.target;
+      // Near a key point of another annotation, it lands exactly on it,
+      // unless Alt is held.
+      const snapped = event.evt.altKey
+        ? { position: { x: node.x() / unit, y: node.y() / unit }, target: null }
+        : snapMove(
+            annotation,
+            { x: node.x() / unit, y: node.y() / unit },
+            targetsBesides(annotation.id),
+            SNAP_DISTANCE / (unit * zoom),
+          );
+      const at = snapped.position;
       let to: Point;
       if (annotation.kind === "step") {
-        to = clampToArea({ x: node.x() / unit, y: node.y() / unit }, area);
+        to = clampToArea(at, area);
       } else if (annotation.kind === "arrow") {
-        to = fitArrow(
-          { x: node.x() / unit, y: node.y() / unit },
-          { x: annotation.dx, y: annotation.dy },
-          area,
-        );
+        to = fitArrow(at, { x: annotation.dx, y: annotation.dy }, area);
       } else {
         const box = fitBox(
           {
-            x: node.x() / unit,
-            y: node.y() / unit,
+            ...at,
             width: annotation.width,
             height: annotation.height,
           },
@@ -904,12 +960,19 @@ export function AnnotationsNode({
         );
         to = { x: box.x, y: box.y };
       }
+      // The guide only while the snap held (fitting may have moved it off).
+      setSnapGuide(
+        snapped.target && to.x === at.x && to.y === at.y
+          ? snapped.target
+          : null,
+      );
       // Kept on the screenshot even when the stored position doesn't change.
       node.position({ x: to.x * unit, y: to.y * unit });
       useEditorStore.getState().moveAnnotation(annotation.id, to);
     },
     onDragEnd: (event: KonvaEventObject<DragEvent>) => {
       event.cancelBubble = true;
+      setSnapGuide(null);
       stopMoving(annotation.id);
       setCursor(event.target, "grab");
     },
@@ -1012,16 +1075,30 @@ export function AnnotationsNode({
       const tail = { x: current.x, y: current.y };
       const tip = { x: current.x + current.dx, y: current.y + current.dy };
       const pointer = { x: node.x() / unit, y: node.y() / unit };
-      // With Shift, the end keeps to 45 degree steps around the other end.
+      // With Shift, the end keeps to 45 degree steps around the other end;
+      // otherwise it lands on a key point of another annotation near it,
+      // unless Alt is held.
+      const target =
+        event.evt.shiftKey || event.evt.altKey
+          ? null
+          : snapPoint(
+              pointer,
+              targetsBesides(arrow.id),
+              SNAP_DISTANCE / (unit * zoom),
+            );
       const to = event.evt.shiftKey
         ? snapEnd(end === "start" ? tip : tail, pointer, area)
-        : clampToArea(pointer, area);
+        : clampToArea(target ?? pointer, area);
+      setSnapGuide(
+        target && to.x === target.x && to.y === target.y ? target : null,
+      );
       node.position({ x: to.x * unit, y: to.y * unit });
       const [from, onto] = end === "start" ? [to, tip] : [tail, to];
       useEditorStore.getState().setArrowEnds(arrow.id, from, onto);
     },
     onDragEnd: (event: KonvaEventObject<DragEvent>) => {
       event.cancelBubble = true;
+      setSnapGuide(null);
       stopMoving(arrow.id);
     },
     onMouseEnter: (event: KonvaEventObject<MouseEvent>) => {
@@ -1081,6 +1158,7 @@ export function AnnotationsNode({
     },
     onDragEnd: (event: KonvaEventObject<DragEvent>) => {
       event.cancelBubble = true;
+      setSnapGuide(null);
       stopMoving(arrow.id);
     },
     onMouseEnter: (event: KonvaEventObject<MouseEvent>) => {
@@ -1231,6 +1309,31 @@ export function AnnotationsNode({
             )}
           </Group>
         ),
+      )}
+      {snapGuide && (
+        // A ring and cross on the point it snapped to.
+        <Group
+          name={EXPORT_HIDDEN}
+          x={snapGuide.x * unit}
+          y={snapGuide.y * unit}
+          listening={false}
+        >
+          <Circle
+            radius={7 / zoom}
+            stroke={SELECTION_COLOR}
+            strokeWidth={1.5 / zoom}
+          />
+          <Line
+            points={[-12 / zoom, 0, 12 / zoom, 0]}
+            stroke={SELECTION_COLOR}
+            strokeWidth={1 / zoom}
+          />
+          <Line
+            points={[0, -12 / zoom, 0, 12 / zoom]}
+            stroke={SELECTION_COLOR}
+            strokeWidth={1 / zoom}
+          />
+        </Group>
       )}
       {draft && (
         <Group

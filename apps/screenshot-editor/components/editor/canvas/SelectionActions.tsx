@@ -1,6 +1,7 @@
 "use client";
 
-import { Trash2 } from "lucide-react";
+import { CopyPlus, Trash2 } from "lucide-react";
+import { pasteAnnotation } from "@/lib/annotationClipboard";
 import { isLineEnd, type ShapeKind } from "@/lib/design/schema";
 import { CANVAS_FOCUS_ATTRIBUTE } from "@/lib/hooks/useShortcuts";
 import { selectSelectedAnnotation, useEditorStore } from "@/lib/store/editor";
@@ -11,6 +12,8 @@ import { useSelectionFrame } from "./nodes/Annotations";
 // resize handles).
 const SIZE = 32;
 const GAP = 12;
+/** Between the two buttons. */
+const SPACING = 4;
 
 const SHAPE_NAMES: Record<ShapeKind, string> = {
   rect: "rectangle",
@@ -27,7 +30,7 @@ type Props = {
   height: number;
 };
 
-/** A delete button just above the selected annotation (below it at the top edge). */
+/** Duplicate and delete buttons just above the selected annotation (below it at the top edge). */
 export function SelectionActions({ width, height }: Props) {
   const frame = useSelectionFrame((state) => state.frame);
   const selected = useEditorStore(selectSelectedAnnotation);
@@ -37,36 +40,54 @@ export function SelectionActions({ width, height }: Props) {
   const above = frame.y - GAP - SIZE;
   const below = frame.y + frame.height + GAP;
   const top = above >= 0 || below + SIZE > height ? Math.max(0, above) : below;
+  // Two buttons side by side, centred over the selection.
   const left = clamp(
-    frame.x + frame.width / 2 - SIZE / 2,
+    frame.x + frame.width / 2 - (SIZE * 2 + SPACING) / 2,
     0,
-    Math.max(0, width - SIZE),
+    Math.max(0, width - SIZE * 2 - SPACING),
   );
-  const label =
+  const name =
     selected.kind === "step"
-      ? `Delete step ${selected.number}`
+      ? `step ${selected.number}`
       : selected.kind === "arrow"
         ? isLineEnd(selected.style)
-          ? "Delete line"
-          : "Delete arrow"
-        : `Delete ${SHAPE_NAMES[selected.shape]}`;
+          ? "line"
+          : "arrow"
+        : SHAPE_NAMES[selected.shape];
+  // The buttons go with the annotation; keep the keys on the canvas.
+  const keepFocus = (button: HTMLElement) =>
+    button
+      .closest<HTMLElement>(`[${CANVAS_FOCUS_ATTRIBUTE}]`)
+      ?.focus({ preventScroll: true });
+  const buttonClass =
+    "flex size-8 items-center justify-center rounded-md pane-float text-foreground transition-colors outline-none hover:bg-accent focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid [&_svg]:size-4";
 
   return (
-    <button
-      type="button"
-      aria-label={label}
-      title={label}
-      onClick={(event) => {
-        // The button goes with the annotation; keep the keys on the canvas.
-        event.currentTarget
-          .closest<HTMLElement>(`[${CANVAS_FOCUS_ATTRIBUTE}]`)
-          ?.focus({ preventScroll: true });
-        removeAnnotation(selected.id);
-      }}
-      className="absolute flex size-8 items-center justify-center rounded-md pane-float text-foreground transition-colors outline-none hover:bg-accent focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid [&_svg]:size-4"
-      style={{ left, top }}
-    >
-      <Trash2 aria-hidden />
-    </button>
+    <div className="absolute flex gap-1" style={{ left, top }}>
+      <button
+        type="button"
+        aria-label={`Duplicate ${name}`}
+        title={`Duplicate ${name}`}
+        onClick={(event) => {
+          keepFocus(event.currentTarget);
+          pasteAnnotation(selected);
+        }}
+        className={buttonClass}
+      >
+        <CopyPlus aria-hidden />
+      </button>
+      <button
+        type="button"
+        aria-label={`Delete ${name}`}
+        title={`Delete ${name}`}
+        onClick={(event) => {
+          keepFocus(event.currentTarget);
+          removeAnnotation(selected.id);
+        }}
+        className={buttonClass}
+      >
+        <Trash2 aria-hidden />
+      </button>
+    </div>
   );
 }

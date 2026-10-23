@@ -47,6 +47,10 @@ describe("matchShortcut", () => {
       type: "copy",
     });
     expect(matchShortcut(key("o", mod), false)).toEqual({ type: "open" });
+    expect(matchShortcut(key("d", mod), false)).toEqual({ type: "duplicate" });
+    expect(matchShortcut(key("d", { metaKey: true }), true)).toEqual({
+      type: "duplicate",
+    });
     expect(matchShortcut(key("v", mod), false)).toBeNull(); // paste is handled by the paste event
   });
 

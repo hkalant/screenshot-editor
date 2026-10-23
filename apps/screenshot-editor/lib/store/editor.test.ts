@@ -452,6 +452,28 @@ describe("editor store: annotations", () => {
     expect(state().selectedAnnotationId).toBeNull();
   });
 
+  it("pastes a copy just below and right of the original, and selects it", () => {
+    state().addShape("rect", { x: 0.1, y: 0.1, width: 0.2, height: 0.1 });
+    state().addStep({ x: 0.5, y: 0.2 });
+    const [box, step] = annotations();
+    const boxCopy = state().pasteAnnotation(box);
+    expect(annotations().at(-1)).toMatchObject({
+      id: boxCopy,
+      kind: "shape",
+      x: 0.12,
+      y: 0.12,
+      width: 0.2,
+    });
+    expect(state().selectedAnnotationId).toBe(boxCopy);
+    // A copied step takes the next number.
+    state().pasteAnnotation(step);
+    expect(annotations().at(-1)).toMatchObject({ kind: "step", number: 2 });
+    expect(state().design.nextStep).toBe(3);
+    // One undo removes the copy.
+    state().undo();
+    expect(annotations()).toHaveLength(3);
+  });
+
   it("resizes steps within limits, and new steps take the last size", () => {
     state().addStep({ x: 0.1, y: 0.1 });
     state().addStep({ x: 0.3, y: 0.1 });
