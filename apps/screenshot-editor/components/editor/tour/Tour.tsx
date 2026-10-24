@@ -58,7 +58,7 @@ const STEPS: Step[] = [
     target: '[data-tour="annotate"]',
     side: "bottom",
     title: "Annotate",
-    body: "Add numbered steps, boxes, arrows and lines. Blur anything private, and magnify the detail that matters.",
+    body: "Add numbered steps, boxes, arrows and lines. Blur anything private, magnify the detail that matters, crop the screenshot or add a second one beside it.",
   },
   {
     target: '[data-tour="export"]',
