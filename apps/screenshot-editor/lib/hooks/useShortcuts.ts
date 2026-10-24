@@ -64,9 +64,10 @@ export function useShortcuts({ onOpen }: { onOpen: () => void }) {
           break;
         case "copy": {
           // The selected annotation, else the image. The browser's copy
-          // event that follows puts the annotation on the clipboard.
+          // event that follows puts the annotation on the clipboard. There's
+          // only one second screenshot, so that copies the image.
           const selected = selectSelectedAnnotation(state);
-          if (selected) {
+          if (selected && selected.kind !== "screenshot") {
             copyAnnotation(selected);
             return;
           }

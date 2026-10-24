@@ -35,8 +35,7 @@ test.beforeEach(async ({ page }) => {
 const toolbar = (page: Page) => page.getByRole("toolbar", { name: "Annotate" });
 const tool = (page: Page, name: string) =>
   toolbar(page).getByRole("button", { name, exact: true });
-const sameFrame = (page: Page) =>
-  tool(page, "Same frame as the main screenshot");
+const GREEN = [0, 200, 0, 255] as const;
 
 async function addSecond(page: Page, png: Buffer) {
   await page.getByTestId("second-screenshot-input").setInputFiles({
@@ -72,44 +71,59 @@ async function pixelsOnImage(page: Page, points: [number, number][]) {
   );
 }
 
-test("a second screenshot is added over the main one, and undone", async ({
+test("a second screenshot is added over the main one, replaced, and undone", async ({
   page,
 }) => {
   await upload(page, makeSolidPng(IMAGE.width, IMAGE.height, RED));
   await addSecond(page, makeSolidPng(400, 300, [...BLUE]));
-  // With no window frame on the main screenshot, there's none to share.
-  await expect(sameFrame(page)).toBeDisabled();
   const [second, main] = await pixelsOnImage(page, [
     [0.85, 0.3],
     [0.2, 0.8],
   ]);
   expectColor(second, "#0000ff", 12);
   expect(isRed(main)).toBe(true);
+  // There's only one, so it can't be duplicated.
+  await expect(
+    page.getByRole("button", { name: "Duplicate second screenshot" }),
+  ).toHaveCount(0);
 
+  // Adding another puts it in the first one's place.
+  await expect(tool(page, "Add second screenshot")).toHaveCount(0);
+  await expect(tool(page, "Replace second screenshot")).toBeVisible();
+  await addSecond(page, makeSolidPng(400, 300, [...GREEN]));
+  const [replaced] = await pixelsOnImage(page, [[0.85, 0.3]]);
+  expectColor(replaced, "#00c800", 12);
+
+  await page.getByRole("button", { name: "Undo" }).click();
+  const [back] = await pixelsOnImage(page, [[0.85, 0.3]]);
+  expectColor(back, "#0000ff", 12);
   await page.getByRole("button", { name: "Undo" }).click();
   const [gone] = await pixelsOnImage(page, [[0.85, 0.3]]);
   expect(isRed(gone)).toBe(true);
+  await expect(tool(page, "Add second screenshot")).toBeVisible();
 });
 
-test("a second screenshot shares the main one's frame and is kept after a reload", async ({
+test("a second screenshot has its own address in the sidebar and is kept after a reload", async ({
   page,
 }) => {
   await upload(page, makeSolidPng(IMAGE.width, IMAGE.height, RED));
   await chooseFrame(page, "macOS browser");
+  await page
+    .getByRole("textbox", { name: "Address", exact: true })
+    .fill("old.example.ac.uk");
   await addSecond(page, makeSolidPng(400, 300, [...BLUE]));
-  await expect(sameFrame(page)).toHaveAttribute("aria-pressed", "true");
-  const address = toolbar(page).getByRole("textbox", {
+  // While it's selected, the sidebar's address is its own.
+  const address = page.getByRole("textbox", {
     name: "Address of the second screenshot",
   });
-  await expect(address).toBeVisible();
+  await expect(address).toHaveValue("");
   await address.fill("grades.example.ac.uk");
-
-  // Out of the frame, it has no address.
-  await sameFrame(page).click();
-  await expect(sameFrame(page)).toHaveAttribute("aria-pressed", "false");
-  await expect(address).toHaveCount(0);
-  await sameFrame(page).click();
-  await expect(address).toHaveValue("grades.example.ac.uk");
+  // Clicking the main screenshot puts it back to the main one's.
+  const main = await onImage(page, 0.2, 0.8);
+  await page.mouse.click(main.x, main.y);
+  await expect(
+    page.getByRole("textbox", { name: "Address", exact: true }),
+  ).toHaveValue("old.example.ac.uk");
 
   // Once the autosave has it.
   await expect

@@ -297,7 +297,7 @@ function useInset(annotation: ScreenshotAnnotation, unit: number) {
   const image = useEditorStore((state) => state.images[annotation.imageId]);
   const shot = useEditorStore((state) => state.design.layers[0]);
   if (!image) return null;
-  const kind = insetFrameKind(annotation.framed, shot.frame.kind);
+  const kind = insetFrameKind(shot.frame.kind);
   return {
     image,
     shot,
@@ -366,7 +366,7 @@ function useBlurSource(
     if (annotation.kind !== "screenshot") continue;
     const image = images[annotation.imageId];
     if (!image) continue;
-    const kind = insetFrameKind(annotation.framed, shot.frame.kind);
+    const kind = insetFrameKind(shot.frame.kind);
     const box = insetBox(image, kind, annotation.width * unit, shot.radius);
     // The picture inside the frame, in image widths.
     const x = annotation.x + box.image.x / unit;

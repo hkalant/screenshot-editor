@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  AppWindow,
   ChevronDown,
   Circle,
   CopyPlus,
@@ -30,7 +29,6 @@ import {
 import {
   LINE_ENDS,
   type MagnifyLens,
-  type ScreenshotAnnotation,
   type StepAnnotation,
 } from "@/lib/design/schema";
 import {
@@ -39,9 +37,6 @@ import {
   type AnnotationTool,
 } from "@/lib/store/editor";
 import { pasteAnnotation } from "@/lib/annotationClipboard";
-import { FRAMES_WITH_TITLE, FRAMES_WITH_URL } from "@/lib/design/frames";
-import { insetFrameKind, sharesFrame } from "@/lib/design/inset";
-import { MAX_FRAME_TEXT } from "@/lib/design/limits";
 import { ACCEPT_ATTR } from "@/lib/image/accept";
 import { ingestFile } from "@/lib/image/ingest";
 import { useAnimatedWidth } from "@/lib/hooks/useAnimatedWidth";
@@ -162,14 +157,19 @@ function FillIcon({ filled }: { filled: boolean }) {
   );
 }
 
-/** Adds a second screenshot, from a file. */
+/** Adds a second screenshot, from a file, or replaces the one there is. */
 function AddScreenshotButton() {
   const inputRef = useRef<HTMLInputElement>(null);
+  const added = useEditorStore((state) =>
+    state.design.annotations.some(
+      (annotation) => annotation.kind === "screenshot",
+    ),
+  );
   return (
     <>
       <ToolButton
-        label="Add second screenshot"
-        hint="placed beside the main one"
+        label={added ? "Replace second screenshot" : "Add second screenshot"}
+        hint={added ? "keeps its place and size" : "placed beside the main one"}
         onClick={() => inputRef.current?.click()}
       >
         <ImagePlus aria-hidden />
@@ -188,56 +188,6 @@ function AddScreenshotButton() {
           if (file) void ingestFile(file, "inset");
         }}
       />
-    </>
-  );
-}
-
-/** A selected second screenshot's frame: the main one's, or none, and its text. */
-function ScreenshotOptions({ shot }: { shot: ScreenshotAnnotation }) {
-  const mainFrame = useEditorStore((state) => state.design.layers[0].frame);
-  const setFramed = useEditorStore((state) => state.setScreenshotFramed);
-  const setText = useEditorStore((state) => state.setScreenshotText);
-  const sealHistory = useEditorStore((state) => state.sealHistory);
-  const shares = sharesFrame(mainFrame.kind);
-  const kind = insetFrameKind(shot.framed, mainFrame.kind);
-  const field = FRAMES_WITH_URL.includes(kind)
-    ? ({ key: "url", label: "Address", placeholder: "Web address" } as const)
-    : FRAMES_WITH_TITLE.includes(kind)
-      ? ({ key: "title", label: "Title", placeholder: "Window title" } as const)
-      : null;
-  return (
-    <>
-      <ToolButton
-        label="Same frame as the main screenshot"
-        hint={
-          shares
-            ? undefined
-            : "choose a window or browser frame for the main screenshot first"
-        }
-        pressed={shares && shot.framed}
-        disabled={!shares}
-        onClick={() => setFramed(shot.id, !shot.framed)}
-      >
-        <AppWindow aria-hidden />
-      </ToolButton>
-      {field && (
-        <input
-          type="text"
-          aria-label={`${field.label} of the second screenshot`}
-          placeholder={field.placeholder}
-          value={shot[field.key]}
-          maxLength={MAX_FRAME_TEXT}
-          spellCheck={false}
-          onChange={(event) =>
-            setText(shot.id, { [field.key]: event.target.value })
-          }
-          onBlur={sealHistory}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") event.currentTarget.blur();
-          }}
-          className="h-7 w-40 shrink-0 rounded-sm border border-input bg-background/70 px-2 text-sm text-foreground outline-none placeholder:text-muted-foreground focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid"
-        />
-      )}
     </>
   );
 }
@@ -610,7 +560,7 @@ export function AnnotationToolbar() {
     tool === "magnify" ||
     (selected?.kind === "shape" && selected.shape === "magnify");
   // A second screenshot takes its look from the main one: no colour.
-  const selectedScreenshot = selected?.kind === "screenshot" ? selected : null;
+  const selectedScreenshot = selected?.kind === "screenshot";
   // Highlights are always a border and a light fill.
   const showCorners =
     tool === "highlight" ||
@@ -732,15 +682,7 @@ export function AnnotationToolbar() {
             <Divider />
             <MagnifyZoom />
           </div>
-        ) : selectedScreenshot ? (
-          <div
-            key="screenshot"
-            className="flex animate-tool-options items-center gap-1"
-          >
-            <Divider />
-            <ScreenshotOptions shot={selectedScreenshot} />
-          </div>
-        ) : (
+        ) : selectedScreenshot ? null : (
           <div
             key="colours"
             className="flex animate-tool-options items-center gap-1"
@@ -780,13 +722,16 @@ export function AnnotationToolbar() {
             <>
               <Divider />
               {selected.kind === "step" && <StepNumberField step={selected} />}
-              <ToolButton
-                label="Duplicate annotation"
-                hint={`${isApplePlatform(currentPlatform()) ? "⌘" : "Ctrl"}+D`}
-                onClick={() => pasteAnnotation(selected)}
-              >
-                <CopyPlus aria-hidden />
-              </ToolButton>
+              {/* There's only one second screenshot. */}
+              {selected.kind !== "screenshot" && (
+                <ToolButton
+                  label="Duplicate annotation"
+                  hint={`${isApplePlatform(currentPlatform()) ? "⌘" : "Ctrl"}+D`}
+                  onClick={() => pasteAnnotation(selected)}
+                >
+                  <CopyPlus aria-hidden />
+                </ToolButton>
+              )}
               <ToolButton
                 label="Delete annotation"
                 onClick={() => removeAnnotation(selected.id)}

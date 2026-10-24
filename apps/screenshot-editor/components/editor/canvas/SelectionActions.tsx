@@ -40,11 +40,14 @@ export function SelectionActions({ width, height }: Props) {
   const above = frame.y - GAP - SIZE;
   const below = frame.y + frame.height + GAP;
   const top = above >= 0 || below + SIZE > height ? Math.max(0, above) : below;
-  // Two buttons side by side, centred over the selection.
+  // There's only one second screenshot, so it can't be duplicated.
+  const duplicable = selected.kind !== "screenshot";
+  // The buttons side by side, centred over the selection.
+  const across = duplicable ? SIZE * 2 + SPACING : SIZE;
   const left = clamp(
-    frame.x + frame.width / 2 - (SIZE * 2 + SPACING) / 2,
+    frame.x + frame.width / 2 - across / 2,
     0,
-    Math.max(0, width - SIZE * 2 - SPACING),
+    Math.max(0, width - across),
   );
   const name =
     selected.kind === "step"
@@ -66,18 +69,20 @@ export function SelectionActions({ width, height }: Props) {
 
   return (
     <div className="absolute flex gap-1" style={{ left, top }}>
-      <button
-        type="button"
-        aria-label={`Duplicate ${name}`}
-        title={`Duplicate ${name}`}
-        onClick={(event) => {
-          keepFocus(event.currentTarget);
-          pasteAnnotation(selected);
-        }}
-        className={buttonClass}
-      >
-        <CopyPlus aria-hidden />
-      </button>
+      {duplicable && (
+        <button
+          type="button"
+          aria-label={`Duplicate ${name}`}
+          title={`Duplicate ${name}`}
+          onClick={(event) => {
+            keepFocus(event.currentTarget);
+            pasteAnnotation(selected);
+          }}
+          className={buttonClass}
+        >
+          <CopyPlus aria-hidden />
+        </button>
+      )}
       <button
         type="button"
         aria-label={`Delete ${name}`}

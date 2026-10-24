@@ -255,9 +255,9 @@ export const arrowAnnotationSchema = z.object({
 
 /**
  * A second screenshot, placed over or beside the main one like an
- * annotation. It takes the main screenshot's shadow, border and corners, and
- * can sit in its window or browser frame. Its height follows from its image
- * and frame (see inset.ts).
+ * annotation. It takes the main screenshot's shadow, border, corners and
+ * window or browser frame. Its height follows from its image and frame (see
+ * inset.ts). There is at most one.
  */
 export const screenshotAnnotationSchema = z.object({
   id: z.string().min(1),
@@ -268,8 +268,6 @@ export const screenshotAnnotationSchema = z.object({
   y: imagePosition,
   width: imageUnit.positive(),
   height: imageUnit.positive(),
-  /** In the main screenshot's window or browser frame, or plain. */
-  framed: z.boolean(),
   /** The title a window frame shows. */
   title: z.string().max(MAX_FRAME_TEXT).default(""),
   /** The address a browser frame shows. */

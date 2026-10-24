@@ -214,12 +214,14 @@ export type EditorState = {
   /** Moves an annotation by canvas pixels, keeping it on the screenshot. */
   nudgeAnnotation: (id: string, dx: number, dy: number) => void;
   resizeShape: (id: string, box: Box) => void;
-  /** Adds a second screenshot beside the main one, and selects it. */
+  /**
+   * Adds a second screenshot beside the main one, or puts `image` in the one
+   * there already, and selects it.
+   */
   addScreenshot: (image: LoadedImage) => void;
   /** Moves and resizes a second screenshot; its height keeps to its shape. */
   resizeScreenshot: (id: string, x: number, y: number, width: number) => void;
   /** Puts a second screenshot in the main screenshot's frame, or takes it out. */
-  setScreenshotFramed: (id: string, framed: boolean) => void;
   /** The title or address a second screenshot's frame shows. */
   setScreenshotText: (
     id: string,
@@ -340,9 +342,7 @@ function withInsetHeight(
   if (!image) return annotation;
   const height =
     Math.round(
-      annotation.width *
-        insetAspect(image, insetFrameKind(annotation.framed, mainFrame)) *
-        10000,
+      annotation.width * insetAspect(image, insetFrameKind(mainFrame)) * 10000,
     ) / 10000;
   return height === annotation.height ? annotation : { ...annotation, height };
 }
@@ -1329,10 +1329,37 @@ export const useEditorStore = create<EditorState>()((set, get) => {
       const state = get();
       const main = selectActiveImage(state);
       if (!main) return;
+      const kind = insetFrameKind(shotOf(state.design).frame.kind);
+      const existing = state.design.annotations.find(
+        (annotation) => annotation.kind === "screenshot",
+      );
+      const extra = {
+        images: { ...state.images, [image.id]: image },
+        notice: null,
+        annotationTool: "select" as const,
+      };
+      // There's only ever one: a new image goes in its place, as wide.
+      if (existing) {
+        const id = existing.id;
+        set((current) =>
+          commitDesign(
+            current,
+            updateAnnotation(current.design, id, (annotation) =>
+              annotation.kind === "screenshot"
+                ? withInsetHeight(
+                    { ...annotation, imageId: image.id },
+                    { [image.id]: image },
+                    kind,
+                  )
+                : null,
+            ) ?? current.design,
+            undefined,
+            { ...extra, selectedAnnotationId: id },
+          ),
+        );
+        return;
+      }
       const area = annotationArea(state) ?? FAR;
-      // In the main screenshot's frame whenever it has a window frame.
-      const framed = true;
-      const kind = insetFrameKind(framed, shotOf(state.design).frame.kind);
       const aspect = insetAspect(image, kind);
       // Level with the top of the main screenshot's frame.
       const { shot } = computeLayout(main, state.design);
@@ -1361,19 +1388,13 @@ export const useEditorStore = create<EditorState>()((set, get) => {
                 kind: "screenshot",
                 imageId: image.id,
                 ...box,
-                framed,
                 title: "",
                 url: "",
               },
             ],
           },
           undefined,
-          {
-            images: { ...current.images, [image.id]: image },
-            notice: null,
-            annotationTool: "select",
-            selectedAnnotationId: id,
-          },
+          { ...extra, selectedAnnotationId: id },
         ),
       );
     },
@@ -1398,19 +1419,6 @@ export const useEditorStore = create<EditorState>()((set, get) => {
         `annotation-resize-${id}`,
       );
     },
-
-    setScreenshotFramed: (id, framed) =>
-      commit((design) =>
-        updateAnnotation(design, id, (annotation) =>
-          annotation.kind !== "screenshot" || annotation.framed === framed
-            ? null
-            : withInsetHeight(
-                { ...annotation, framed },
-                get().images,
-                shotOf(design).frame.kind,
-              ),
-        ),
-      ),
 
     setScreenshotText: (id, patch) =>
       commit(
@@ -1499,6 +1507,8 @@ export const useEditorStore = create<EditorState>()((set, get) => {
       }),
 
     pasteAnnotation: (annotation) => {
+      // There's only one second screenshot.
+      if (annotation.kind === "screenshot") return null;
       const state = get();
       const area = annotationArea(state) ?? FAR;
       const id = newAnnotationId();

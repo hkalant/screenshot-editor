@@ -21,8 +21,8 @@ export const sharesFrame = (kind: FrameKind) =>
   INSET_FRAME_KINDS.includes(kind);
 
 /** The frame a second screenshot is drawn in, given the main screenshot's. */
-export const insetFrameKind = (framed: boolean, main: FrameKind): FrameKind =>
-  framed && sharesFrame(main) ? main : "none";
+export const insetFrameKind = (main: FrameKind): FrameKind =>
+  sharesFrame(main) ? main : "none";
 
 /** A second screenshot's height over its width, frame included. */
 export function insetAspect(source: Size, kind: FrameKind): number {

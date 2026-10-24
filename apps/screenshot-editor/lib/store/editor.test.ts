@@ -433,7 +433,6 @@ describe("editor store: annotations", () => {
       imageId: "second",
       width: 0.6,
       height: 0.3,
-      framed: true,
     });
     expect(state().selectedAnnotationId).toBe(second.id);
     expect(referencedImageIds(state().design)).toContain("second");
@@ -442,9 +441,6 @@ describe("editor store: annotations", () => {
     state().setFrame({ kind: "macos" });
     const framed = annotations()[0];
     expect(framed.kind === "screenshot" && framed.height).toBeGreaterThan(0.3);
-    state().setScreenshotFramed(second.id, false);
-    expect(annotations()[0]).toMatchObject({ height: 0.3 });
-    state().undo();
     state().undo();
     expect(annotations()[0]).toMatchObject({ height: 0.3 });
     expect(shot().frame.kind).toBe("none");
@@ -457,6 +453,27 @@ describe("editor store: annotations", () => {
       width: 0.3,
       height: 0.15,
     });
+  });
+
+  it("puts a new second screenshot in place of the one there already", () => {
+    state().addScreenshot(fakeImage("second", 800, 400));
+    const [second] = annotations();
+    state().resizeScreenshot(second.id, 0.1, 0.1, 0.4);
+    state().addScreenshot(fakeImage("third", 800, 800));
+    expect(annotations()).toHaveLength(1);
+    expect(annotations()[0]).toMatchObject({
+      id: second.id,
+      imageId: "third",
+      x: 0.1,
+      y: 0.1,
+      width: 0.4,
+      height: 0.4,
+    });
+    expect(referencedImageIds(state().design)).not.toContain("second");
+    // Nor can it be copied.
+    expect(state().pasteAnnotation(annotations()[0])).toBeNull();
+    state().undo();
+    expect(annotations()[0]).toMatchObject({ imageId: "second", height: 0.2 });
   });
 
   it("numbers steps in order and can start again from 1", () => {

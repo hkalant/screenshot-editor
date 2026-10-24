@@ -20,6 +20,7 @@ import type { FrameTheme } from "@/lib/render/frame";
 import type { FrameKind } from "@/lib/design/schema";
 import {
   selectActiveImage,
+  selectSelectedAnnotation,
   selectShot,
   useEditorStore,
 } from "@/lib/store/editor";
@@ -122,7 +123,15 @@ function FrameItem({
 export function FrameOptions() {
   const frame = useEditorStore((state) => selectShot(state).frame);
   const setFrame = useEditorStore((state) => state.setFrame);
+  const setScreenshotText = useEditorStore((state) => state.setScreenshotText);
   const image = useEditorStore(selectActiveImage);
+  // While the second screenshot is selected, the title and address are its own.
+  const selected = useEditorStore(selectSelectedAnnotation);
+  const second = selected?.kind === "screenshot" ? selected : null;
+  const text = second ?? frame;
+  const setText = (patch: { title?: string; url?: string }) =>
+    second ? setScreenshotText(second.id, patch) : setFrame(patch);
+  const of = second ? " of the second screenshot" : "";
   // Without a screenshot there is no shape to go by, so every device is offered.
   const fitting = image ? fittingDevices(image) : null;
   const hintId = useId();
@@ -187,20 +196,20 @@ export function FrameOptions() {
 
       {FRAMES_WITH_TITLE.includes(frame.kind) && (
         <TextField
-          label="Window title"
-          value={frame.title}
+          label={`Window title${of}`}
+          value={text.title}
           placeholder="Untitled"
-          onChange={(title) => setFrame({ title })}
+          onChange={(title) => setText({ title })}
         />
       )}
 
       {FRAMES_WITH_URL.includes(frame.kind) && (
         <TextField
-          label="Address"
-          value={frame.url}
+          label={`Address${of}`}
+          value={text.url}
           placeholder="example.com"
           inputMode="url"
-          onChange={(url) => setFrame({ url })}
+          onChange={(url) => setText({ url })}
         />
       )}
     </div>

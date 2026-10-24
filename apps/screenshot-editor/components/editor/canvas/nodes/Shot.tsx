@@ -6,7 +6,7 @@ import { canvasArea } from "@/lib/design/annotations";
 import type { DesignLayout } from "@/lib/design/layout";
 import type { ShotLayer } from "@/lib/design/schema";
 import type { LoadedImage } from "@/lib/image/load";
-import { NO_GUIDES, snapDrag } from "@/lib/render/snap";
+import { groupOffset, NO_GUIDES, snapDrag } from "@/lib/render/snap";
 import { useEditorStore } from "@/lib/store/editor";
 import { AnnotationsNode } from "./Annotations";
 import { FramedShot, shadowProps } from "./FramedShot";
@@ -70,10 +70,39 @@ export function ShotNode({ image, shot, layout, zoom }: Props) {
     };
   }, [draggable]);
 
+  // A second screenshot moves with it, and the two are centred together.
+  const second = useEditorStore((state) =>
+    state.design.annotations.find(
+      (annotation) => annotation.kind === "screenshot",
+    ),
+  );
+
   const onDragMove = (event: KonvaEventObject<DragEvent>) => {
     const node = event.target;
     if (node !== event.currentTarget) return;
-    const snap = snapDrag(node.position(), layout.canvas, zoom);
+    const unit = box.image.width;
+    const offset = groupOffset(
+      box.width,
+      box.height,
+      box.rotation,
+      second
+        ? [
+            {
+              x: box.image.x + second.x * unit,
+              y: box.image.y + second.y * unit,
+              width: second.width * unit,
+              height: second.height * unit,
+            },
+          ]
+        : [],
+    );
+    const snap = snapDrag(
+      node.position(),
+      layout.canvas,
+      zoom,
+      undefined,
+      offset,
+    );
     node.position(snap.centre);
     useGuides.setState(snap.guides);
     // Every move of one drag merges into one undo step.
