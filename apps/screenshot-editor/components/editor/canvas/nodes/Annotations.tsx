@@ -74,6 +74,7 @@ import type {
   StepAnnotation,
 } from "@/lib/design/schema";
 import { EXPORT_HIDDEN } from "@/lib/export/exportImage";
+import { shownImage } from "@/lib/image/crop";
 import { ANNOTATIONS_ROOT } from "@/lib/render/cropPicture";
 import { CANVAS_FOCUS_ATTRIBUTE } from "@/lib/hooks/useShortcuts";
 import type { LoadedImage } from "@/lib/image/load";
@@ -295,9 +296,10 @@ function ShapeBody({
 
 /** A second screenshot, in canvas px, and the frame it's drawn in. */
 function useInset(annotation: ScreenshotAnnotation, unit: number) {
-  const image = useEditorStore((state) => state.images[annotation.imageId]);
+  const original = useEditorStore((state) => state.images[annotation.imageId]);
   const shot = useEditorStore((state) => state.design.layers[0]);
-  if (!image) return null;
+  if (!original) return null;
+  const image = shownImage(original, annotation.crop);
   const kind = insetFrameKind(shot.frame.kind);
   return {
     image,
@@ -365,8 +367,9 @@ function useBlurSource(
   };
   for (const annotation of [...annotations].reverse()) {
     if (annotation.kind !== "screenshot") continue;
-    const image = images[annotation.imageId];
-    if (!image) continue;
+    const original = images[annotation.imageId];
+    if (!original) continue;
+    const image = shownImage(original, annotation.crop);
     const kind = insetFrameKind(shot.frame.kind);
     const box = insetBox(image, kind, annotation.width * unit, shot.radius);
     // The picture inside the frame, in image widths.

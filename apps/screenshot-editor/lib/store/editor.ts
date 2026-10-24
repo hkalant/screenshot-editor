@@ -28,6 +28,7 @@ import { createDefaultDesign, defaultShotStyle } from "@/lib/design/defaults";
 import { frameFits, frameForScreenshot } from "@/lib/design/devices";
 import {
   croppedSize,
+  FULL_CROP,
   normalizeCrop,
   recropAnnotations,
 } from "@/lib/design/crop";
@@ -38,7 +39,7 @@ import {
   getGradientPreset,
   normalizeAngle,
 } from "@/lib/design/gradients";
-import { computeLayout } from "@/lib/design/layout";
+import { computeLayout, insetBox as framedInsetBox } from "@/lib/design/layout";
 import {
   BLUR,
   BORDER_WIDTH,
@@ -79,7 +80,7 @@ import {
   sanitizeExportOptions,
   type ExportOptions,
 } from "@/lib/export/options";
-import { croppedImage } from "@/lib/image/crop";
+import { croppedImage, shownImage } from "@/lib/image/crop";
 import type { LoadedImage } from "@/lib/image/load";
 import { clamp } from "@/lib/utils";
 
@@ -128,8 +129,10 @@ export type EditorState = {
   notice: Notice | null;
   /** Goes up with each second screenshot added, to show a hint about it. */
   insetHint: number;
-  /** Choosing the main screenshot's crop, in place of the design. */
+  /** Choosing a screenshot's crop, in place of the design. */
   cropping: boolean;
+  /** The second screenshot being cropped, or null for the main one. */
+  cropId: string | null;
   exportOptions: ExportOptions;
 
   annotationTool: AnnotationTool;
@@ -221,12 +224,13 @@ export type EditorState = {
   /** Moves an annotation by canvas pixels, keeping it on the screenshot. */
   nudgeAnnotation: (id: string, dx: number, dy: number) => void;
   resizeShape: (id: string, box: Box) => void;
-  /** Starts choosing the main screenshot's crop. */
-  startCrop: () => void;
+  /** Starts choosing the crop of the main screenshot, or of the second one, `id`. */
+  startCrop: (id?: string | null) => void;
   cancelCrop: () => void;
   /**
-   * Crops the main screenshot to `crop` (fractions of the original), moving
-   * the annotations to stay over the same spots, in one undo step.
+   * Crops the screenshot being cropped to `crop` (fractions of the original),
+   * in one undo step. For the main one the annotations move to stay over the
+   * same spots; the second one's picture stays where it was on the canvas.
    */
   applyCrop: (crop: Crop) => void;
   /**
@@ -353,14 +357,61 @@ function withInsetHeight(
   images: Record<string, LoadedImage>,
   mainFrame: FrameKind,
 ): ScreenshotAnnotation {
-  const image = images[annotation.imageId];
-  if (!image) return annotation;
+  const original = images[annotation.imageId];
+  if (!original) return annotation;
+  const image = shownImage(original, annotation.crop);
   const height =
     Math.round(
       annotation.width * insetAspect(image, insetFrameKind(mainFrame)) * 10000,
     ) / 10000;
   return height === annotation.height ? annotation : { ...annotation, height };
 }
+/**
+ * A second screenshot cropped to `crop`: what's still shown keeps its size
+ * and place on the canvas, and the frame fits round it.
+ */
+function recropScreenshot(
+  annotation: ScreenshotAnnotation,
+  crop: Crop,
+  images: Record<string, LoadedImage>,
+  mainFrame: FrameKind,
+): ScreenshotAnnotation | null {
+  const original = images[annotation.imageId];
+  if (!original || ![crop.x, crop.y, crop.width, crop.height].every(finite))
+    return null;
+  const next = normalizeCrop(crop, original);
+  const kind = insetFrameKind(mainFrame);
+  const before = annotation.crop ?? FULL_CROP;
+  const after = next ?? FULL_CROP;
+  const oldShown = croppedSize(original, annotation.crop);
+  const newShown = croppedSize(original, next);
+  // Image widths per pixel of the original, inside the frame.
+  const old = framedInsetBox(oldShown, kind, annotation.width, 0);
+  const perPixel = old.image.width / oldShown.width;
+  // The new frame for a picture that wide, from a box 1 wide.
+  const unit = framedInsetBox(newShown, kind, 1, 0);
+  const width = (newShown.width * perPixel) / unit.image.width;
+  const box = framedInsetBox(newShown, kind, width, 0);
+  return {
+    ...annotation,
+    crop: next,
+    ...roundBox({
+      x:
+        annotation.x +
+        old.image.x +
+        (after.x - before.x) * original.width * perPixel -
+        box.image.x,
+      y:
+        annotation.y +
+        old.image.y +
+        (after.y - before.y) * original.height * perPixel -
+        box.image.y,
+      width,
+      height: box.height,
+    }),
+  };
+}
+
 /** How far a pasted copy sits from its original, across and down, in image widths. */
 const PASTE_OFFSET = 0.02;
 
@@ -489,6 +540,7 @@ export const useEditorStore = create<EditorState>()((set, get) => {
     notice: null,
     insetHint: 0,
     cropping: false,
+    cropId: null,
     exportOptions: { ...DEFAULT_EXPORT_OPTIONS },
     annotationTool: "select",
     annotationColor: DEFAULT_ANNOTATION_COLOR,
@@ -1314,19 +1366,57 @@ export const useEditorStore = create<EditorState>()((set, get) => {
       );
     },
 
-    startCrop: () => {
-      if (!selectActiveImage(get())) return;
+    startCrop: (id = null) => {
+      const state = get();
+      if (!selectActiveImage(state)) return;
+      const second = id
+        ? state.design.annotations.find((annotation) => annotation.id === id)
+        : null;
+      if (
+        id &&
+        (second?.kind !== "screenshot" || !state.images[second.imageId])
+      )
+        return;
       set(() => ({
         cropping: true,
+        cropId: id,
         selectedAnnotationId: null,
         annotationTool: "select",
       }));
     },
 
-    cancelCrop: () => set(() => ({ cropping: false })),
+    cancelCrop: () =>
+      set((state) => ({
+        cropping: false,
+        cropId: null,
+        // Back to the second screenshot, if that was being cropped.
+        selectedAnnotationId: state.cropId ?? state.selectedAnnotationId,
+      })),
 
     applyCrop: (crop) => {
       const state = get();
+      if (state.cropId) {
+        const id = state.cropId;
+        set((current) =>
+          commitDesign(
+            current,
+            updateAnnotation(current.design, id, (annotation) =>
+              annotation.kind === "screenshot"
+                ? recropScreenshot(
+                    annotation,
+                    crop,
+                    current.images,
+                    shotOf(current.design).frame.kind,
+                  )
+                : null,
+            ) ?? current.design,
+            undefined,
+            // Still selected, as before cropping.
+            { cropping: false, cropId: null, selectedAnnotationId: id },
+          ),
+        );
+        return;
+      }
       const shot = shotOf(state.design);
       const original = shot.imageId ? state.images[shot.imageId] : undefined;
       if (
@@ -1410,7 +1500,7 @@ export const useEditorStore = create<EditorState>()((set, get) => {
             updateAnnotation(current.design, id, (annotation) =>
               annotation.kind === "screenshot"
                 ? withInsetHeight(
-                    { ...annotation, imageId: image.id },
+                    { ...annotation, imageId: image.id, crop: null },
                     { [image.id]: image },
                     kind,
                   )
@@ -1451,6 +1541,7 @@ export const useEditorStore = create<EditorState>()((set, get) => {
                 kind: "screenshot",
                 imageId: image.id,
                 ...box,
+                crop: null,
                 title: "",
                 url: "",
               },

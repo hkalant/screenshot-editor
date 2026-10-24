@@ -7,22 +7,28 @@ import { useEditorStore } from "@/lib/store/editor";
 // As long as the animate-hint animation.
 const SHOW_MS = 4500;
 
+let shownUpTo = 0;
+
 /**
  * A short note over the zoom controls once a second screenshot is added:
  * it's an annotation, so it goes with the main one.
  */
 export function CanvasHint() {
   const added = useEditorStore((state) => state.insetHint);
-  // The last one whose hint has gone.
-  const [done, setDone] = useState(0);
+  // The last one whose hint has gone, kept while the canvas is away (as
+  // when cropping).
+  const [done, setDone] = useState(() => shownUpTo);
 
   useEffect(() => {
-    if (added === 0) return;
-    const timer = window.setTimeout(() => setDone(added), SHOW_MS);
+    if (added === 0 || added <= shownUpTo) return;
+    const timer = window.setTimeout(() => {
+      shownUpTo = added;
+      setDone(added);
+    }, SHOW_MS);
     return () => window.clearTimeout(timer);
   }, [added]);
 
-  if (added === done) return null;
+  if (added <= done) return null;
   return (
     <p
       key={added}

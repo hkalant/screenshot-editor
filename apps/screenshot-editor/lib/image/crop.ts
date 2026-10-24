@@ -67,3 +67,7 @@ export function croppedImage(image: LoadedImage, crop: Crop): LoadedImage {
 
 /** The id of the image a cropped copy was made from (or `id` itself). */
 export const originalImageId = (id: string) => id.split("#")[0];
+
+/** `image` as shown: cropped to `crop`, or whole without one. */
+export const shownImage = (image: LoadedImage, crop: Crop | null) =>
+  crop ? croppedImage(image, crop) : image;

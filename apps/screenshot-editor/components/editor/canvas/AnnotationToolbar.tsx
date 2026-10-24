@@ -159,14 +159,22 @@ function FillIcon({ filled }: { filled: boolean }) {
   );
 }
 
-/** Starts cropping the main screenshot. */
+/** Starts cropping the selected second screenshot, or else the main one. */
 function CropButton() {
   const startCrop = useEditorStore((state) => state.startCrop);
   const selectAnnotation = useEditorStore((state) => state.selectAnnotation);
+  const second = useEditorStore((state) => {
+    const selected = selectSelectedAnnotation(state);
+    return selected?.kind === "screenshot" ? selected.id : null;
+  });
   return (
     <ToolButton
-      label="Crop screenshot"
+      label={second ? "Crop second screenshot" : "Crop screenshot"}
       onClick={() => {
+        if (second) {
+          startCrop(second);
+          return;
+        }
         selectAnnotation(null);
         // Once the selection has left the canvas, so it isn't in the picture.
         requestAnimationFrame(() => {

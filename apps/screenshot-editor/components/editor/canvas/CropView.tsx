@@ -22,6 +22,7 @@ import {
 } from "@/lib/design/crop";
 import { isDeviceKind } from "@/lib/design/devices";
 import { FRAME_LABELS } from "@/lib/design/frames";
+import { sharesFrame } from "@/lib/design/inset";
 import { computePreviewScale } from "@/lib/design/layout";
 import type { Crop } from "@/lib/design/schema";
 import { isEditableTarget } from "@/lib/dom";
@@ -96,27 +97,61 @@ type Props = {
  * frame, with the annotations over it and a box to drag and resize.
  */
 export function CropView({ width, height }: Props) {
-  const image = useEditorStore(selectOriginalImage);
-  if (!image) return null;
-  return <CropArea image={image} width={width} height={height} />;
+  const main = useEditorStore(selectOriginalImage);
+  const second = useEditorStore((state) => {
+    const found = state.design.annotations.find(
+      (annotation) => annotation.id === state.cropId,
+    );
+    return found?.kind === "screenshot" ? found : null;
+  });
+  const secondImage = useEditorStore((state) =>
+    second ? state.images[second.imageId] : undefined,
+  );
+  const shot = useEditorStore((state) => state.design.layers[0]);
+  if (second) {
+    if (!secondImage) return null;
+    return (
+      <CropArea
+        image={secondImage}
+        crop={second.crop}
+        second
+        width={width}
+        height={height}
+      />
+    );
+  }
+  if (!main) return null;
+  return (
+    <CropArea image={main} crop={shot.crop} width={width} height={height} />
+  );
 }
 
 function CropArea({
   image,
+  crop: start,
+  second = false,
   width,
   height,
 }: Props & {
   image: LoadedImage;
+  /** The crop the screenshot has now. */
+  crop: Crop | null;
+  /** The second screenshot, not the main one. */
+  second?: boolean;
 }) {
-  const shot = useEditorStore((state) => state.design.layers[0]);
+  const frameKind = useEditorStore(
+    (state) => state.design.layers[0].frame.kind,
+  );
   const applyCrop = useEditorStore((state) => state.applyCrop);
   const cancelCrop = useEditorStore((state) => state.cancelCrop);
   // A device only fits its own shape, so the crop keeps the shape it has.
-  const device = isDeviceKind(shot.frame.kind) ? shot.frame.kind : null;
-  const current = croppedSize(image, shot.crop);
+  // (The second screenshot is never in one.)
+  const device = !second && isDeviceKind(frameKind) ? frameKind : null;
+  const current = croppedSize(image, start);
   const ratio = device ? current.width / current.height : null;
-  const [crop, setCrop] = useState<Crop>(shot.crop ?? FULL_CROP);
-  const [picture] = useState(cropPicture);
+  const [crop, setCrop] = useState<Crop>(start ?? FULL_CROP);
+  // The annotations are on the main screenshot.
+  const [picture] = useState(() => (second ? null : cropPicture()));
   const drag = useRef<Drag | null>(null);
   const areaRef = useRef<HTMLDivElement>(null);
   const boxRef = useRef<HTMLDivElement>(null);
@@ -129,7 +164,7 @@ function CropArea({
   const shown = { width: image.width * scale, height: image.height * scale };
   const imageRef = useDrawn(image.source, shown.width, shown.height);
   // The picture is in image widths of the screenshot as it was cropped.
-  const before = shot.crop ?? FULL_CROP;
+  const before = start ?? FULL_CROP;
   const unit = before.width * shown.width;
   const pictureBox = picture && {
     left: before.x * shown.width + picture.x * unit,
@@ -290,14 +325,14 @@ function CropArea({
         <div
           role="toolbar"
           aria-label="Crop"
-          className="flex max-w-full [scrollbar-width:none] items-center gap-2 overflow-x-auto rounded-lg pane-float p-1 pl-3"
+          className="flex max-w-full [scrollbar-width:none] items-center gap-2 overflow-x-auto rounded-lg pane-float p-1 sm:pl-3"
         >
           <p className="shrink text-xs text-muted-foreground max-sm:hidden">
             {device
               ? `Keeps the ${FRAME_LABELS[device].toLowerCase()} shape, so the frame still fits.`
-              : shot.frame.kind === "none"
-                ? "Drag the edges or corners to crop the screenshot."
-                : "Cropping the screenshot. The frame fits around it afterwards."}
+              : frameKind === "none" || (second && !sharesFrame(frameKind))
+                ? `Drag the edges or corners to crop the ${second ? "second " : ""}screenshot.`
+                : `Cropping the ${second ? "second " : ""}screenshot. The frame fits around it afterwards.`}
           </p>
           <span
             // Phones keep the room for the buttons.

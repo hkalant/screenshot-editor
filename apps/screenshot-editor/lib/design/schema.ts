@@ -286,6 +286,8 @@ export const screenshotAnnotationSchema = z.object({
   y: imagePosition,
   width: imageUnit.positive(),
   height: imageUnit.positive(),
+  /** The part of its image that's shown; the whole image when null. */
+  crop: cropSchema.nullable().default(null),
   /** The title a window frame shows. */
   title: z.string().max(MAX_FRAME_TEXT).default(""),
   /** The address a browser frame shows. */

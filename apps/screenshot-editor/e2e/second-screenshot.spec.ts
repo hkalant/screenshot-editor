@@ -215,3 +215,40 @@ test("with a second screenshot, the menu replaces all screenshots, and a hint sa
     menu.getByRole("button", { name: /^Replace screenshot/ }),
   ).toBeVisible();
 });
+
+test("a second screenshot is cropped in place", async ({ page }) => {
+  await upload(page, makeSolidPng(IMAGE.width, IMAGE.height, RED));
+  await addSecond(page, makeSolidPng(400, 300, [...BLUE]));
+  // It runs from 0.58 to 1.18 of the main screenshot's width.
+  const [left] = await pixelsOnImage(page, [[0.7, 0.3]]);
+  expectColor(left, "#0000ff", 12);
+
+  await tool(page, "Crop second screenshot").click();
+  await expect(page.getByTestId("crop-size")).toHaveText("400 × 300");
+  await page.getByRole("button", { name: "Resize from the left edge" }).focus();
+  for (let i = 0; i < 50; i++) await page.keyboard.press("ArrowRight");
+  await expect(page.getByTestId("crop-size")).toHaveText("200 × 300");
+  await page
+    .getByRole("toolbar", { name: "Crop" })
+    .getByRole("button", { name: "Done" })
+    .click();
+
+  // Still selected, with its left half gone and the right half where it was.
+  await expect(
+    page.getByRole("button", { name: "Delete second screenshot" }),
+  ).toBeVisible();
+  const [gone, kept] = await pixelsOnImage(page, [
+    [0.7, 0.3],
+    [1.05, 0.3],
+  ]);
+  expect(isRed(gone)).toBe(true);
+  expectColor(kept, "#0000ff", 12);
+
+  // Cropping again starts from its whole image.
+  await tool(page, "Crop second screenshot").click();
+  await expect(page.getByTestId("crop-size")).toHaveText("200 × 300");
+  await page.keyboard.press("Escape");
+  await expect(
+    page.getByRole("button", { name: "Delete second screenshot" }),
+  ).toBeVisible();
+});

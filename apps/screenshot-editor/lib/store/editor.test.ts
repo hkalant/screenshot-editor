@@ -803,3 +803,42 @@ describe("editor store: cropping", () => {
     expect(shot().crop).toBeNull();
   });
 });
+
+describe("editor store: cropping the second screenshot", () => {
+  beforeEach(() => {
+    state().setImage(fakeImage("shot", 1000, 500));
+    state().addScreenshot(fakeImage("second", 800, 400));
+  });
+
+  it("crops it in place: what's left stays where it was", () => {
+    const [before] = state().design.annotations;
+    if (before.kind !== "screenshot") throw new Error("Not a screenshot");
+    state().startCrop(before.id);
+    expect(state()).toMatchObject({ cropping: true, cropId: before.id });
+    // The right half.
+    state().applyCrop({ x: 0.5, y: 0, width: 0.5, height: 1 });
+    const [after] = state().design.annotations;
+    if (after.kind !== "screenshot") throw new Error("Not a screenshot");
+    expect(after.id).toBe(before.id);
+    expect(after.crop).toEqual({ x: 0.5, y: 0, width: 0.5, height: 1 });
+    expect(after.x).toBeCloseTo(before.x + before.width / 2);
+    expect(after.y).toBeCloseTo(before.y);
+    expect(after.width).toBeCloseTo(before.width / 2);
+    expect(after.height).toBeCloseTo(before.height);
+    expect(state()).toMatchObject({
+      cropping: false,
+      cropId: null,
+      selectedAnnotationId: before.id,
+    });
+    // The main screenshot isn't touched.
+    expect(shot().crop).toBeNull();
+
+    state().undo();
+    expect(state().design.annotations[0]).toEqual(before);
+  });
+
+  it("only starts on a second screenshot that's there", () => {
+    state().startCrop("nothing");
+    expect(state().cropping).toBe(false);
+  });
+});

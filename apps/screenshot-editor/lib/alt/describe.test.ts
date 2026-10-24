@@ -126,6 +126,7 @@ describe("describeAnnotations", () => {
           y: 0.25,
           width: 0.4,
           height: 0.2,
+          crop: null,
           title: "",
           url: "",
         },
