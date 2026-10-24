@@ -27,6 +27,7 @@ import { isHexColor } from "@/lib/design/colors";
 import { createDefaultDesign, defaultShotStyle } from "@/lib/design/defaults";
 import { frameFits, frameForScreenshot } from "@/lib/design/devices";
 import { isFrameKind } from "@/lib/design/frames";
+import { insetAspect, insetFrameKind } from "@/lib/design/inset";
 import {
   DEFAULT_GRADIENT,
   getGradientPreset,
@@ -57,7 +58,9 @@ import {
   type LineEnd,
   type Background,
   type Design,
+  type FrameKind,
   type FrameSpec,
+  type ScreenshotAnnotation,
   type ShadowSpec,
   type MagnifyLens,
   type ShapeKind,
@@ -211,6 +214,17 @@ export type EditorState = {
   /** Moves an annotation by canvas pixels, keeping it on the screenshot. */
   nudgeAnnotation: (id: string, dx: number, dy: number) => void;
   resizeShape: (id: string, box: Box) => void;
+  /** Adds a second screenshot beside the main one, and selects it. */
+  addScreenshot: (image: LoadedImage) => void;
+  /** Moves and resizes a second screenshot; its height keeps to its shape. */
+  resizeScreenshot: (id: string, x: number, y: number, width: number) => void;
+  /** Puts a second screenshot in the main screenshot's frame, or takes it out. */
+  setScreenshotFramed: (id: string, framed: boolean) => void;
+  /** The title or address a second screenshot's frame shows. */
+  setScreenshotText: (
+    id: string,
+    patch: Partial<Pick<ScreenshotAnnotation, "title" | "url">>,
+  ) => void;
   /** Changes a blur box's strength (0 to 1); new blur boxes then match it. */
   setBlurIntensity: (id: string | null, intensity: number) => void;
   /** Changes a magnifier's zoom; new magnifiers then match it. */
@@ -307,6 +321,31 @@ const arrowDelta = (from: Point, to: Point) => ({
 
 /** Adding an annotation leaves the old selection behind. */
 const NO_SELECTION = { selectedAnnotationId: null };
+/**
+ * A new second screenshot's gap from the main one, the least room beside it
+ * that it goes in, and its width over the main one without that room, in
+ * image widths.
+ */
+const INSET_GAP = 0.08;
+const MIN_INSET_ROOM = 0.3;
+const INSET_WIDTH = 0.6;
+
+/** A second screenshot with the height its image and frame give it. */
+function withInsetHeight(
+  annotation: ScreenshotAnnotation,
+  images: Record<string, LoadedImage>,
+  mainFrame: FrameKind,
+): ScreenshotAnnotation {
+  const image = images[annotation.imageId];
+  if (!image) return annotation;
+  const height =
+    Math.round(
+      annotation.width *
+        insetAspect(image, insetFrameKind(annotation.framed, mainFrame)) *
+        10000,
+    ) / 10000;
+  return height === annotation.height ? annotation : { ...annotation, height };
+}
 /** How far a pasted copy sits from its original, across and down, in image widths. */
 const PASTE_OFFSET = 0.02;
 
@@ -833,9 +872,9 @@ export const useEditorStore = create<EditorState>()((set, get) => {
       ),
 
     setFrame: (patch) =>
-      commitShot(
-        (shot) => {
-          const next = { ...shot.frame };
+      commit(
+        (design) => {
+          const next = { ...shotOf(design).frame };
           if (patch.kind !== undefined) {
             if (!isFrameKind(patch.kind)) return null;
             const image = selectActiveImage(get());
@@ -850,7 +889,16 @@ export const useEditorStore = create<EditorState>()((set, get) => {
             next.title = patch.title.slice(0, MAX_FRAME_TEXT);
           if (typeof patch.url === "string")
             next.url = patch.url.slice(0, MAX_FRAME_TEXT);
-          return { frame: next };
+          // Second screenshots in the frame take its new bar height.
+          const { images } = get();
+          return {
+            ...updateShot(design, { frame: next }),
+            annotations: design.annotations.map((annotation) =>
+              annotation.kind === "screenshot"
+                ? withInsetHeight(annotation, images, next.kind)
+                : annotation,
+            ),
+          };
         },
         // Typing a title or address merges; picking a frame or theme doesn't.
         patch.kind === undefined && patch.theme === undefined
@@ -870,7 +918,10 @@ export const useEditorStore = create<EditorState>()((set, get) => {
       if (id)
         commit((design) =>
           updateAnnotation(design, id, (annotation) =>
-            annotation.color === color ? null : { ...annotation, color },
+            // A second screenshot has no colour.
+            annotation.kind === "screenshot" || annotation.color === color
+              ? null
+              : { ...annotation, color },
           ),
         );
     },
@@ -913,22 +964,23 @@ export const useEditorStore = create<EditorState>()((set, get) => {
         // The toolbar shows the selected annotation's colour and fill.
         return {
           selectedAnnotationId: id,
-          ...(annotation && {
-            annotationColor: annotation.color,
-            ...(annotation.kind === "shape" && {
-              shapeFilled: annotation.filled,
+          ...(annotation &&
+            annotation.kind !== "screenshot" && {
+              annotationColor: annotation.color,
+              ...(annotation.kind === "shape" && {
+                shapeFilled: annotation.filled,
+              }),
+              ...(annotation.kind === "shape" &&
+                annotation.shape === "highlight" && {
+                  highlightRounded: annotation.rounded ?? false,
+                }),
+              ...(annotation.kind === "shape" &&
+                annotation.shape === "magnify" && {
+                  magnifyZoom: annotation.zoom ?? DEFAULT_MAGNIFY_ZOOM,
+                  magnifyLens: annotation.lens ?? DEFAULT_MAGNIFY_LENS,
+                  magnifyInset: annotation.from !== undefined,
+                }),
             }),
-            ...(annotation.kind === "shape" &&
-              annotation.shape === "highlight" && {
-                highlightRounded: annotation.rounded ?? false,
-              }),
-            ...(annotation.kind === "shape" &&
-              annotation.shape === "magnify" && {
-                magnifyZoom: annotation.zoom ?? DEFAULT_MAGNIFY_ZOOM,
-                magnifyLens: annotation.lens ?? DEFAULT_MAGNIFY_LENS,
-                magnifyInset: annotation.from !== undefined,
-              }),
-          }),
         };
       }),
 
@@ -1113,7 +1165,7 @@ export const useEditorStore = create<EditorState>()((set, get) => {
                   : fitBox(
                       { ...annotation, ...moved },
                       area,
-                      isSquareShape(annotation),
+                      annotation.kind === "shape" && isSquareShape(annotation),
                     );
             const rounded = roundPoint(to);
             return rounded.x === annotation.x && rounded.y === annotation.y
@@ -1273,6 +1325,112 @@ export const useEditorStore = create<EditorState>()((set, get) => {
       );
     },
 
+    addScreenshot: (image) => {
+      const state = get();
+      const main = selectActiveImage(state);
+      if (!main) return;
+      const area = annotationArea(state) ?? FAR;
+      // In the main screenshot's frame whenever it has a window frame.
+      const framed = true;
+      const kind = insetFrameKind(framed, shotOf(state.design).frame.kind);
+      const aspect = insetAspect(image, kind);
+      // Level with the top of the main screenshot's frame.
+      const { shot } = computeLayout(main, state.design);
+      const top = -shot.image.y / shot.image.width;
+      // To the right of the main screenshot and as wide, where there's room;
+      // otherwise over it.
+      const left = 1 + INSET_GAP;
+      const room = Math.min(
+        area.x + area.width - left,
+        (area.y + area.height - top) / aspect,
+      );
+      const width = room >= MIN_INSET_ROOM ? Math.min(1, room) : INSET_WIDTH;
+      const box = roundBox(
+        fitBox({ x: left, y: top, width, height: width * aspect }, area),
+      );
+      const id = newAnnotationId();
+      set((current) =>
+        commitDesign(
+          current,
+          {
+            ...current.design,
+            annotations: [
+              ...current.design.annotations,
+              {
+                id,
+                kind: "screenshot",
+                imageId: image.id,
+                ...box,
+                framed,
+                title: "",
+                url: "",
+              },
+            ],
+          },
+          undefined,
+          {
+            images: { ...current.images, [image.id]: image },
+            notice: null,
+            annotationTool: "select",
+            selectedAnnotationId: id,
+          },
+        ),
+      );
+    },
+
+    resizeScreenshot: (id, x, y, width) => {
+      if (![x, y, width].every(finite) || width <= 0) return;
+      commit(
+        (design) =>
+          updateAnnotation(design, id, (annotation) =>
+            annotation.kind === "screenshot"
+              ? {
+                  ...annotation,
+                  ...roundBox({
+                    x,
+                    y,
+                    width,
+                    height: width * (annotation.height / annotation.width),
+                  }),
+                }
+              : null,
+          ),
+        `annotation-resize-${id}`,
+      );
+    },
+
+    setScreenshotFramed: (id, framed) =>
+      commit((design) =>
+        updateAnnotation(design, id, (annotation) =>
+          annotation.kind !== "screenshot" || annotation.framed === framed
+            ? null
+            : withInsetHeight(
+                { ...annotation, framed },
+                get().images,
+                shotOf(design).frame.kind,
+              ),
+        ),
+      ),
+
+    setScreenshotText: (id, patch) =>
+      commit(
+        (design) =>
+          updateAnnotation(design, id, (annotation) => {
+            if (annotation.kind !== "screenshot") return null;
+            const next = { ...annotation };
+            if (typeof patch.title === "string")
+              next.title = patch.title.slice(0, MAX_FRAME_TEXT);
+            if (typeof patch.url === "string")
+              next.url = patch.url.slice(0, MAX_FRAME_TEXT);
+            return next.title === annotation.title &&
+              next.url === annotation.url
+              ? null
+              : next;
+          }),
+        // Typing merges into one step.
+        `screenshot-text-${id}`,
+      ),
+
     resizeStep: (id, centre, size) => {
       if (!finite(centre.x) || !finite(centre.y) || !finite(size)) return;
       const to = { ...roundPoint(centre), size: clampStepSize(size) };
@@ -1356,7 +1514,7 @@ export const useEditorStore = create<EditorState>()((set, get) => {
             : fitBox(
                 { ...annotation, ...moved },
                 area,
-                isSquareShape(annotation),
+                annotation.kind === "shape" && isSquareShape(annotation),
               ),
       );
       const number = state.design.nextStep;

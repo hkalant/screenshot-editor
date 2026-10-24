@@ -6,7 +6,7 @@ import {
 } from "./devices";
 import { frameMetrics } from "./frames";
 import { MAX_DESIGN_SIDE } from "./limits";
-import type { Design } from "./schema";
+import type { Design, FrameKind } from "./schema";
 
 export type Size = { width: number; height: number };
 export type Rect = Size & { x: number; y: number };
@@ -121,7 +121,44 @@ export function computeLayout(source: Size, design: Design): DesignLayout {
     };
   }
 
-  const radius = Math.max(0, Math.min(shot.radius, width / 2, height / 2));
+  return {
+    canvas,
+    draggable: design.canvas.preset !== "auto",
+    shot: {
+      x,
+      y,
+      scale,
+      rotation: shot.rotation,
+      device: null,
+      ...framedBox(image, shot.frame.kind, scale, shot.radius),
+    },
+  };
+}
+
+/** A screenshot in a window frame (or none), sized and laid out from its top-left. */
+export type FramedBox = Pick<
+  ShotLayout,
+  "width" | "height" | "radius" | "image" | "imageRadii" | "chrome" | "unit"
+>;
+
+/**
+ * A screenshot `image` design px in size, in a window frame (not a device),
+ * at `scale`, with corners of `cornerRadius` canvas px.
+ */
+export function framedBox(
+  image: Size,
+  kind: FrameKind,
+  scale: number,
+  cornerRadius: number,
+): FramedBox {
+  const { chromeTop, ring, unit } = frameMetrics(kind, image.width);
+  const natural = {
+    width: image.width + 2 * ring,
+    height: image.height + 2 * ring + chromeTop,
+  };
+  const width = natural.width * scale;
+  const height = natural.height * scale;
+  const radius = Math.max(0, Math.min(cornerRadius, width / 2, height / 2));
   const imageRect: Rect = {
     x: ring * scale,
     y: (ring + chromeTop) * scale,
@@ -133,33 +170,35 @@ export function computeLayout(source: Size, design: Design): DesignLayout {
     Math.min(radius - ring * scale, imageRect.width / 2, imageRect.height / 2),
   );
   const top = chromeTop > 0 ? 0 : inner;
-
   return {
-    canvas,
-    draggable: design.canvas.preset !== "auto",
-    shot: {
-      x,
-      y,
-      width,
-      height,
-      scale,
-      rotation: shot.rotation,
-      radius,
-      image: imageRect,
-      imageRadii: [top, top, inner, inner],
-      chrome:
-        chromeTop > 0
-          ? {
-              x: ring * scale,
-              y: ring * scale,
-              width: (natural.width - 2 * ring) * scale,
-              height: chromeTop * scale,
-            }
-          : null,
-      unit: unit * scale,
-      device: null,
-    },
+    width,
+    height,
+    radius,
+    image: imageRect,
+    imageRadii: [top, top, inner, inner],
+    chrome:
+      chromeTop > 0
+        ? {
+            x: ring * scale,
+            y: ring * scale,
+            width: (natural.width - 2 * ring) * scale,
+            height: chromeTop * scale,
+          }
+        : null,
+    unit: unit * scale,
   };
+}
+
+/** A second screenshot `width` canvas px wide, frame included. */
+export function insetBox(
+  source: Size,
+  kind: FrameKind,
+  width: number,
+  cornerRadius: number,
+): FramedBox {
+  const image = fitWithin(source, MAX_DESIGN_SIDE);
+  const { ring } = frameMetrics(kind, image.width);
+  return framedBox(image, kind, width / (image.width + 2 * ring), cornerRadius);
 }
 
 function scalePart<T extends DevicePart>(part: T, scale: number): T {

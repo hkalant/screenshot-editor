@@ -53,7 +53,9 @@ export function SelectionActions({ width, height }: Props) {
         ? isLineEnd(selected.style)
           ? "line"
           : "arrow"
-        : SHAPE_NAMES[selected.shape];
+        : selected.kind === "screenshot"
+          ? "second screenshot"
+          : SHAPE_NAMES[selected.shape];
   // The buttons go with the annotation; keep the keys on the canvas.
   const keepFocus = (button: HTMLElement) =>
     button

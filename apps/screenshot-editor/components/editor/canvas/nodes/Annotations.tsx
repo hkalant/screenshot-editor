@@ -52,7 +52,8 @@ import {
   MAGNIFY_BORDER_COLOR,
   magnifyArea,
 } from "@/lib/design/magnify";
-import type { Rect as LayoutRect } from "@/lib/design/layout";
+import { insetFrameKind } from "@/lib/design/inset";
+import { insetBox, type Rect as LayoutRect } from "@/lib/design/layout";
 import {
   arrowEndNear,
   SNAP_DISTANCE,
@@ -67,6 +68,7 @@ import type {
   ArrowStyle,
   LineEnd,
   MagnifyLens,
+  ScreenshotAnnotation,
   ShapeAnnotation,
   ShapeKind,
   StepAnnotation,
@@ -78,9 +80,12 @@ import { blurredPatch } from "@/lib/render/blurPatch";
 import { FRAME_FONT_FAMILY } from "@/lib/render/frame";
 import { useEditorStore } from "@/lib/store/editor";
 import { useFrameFont } from "./Chrome";
+import { FramedShot } from "./FramedShot";
 
 /** Marks annotation nodes, so a press on one picks it up instead of drawing. */
 const ANNOTATION_NAME = "annotation";
+/** A second screenshot: with a drawing tool on, it's drawn on like the main one. */
+const SCREENSHOT_NAME = "second-screenshot";
 
 const SELECTION_COLOR = "#0a84ff";
 
@@ -283,6 +288,141 @@ function ShapeBody({
       height={height}
       cornerRadius={cornerRadius(shape, width, height, weight)}
       {...paint}
+    />
+  );
+}
+
+/** A second screenshot, in canvas px, and the frame it's drawn in. */
+function useInset(annotation: ScreenshotAnnotation, unit: number) {
+  const image = useEditorStore((state) => state.images[annotation.imageId]);
+  const shot = useEditorStore((state) => state.design.layers[0]);
+  if (!image) return null;
+  const kind = insetFrameKind(annotation.framed, shot.frame.kind);
+  return {
+    image,
+    shot,
+    frame: {
+      ...shot.frame,
+      kind,
+      title: annotation.title,
+      url: annotation.url,
+    },
+    box: insetBox(image, kind, annotation.width * unit, shot.radius),
+  };
+}
+
+/**
+ * A second screenshot, with the main one's shadow, border and corners. Its
+ * first child is the box itself (pressable all over), which a resize scales.
+ */
+function ScreenshotBody({
+  annotation,
+  unit,
+}: {
+  annotation: ScreenshotAnnotation;
+  unit: number;
+}) {
+  const inset = useInset(annotation, unit);
+  return (
+    <>
+      <Rect
+        width={annotation.width * unit}
+        height={annotation.height * unit}
+        fill="rgba(0, 0, 0, 0)"
+      />
+      {inset && (
+        <Group listening={false}>
+          <FramedShot
+            image={inset.image}
+            box={inset.box}
+            frame={inset.frame}
+            shadow={inset.shot.shadow}
+            border={inset.shot.border}
+            listening={false}
+          />
+        </Group>
+      )}
+    </>
+  );
+}
+
+/**
+ * The picture a blur box blurs: the second screenshot its centre is over,
+ * if any, else the main one. Its box is then in that picture's widths.
+ */
+function useBlurSource(
+  shape: ShapeAnnotation,
+  annotations: readonly Annotation[],
+  main: LoadedImage,
+  unit: number,
+) {
+  const images = useEditorStore((state) => state.images);
+  const shot = useEditorStore((state) => state.design.layers[0]);
+  const centre = {
+    x: shape.x + shape.width / 2,
+    y: shape.y + shape.height / 2,
+  };
+  for (const annotation of [...annotations].reverse()) {
+    if (annotation.kind !== "screenshot") continue;
+    const image = images[annotation.imageId];
+    if (!image) continue;
+    const kind = insetFrameKind(annotation.framed, shot.frame.kind);
+    const box = insetBox(image, kind, annotation.width * unit, shot.radius);
+    // The picture inside the frame, in image widths.
+    const x = annotation.x + box.image.x / unit;
+    const y = annotation.y + box.image.y / unit;
+    const width = box.image.width / unit;
+    const height = box.image.height / unit;
+    if (
+      centre.x < x ||
+      centre.y < y ||
+      centre.x > x + width ||
+      centre.y > y + height
+    )
+      continue;
+    return {
+      source: image,
+      shape: {
+        ...shape,
+        x: (shape.x - x) / width,
+        y: (shape.y - y) / width,
+        width: shape.width / width,
+        height: shape.height / width,
+      },
+      aspect: height / width,
+      unit: unit * width,
+    };
+  }
+  return {
+    source: main,
+    shape,
+    aspect: main.height / main.width,
+    unit,
+  };
+}
+
+/** A blur box over whichever screenshot is under it. */
+function BlurOver({
+  shape,
+  annotations,
+  source,
+  unit,
+  zoom,
+}: {
+  shape: ShapeAnnotation;
+  annotations: readonly Annotation[];
+  source: LoadedImage;
+  unit: number;
+  zoom: number;
+}) {
+  const over = useBlurSource(shape, annotations, source, unit);
+  return (
+    <BlurBody
+      shape={over.shape}
+      source={over.source}
+      aspect={over.aspect}
+      unit={over.unit}
+      zoom={zoom}
     />
   );
 }
@@ -772,7 +912,11 @@ export function AnnotationsNode({
       // step tool, though, the end of an arrow or line takes a step centred
       // on it, so a step can be put at the end of a line.
       const target = event.target;
-      const pressed = target.findAncestor(`.${ANNOTATION_NAME}`, true);
+      const under = target.findAncestor(`.${ANNOTATION_NAME}`, true);
+      const pressed =
+        under && !(tool !== "select" && under.hasName(SCREENSHOT_NAME))
+          ? under
+          : null;
       if (tool === "step" && pressed && !event.evt.altKey) {
         const point = pointer();
         const end =
@@ -956,7 +1100,7 @@ export function AnnotationsNode({
             height: annotation.height,
           },
           area,
-          isSquareShape(annotation),
+          annotation.kind === "shape" && isSquareShape(annotation),
         );
         to = { x: box.x, y: box.y };
       }
@@ -1169,11 +1313,54 @@ export function AnnotationsNode({
     },
   });
 
+  // Second screenshots go under everything drawn on them.
+  const drawOrder = [
+    ...annotations.filter((annotation) => annotation.kind === "screenshot"),
+    ...annotations.filter((annotation) => annotation.kind !== "screenshot"),
+  ];
+
+  // A second screenshot is resized from its corners, keeping its shape; the
+  // stretch becomes its width when the resize ends.
+  const screenshotTransformProps = (shot: ScreenshotAnnotation) => ({
+    onTransformStart: startMoving,
+    onTransformEnd: (event: KonvaEventObject<Event>) => {
+      const node = event.currentTarget as Konva.Group;
+      const ratio = shot.height / shot.width;
+      // No bigger than the canvas, and on it.
+      const width = Math.min(
+        shot.width * node.scaleX(),
+        area.width,
+        area.height / ratio,
+      );
+      const box = fitBox(
+        {
+          x: node.x() / unit,
+          y: node.y() / unit,
+          width,
+          height: width * ratio,
+        },
+        area,
+      );
+      node.setAttrs({
+        x: box.x * unit,
+        y: box.y * unit,
+        scaleX: 1,
+        scaleY: 1,
+      });
+      useEditorStore
+        .getState()
+        .resizeScreenshot(shot.id, box.x, box.y, box.width);
+      transformerRef.current?.forceUpdate();
+      stopMoving(shot.id);
+    },
+  });
+
   const selectedShape = selected?.kind === "shape" ? selected : null;
   const selectedArrow = selected?.kind === "arrow" ? selected : null;
   // Steps and circles keep their proportions, from the corners.
   const roundSelection =
     selected?.kind === "step" ||
+    selected?.kind === "screenshot" ||
     (selectedShape !== null && isSquareShape(selectedShape));
 
   // An inset's outline round the area it enlarges is dragged on its own.
@@ -1239,8 +1426,21 @@ export function AnnotationsNode({
             />
           ),
       )}
-      {annotations.map((annotation) =>
-        annotation.kind === "arrow" ? (
+      {drawOrder.map((annotation) =>
+        annotation.kind === "screenshot" ? (
+          <Group
+            key={annotation.id}
+            ref={register(annotation.id)}
+            name={`${ANNOTATION_NAME} ${SCREENSHOT_NAME}`}
+            x={annotation.x * unit}
+            y={annotation.y * unit}
+            {...screenshotTransformProps(annotation)}
+            // Moved with the select tool; drawn on with the others.
+            {...(selecting ? dragProps(annotation) : {})}
+          >
+            <ScreenshotBody annotation={annotation} unit={unit} />
+          </Group>
+        ) : annotation.kind === "arrow" ? (
           <Group
             key={annotation.id}
             ref={register(annotation.id)}
@@ -1282,10 +1482,10 @@ export function AnnotationsNode({
             {...dragProps(annotation)}
           >
             {annotation.shape === "blur" ? (
-              <BlurBody
+              <BlurOver
                 shape={annotation}
+                annotations={annotations}
                 source={source}
-                aspect={image.height / image.width}
                 unit={unit}
                 zoom={zoom}
               />

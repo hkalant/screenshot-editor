@@ -253,10 +253,34 @@ export const arrowAnnotationSchema = z.object({
   bend: z.number().min(-0.5).max(0.5).default(0),
 });
 
+/**
+ * A second screenshot, placed over or beside the main one like an
+ * annotation. It takes the main screenshot's shadow, border and corners, and
+ * can sit in its window or browser frame. Its height follows from its image
+ * and frame (see inset.ts).
+ */
+export const screenshotAnnotationSchema = z.object({
+  id: z.string().min(1),
+  kind: z.literal("screenshot"),
+  imageId: z.string().min(1),
+  /** Top-left corner of the framed screenshot. */
+  x: imagePosition,
+  y: imagePosition,
+  width: imageUnit.positive(),
+  height: imageUnit.positive(),
+  /** In the main screenshot's window or browser frame, or plain. */
+  framed: z.boolean(),
+  /** The title a window frame shows. */
+  title: z.string().max(MAX_FRAME_TEXT).default(""),
+  /** The address a browser frame shows. */
+  url: z.string().max(MAX_FRAME_TEXT).default(""),
+});
+
 export const annotationSchema = z.discriminatedUnion("kind", [
   stepAnnotationSchema,
   shapeAnnotationSchema,
   arrowAnnotationSchema,
+  screenshotAnnotationSchema,
 ]);
 
 export const designSchema = z.object({
@@ -312,6 +336,7 @@ export type LineEnd = (typeof LINE_ENDS)[number];
 export const isLineEnd = (style: string): style is LineEnd =>
   (LINE_ENDS as readonly string[]).includes(style);
 export type ArrowAnnotation = z.infer<typeof arrowAnnotationSchema>;
+export type ScreenshotAnnotation = z.infer<typeof screenshotAnnotationSchema>;
 export type Annotation = z.infer<typeof annotationSchema>;
 export type Design = z.infer<typeof designSchema>;
 export type DesignV1 = z.infer<typeof designV1Schema>;

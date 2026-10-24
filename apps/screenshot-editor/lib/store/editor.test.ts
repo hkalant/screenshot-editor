@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { referencedImageIds } from "@/lib/design/refs";
 import { createDefaultDesign, defaultShotStyle } from "@/lib/design/defaults";
 import { getGradientPreset } from "@/lib/design/gradients";
 import { SHADOW_PRESETS } from "@/lib/design/shadows";
@@ -422,6 +423,42 @@ describe("editor store: annotations", () => {
     state().setImage(fakeImage("shot", 1000, 500));
   });
 
+  it("adds a second screenshot whose height follows its frame", () => {
+    // Laptop-shaped, so it can have a window frame.
+    state().setImage(fakeImage("shot", 1200, 750));
+    state().addScreenshot(fakeImage("second", 800, 400));
+    const [second] = annotations();
+    expect(second).toMatchObject({
+      kind: "screenshot",
+      imageId: "second",
+      width: 0.6,
+      height: 0.3,
+      framed: true,
+    });
+    expect(state().selectedAnnotationId).toBe(second.id);
+    expect(referencedImageIds(state().design)).toContain("second");
+
+    // A window frame on the main screenshot goes round it too, in one step.
+    state().setFrame({ kind: "macos" });
+    const framed = annotations()[0];
+    expect(framed.kind === "screenshot" && framed.height).toBeGreaterThan(0.3);
+    state().setScreenshotFramed(second.id, false);
+    expect(annotations()[0]).toMatchObject({ height: 0.3 });
+    state().undo();
+    state().undo();
+    expect(annotations()[0]).toMatchObject({ height: 0.3 });
+    expect(shot().frame.kind).toBe("none");
+
+    // Resized, it keeps its shape.
+    state().resizeScreenshot(second.id, 0.1, 0.1, 0.3);
+    expect(annotations()[0]).toMatchObject({
+      x: 0.1,
+      y: 0.1,
+      width: 0.3,
+      height: 0.15,
+    });
+  });
+
   it("numbers steps in order and can start again from 1", () => {
     state().addStep({ x: 0.1, y: 0.1 });
     state().addStep({ x: 0.2, y: 0.1 });
@@ -501,7 +538,7 @@ describe("editor store: annotations", () => {
     state().addStep({ x: 0.1, y: 0.1 });
     state().setAnnotationColor("#ff0000");
     expect(state().annotationColor).toBe("#f9c909");
-    expect(annotations()[0].color).toBe("#f9c909");
+    expect(annotations()[0]).toMatchObject({ color: "#f9c909" });
   });
 
   it("adds filled or outline shapes, and changes the selected one", () => {
