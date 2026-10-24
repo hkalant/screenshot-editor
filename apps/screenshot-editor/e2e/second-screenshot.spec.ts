@@ -261,6 +261,9 @@ test("a phone screenshot beside a laptop one goes in a phone, and each has its o
   await addSecond(page, makeSolidPng(390, 844, [...BLUE]));
 
   // Selected, the sidebar shows its frame: a phone, and no window frames.
+  await expect(page.getByTestId("frame-for")).toHaveText(
+    "You’re choosing a frame for the second screenshot.",
+  );
   const secondFrame = page.getByRole("radiogroup", {
     name: "Frame of the second screenshot",
   });
@@ -277,6 +280,9 @@ test("a phone screenshot beside a laptop one goes in a phone, and each has its o
 
   // The main one keeps its own.
   await page.keyboard.press("Escape");
+  await expect(page.getByTestId("frame-for")).toHaveText(
+    "You’re choosing a frame for the main screenshot.",
+  );
   const mainFrame = page.getByRole("radiogroup", {
     name: "Frame",
     exact: true,

@@ -133,6 +133,11 @@ export function FrameOptions() {
   // are edited here; the theme stays shared.
   const selected = useEditorStore(selectSelectedAnnotation);
   const second = selected?.kind === "screenshot" ? selected : null;
+  const hasSecond = useEditorStore((state) =>
+    state.design.annotations.some(
+      (annotation) => annotation.kind === "screenshot",
+    ),
+  );
   const secondImage = useEditorStore((state) =>
     second ? state.images[second.imageId] : undefined,
   );
@@ -153,12 +158,11 @@ export function FrameOptions() {
 
   return (
     <div className="space-y-6">
-      {second && (
+      {/* With two screenshots, which one this is for. */}
+      {hasSecond && (
         <p className="text-xs text-muted-foreground" data-testid="frame-for">
-          <span className="font-medium text-foreground">
-            Second screenshot.
-          </span>{" "}
-          Click the main screenshot to change its frame instead.
+          You’re choosing a frame for the {second ? "second" : "main"}{" "}
+          screenshot.
         </p>
       )}
       {/* One choice: a window frame or a device. The section heading already
