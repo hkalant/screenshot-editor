@@ -34,7 +34,7 @@ const STEPS: Step[] = [
     target: '[data-tour="section-size"]',
     side: "right",
     title: "Canvas size",
-    body: "Start with the size the image is for, such as a slide, a LinkedIn post or an Instagram story, or type your own width and height.",
+    body: "Start with the size the image is for, such as a tutorial, a knowledge base article, or type your own width and height.",
     enter: () => reveal("size"),
   },
   {
@@ -48,7 +48,7 @@ const STEPS: Step[] = [
     target: '[data-tour="section-frame"]',
     side: "right",
     title: "Frame & Style",
-    body: "Further down the sidebar, add a browser frame and set the padding, shadow and border. Open as many sections as you like.",
+    body: "Further down the sidebar, add a browser frame and set the padding, shadow and border.",
     enter: () => {
       window.clearTimeout(switchTimer);
       switchTimer = window.setTimeout(() => reveal("frame"), SWITCH_DELAY_MS);
@@ -70,7 +70,7 @@ const STEPS: Step[] = [
     target: '[data-tour="menu"]',
     side: "bottom",
     title: "Save your work",
-    body: "Save your work as a project file to keep every annotation editable, and open it again later. This menu also has Replace screenshot, the keyboard shortcuts, this tour and the theme.",
+    body: "Save your work as a project file to keep every annotation editable, and open it again later. This menu also has Replace all screenshots, the keyboard shortcuts, this tour and the theme.",
   },
   {
     title: "You're all set!",
