@@ -115,6 +115,32 @@ describe("describeAnnotations", () => {
     expect(text).not.toContain("12345");
   });
 
+  it("says where a second screenshot is, and quotes nothing under it", () => {
+    const text = describeAnnotations(
+      [
+        {
+          id: "s",
+          kind: "screenshot",
+          imageId: "b",
+          x: 0.55,
+          y: 0.25,
+          width: 0.4,
+          height: 0.2,
+          crop: null,
+          frame: "none",
+          title: "",
+          url: "",
+        },
+        step(1, 0.75, 0.27),
+      ],
+      ASPECT,
+      LINES,
+    );
+    expect(text).toBe(
+      "Step 1 is on the right. A second screenshot is shown at the bottom right.",
+    );
+  });
+
   it("splits side-by-side columns into separate phrases", () => {
     // One OCR line running across a menu and a heading, far apart.
     const across: FoundLine = {

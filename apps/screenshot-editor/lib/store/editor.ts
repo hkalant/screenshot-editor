@@ -26,21 +26,26 @@ import {
 import { isHexColor } from "@/lib/design/colors";
 import { createDefaultDesign, defaultShotStyle } from "@/lib/design/defaults";
 import { frameFits, frameForScreenshot } from "@/lib/design/devices";
-import { isFrameKind } from "@/lib/design/frames";
+import {
+  croppedSize,
+  FULL_CROP,
+  normalizeCrop,
+  recropAnnotations,
+} from "@/lib/design/crop";
+import { FRAME_LABELS, isFrameKind } from "@/lib/design/frames";
+import { insetAspect, newInsetFrame } from "@/lib/design/inset";
 import {
   DEFAULT_GRADIENT,
   getGradientPreset,
   normalizeAngle,
 } from "@/lib/design/gradients";
-import { alignedPosition, computeLayout } from "@/lib/design/layout";
-import type { Alignment } from "@/lib/design/layout";
+import { computeLayout, insetBox as framedInsetBox } from "@/lib/design/layout";
 import {
   BLUR,
   BORDER_WIDTH,
   MAX_FRAME_TEXT,
   PADDING,
   RADIUS,
-  ROTATION,
   SHADOW_BLUR,
   SHADOW_OFFSET,
   SHOT_SCALE,
@@ -53,11 +58,14 @@ import {
   LINE_ENDS,
   type Annotation,
   type AnnotationColor,
+  type Crop,
   type ArrowStyle,
   type LineEnd,
   type Background,
   type Design,
+  type FrameKind,
   type FrameSpec,
+  type ScreenshotAnnotation,
   type ShadowSpec,
   type MagnifyLens,
   type ShapeKind,
@@ -71,6 +79,7 @@ import {
   sanitizeExportOptions,
   type ExportOptions,
 } from "@/lib/export/options";
+import { croppedImage, shownImage } from "@/lib/image/crop";
 import type { LoadedImage } from "@/lib/image/load";
 import { clamp } from "@/lib/utils";
 
@@ -117,6 +126,12 @@ export type EditorState = {
   restoring: boolean;
   exporting: boolean;
   notice: Notice | null;
+  /** Goes up with each second screenshot added, to show a hint about it. */
+  insetHint: number;
+  /** Choosing a screenshot's crop, in place of the design. */
+  cropping: boolean;
+  /** The second screenshot being cropped, or null for the main one. */
+  cropId: string | null;
   exportOptions: ExportOptions;
 
   annotationTool: AnnotationTool;
@@ -170,14 +185,11 @@ export type EditorState = {
   setCustomSize: (width: number, height: number) => void;
 
   setPadding: (pixels: number) => void;
-  setScale: (scale: number) => void;
   /** Resizes the shot from a corner: its new scale and centre together. */
   resizeShot: (scale: number, x: number, y: number) => void;
   setPosition: (x: number, y: number) => void;
   /** Moves the shot by canvas pixels (fixed canvases only). */
   nudge: (dx: number, dy: number) => void;
-  alignTo: (horizontal: Alignment, vertical: Alignment) => void;
-  setRotation: (degrees: number) => void;
   setRadius: (pixels: number) => void;
   setShadowPreset: (id: string) => void;
   setShadow: (patch: ShadowPatch) => void;
@@ -211,6 +223,30 @@ export type EditorState = {
   /** Moves an annotation by canvas pixels, keeping it on the screenshot. */
   nudgeAnnotation: (id: string, dx: number, dy: number) => void;
   resizeShape: (id: string, box: Box) => void;
+  /** Starts choosing the crop of the main screenshot, or of the second one, `id`. */
+  startCrop: (id?: string | null) => void;
+  cancelCrop: () => void;
+  /**
+   * Crops the screenshot being cropped to `crop` (fractions of the original),
+   * in one undo step. For the main one the annotations move to stay over the
+   * same spots; the second one's picture stays where it was on the canvas.
+   */
+  applyCrop: (crop: Crop) => void;
+  /**
+   * Adds a second screenshot beside the main one, or puts `image` in the one
+   * there already, and selects it.
+   */
+  addScreenshot: (image: LoadedImage) => void;
+  /** Moves and resizes a second screenshot; its height keeps to its shape. */
+  resizeScreenshot: (id: string, x: number, y: number, width: number) => void;
+  /** Puts a second screenshot in the main screenshot's frame, or takes it out. */
+  /** The title or address a second screenshot's frame shows. */
+  /** Puts a second screenshot in `kind` of frame, if it fits it. */
+  setScreenshotFrame: (id: string, kind: FrameKind) => void;
+  setScreenshotText: (
+    id: string,
+    patch: Partial<Pick<ScreenshotAnnotation, "title" | "url">>,
+  ) => void;
   /** Changes a blur box's strength (0 to 1); new blur boxes then match it. */
   setBlurIntensity: (id: string | null, intensity: number) => void;
   /** Changes a magnifier's zoom; new magnifiers then match it. */
@@ -307,6 +343,101 @@ const arrowDelta = (from: Point, to: Point) => ({
 
 /** Adding an annotation leaves the old selection behind. */
 const NO_SELECTION = { selectedAnnotationId: null };
+/**
+ * A new second screenshot's gap from the main one, the least room beside it
+ * that it goes in, and its width over the main one without that room, in
+ * image widths.
+ */
+const INSET_GAP = 0.08;
+const MIN_INSET_ROOM = 0.3;
+const INSET_WIDTH = 0.6;
+
+/** A second screenshot with the height its image and frame give it. */
+function withInsetHeight(
+  annotation: ScreenshotAnnotation,
+  images: Record<string, LoadedImage>,
+): ScreenshotAnnotation {
+  const original = images[annotation.imageId];
+  if (!original) return annotation;
+  const image = shownImage(original, annotation.crop);
+  const height =
+    Math.round(
+      annotation.width * insetAspect(image, annotation.frame) * 10000,
+    ) / 10000;
+  return height === annotation.height ? annotation : { ...annotation, height };
+}
+/**
+ * A second screenshot cropped to `crop`: what's still shown keeps its size
+ * and place on the canvas, and the frame fits round it (a device that no
+ * longer fits gives way, as for the main screenshot).
+ */
+function recropScreenshot(
+  annotation: ScreenshotAnnotation,
+  crop: Crop,
+  images: Record<string, LoadedImage>,
+): ScreenshotAnnotation | null {
+  const original = images[annotation.imageId];
+  if (!original || ![crop.x, crop.y, crop.width, crop.height].every(finite))
+    return null;
+  const next = normalizeCrop(crop, original);
+  const before = annotation.crop ?? FULL_CROP;
+  const after = next ?? FULL_CROP;
+  const oldShown = croppedSize(original, annotation.crop);
+  const newShown = croppedSize(original, next);
+  const kind = frameForScreenshot(annotation.frame, newShown);
+  // Image widths per pixel of the original, inside the frame.
+  const old = framedInsetBox(oldShown, annotation.frame, annotation.width, 0);
+  const perPixel = old.image.width / oldShown.width;
+  // The new frame for a picture that wide, from a box 1 wide.
+  const unit = framedInsetBox(newShown, kind, 1, 0);
+  const width = (newShown.width * perPixel) / unit.image.width;
+  const box = framedInsetBox(newShown, kind, width, 0);
+  return {
+    ...annotation,
+    crop: next,
+    frame: kind,
+    ...roundBox({
+      x:
+        annotation.x +
+        old.image.x +
+        (after.x - before.x) * original.width * perPixel -
+        box.image.x,
+      y:
+        annotation.y +
+        old.image.y +
+        (after.y - before.y) * original.height * perPixel -
+        box.image.y,
+      width,
+      height: box.height,
+    }),
+  };
+}
+
+/**
+ * A second screenshot showing `image` instead: in its frame if that fits the
+ * new image, and inside its old box, from the same top-left.
+ */
+function replacedScreenshot(
+  annotation: ScreenshotAnnotation,
+  image: LoadedImage,
+): ScreenshotAnnotation {
+  const frame = frameForScreenshot(annotation.frame, image);
+  const aspect = insetAspect(image, frame);
+  const width = Math.min(annotation.width, annotation.height / aspect);
+  return {
+    ...annotation,
+    imageId: image.id,
+    crop: null,
+    frame,
+    ...roundBox({
+      x: annotation.x,
+      y: annotation.y,
+      width,
+      height: width * aspect,
+    }),
+  };
+}
+
 /** How far a pasted copy sits from its original, across and down, in image widths. */
 const PASTE_OFFSET = 0.02;
 
@@ -433,6 +564,9 @@ export const useEditorStore = create<EditorState>()((set, get) => {
     restoring: false,
     exporting: false,
     notice: null,
+    insetHint: 0,
+    cropping: false,
+    cropId: null,
     exportOptions: { ...DEFAULT_EXPORT_OPTIONS },
     annotationTool: "select",
     annotationColor: DEFAULT_ANNOTATION_COLOR,
@@ -456,6 +590,8 @@ export const useEditorStore = create<EditorState>()((set, get) => {
           future: [state.design, ...state.future].slice(0, HISTORY_LIMIT),
           revision: state.revision + 1,
           mergeKey: null,
+          // The crop being chosen was for the design that's gone.
+          cropping: false,
         };
       }),
 
@@ -469,6 +605,7 @@ export const useEditorStore = create<EditorState>()((set, get) => {
           future: rest,
           revision: state.revision + 1,
           mergeKey: null,
+          cropping: false,
         };
       }),
 
@@ -487,6 +624,7 @@ export const useEditorStore = create<EditorState>()((set, get) => {
           state,
           updateShot(withoutAnnotations(state.design), {
             imageId: image.id,
+            crop: null,
             // A phone around a laptop screenshot looks wrong: swap the device.
             frame: {
               ...shotOf(state.design).frame,
@@ -498,6 +636,7 @@ export const useEditorStore = create<EditorState>()((set, get) => {
             images: { ...state.images, [image.id]: image },
             notice: null,
             selectedAnnotationId: null,
+            cropping: false,
           },
         ),
       ),
@@ -506,9 +645,12 @@ export const useEditorStore = create<EditorState>()((set, get) => {
       set((state) =>
         commitDesign(
           state,
-          updateShot(withoutAnnotations(state.design), { imageId: null }),
+          updateShot(withoutAnnotations(state.design), {
+            imageId: null,
+            crop: null,
+          }),
           undefined,
-          { selectedAnnotationId: null },
+          { selectedAnnotationId: null, cropping: false },
         ),
       ),
 
@@ -695,16 +837,6 @@ export const useEditorStore = create<EditorState>()((set, get) => {
       );
     },
 
-    setScale: (scale) => {
-      if (!finite(scale)) return;
-      commitShot(
-        () => ({
-          scale: round(clamp(scale, SHOT_SCALE.min, SHOT_SCALE.max), 2),
-        }),
-        "scale",
-      );
-    },
-
     resizeShot: (scale, x, y) => {
       if (!finite(scale) || !finite(x) || !finite(y)) return;
       commitShot(
@@ -744,32 +876,6 @@ export const useEditorStore = create<EditorState>()((set, get) => {
           },
         };
       }, "position");
-    },
-
-    alignTo: (horizontal, vertical) => {
-      const state = get();
-      const image = selectActiveImage(state);
-      if (!image || state.design.canvas.preset === "auto") return;
-      const layout = computeLayout(image, state.design);
-      const position = alignedPosition(
-        layout,
-        shotOf(state.design).padding,
-        horizontal,
-        vertical,
-      );
-      commitShot(() => ({
-        position: { x: round(position.x, 4), y: round(position.y, 4) },
-      }));
-    },
-
-    setRotation: (degrees) => {
-      if (!finite(degrees)) return;
-      commitShot(
-        () => ({
-          rotation: Math.round(clamp(degrees, ROTATION.min, ROTATION.max)) + 0,
-        }),
-        "rotation",
-      );
     },
 
     setRadius: (pixels) => {
@@ -833,9 +939,9 @@ export const useEditorStore = create<EditorState>()((set, get) => {
       ),
 
     setFrame: (patch) =>
-      commitShot(
-        (shot) => {
-          const next = { ...shot.frame };
+      commit(
+        (design) => {
+          const next = { ...shotOf(design).frame };
           if (patch.kind !== undefined) {
             if (!isFrameKind(patch.kind)) return null;
             const image = selectActiveImage(get());
@@ -850,7 +956,7 @@ export const useEditorStore = create<EditorState>()((set, get) => {
             next.title = patch.title.slice(0, MAX_FRAME_TEXT);
           if (typeof patch.url === "string")
             next.url = patch.url.slice(0, MAX_FRAME_TEXT);
-          return { frame: next };
+          return updateShot(design, { frame: next });
         },
         // Typing a title or address merges; picking a frame or theme doesn't.
         patch.kind === undefined && patch.theme === undefined
@@ -870,7 +976,10 @@ export const useEditorStore = create<EditorState>()((set, get) => {
       if (id)
         commit((design) =>
           updateAnnotation(design, id, (annotation) =>
-            annotation.color === color ? null : { ...annotation, color },
+            // A second screenshot has no colour.
+            annotation.kind === "screenshot" || annotation.color === color
+              ? null
+              : { ...annotation, color },
           ),
         );
     },
@@ -913,22 +1022,23 @@ export const useEditorStore = create<EditorState>()((set, get) => {
         // The toolbar shows the selected annotation's colour and fill.
         return {
           selectedAnnotationId: id,
-          ...(annotation && {
-            annotationColor: annotation.color,
-            ...(annotation.kind === "shape" && {
-              shapeFilled: annotation.filled,
+          ...(annotation &&
+            annotation.kind !== "screenshot" && {
+              annotationColor: annotation.color,
+              ...(annotation.kind === "shape" && {
+                shapeFilled: annotation.filled,
+              }),
+              ...(annotation.kind === "shape" &&
+                annotation.shape === "highlight" && {
+                  highlightRounded: annotation.rounded ?? false,
+                }),
+              ...(annotation.kind === "shape" &&
+                annotation.shape === "magnify" && {
+                  magnifyZoom: annotation.zoom ?? DEFAULT_MAGNIFY_ZOOM,
+                  magnifyLens: annotation.lens ?? DEFAULT_MAGNIFY_LENS,
+                  magnifyInset: annotation.from !== undefined,
+                }),
             }),
-            ...(annotation.kind === "shape" &&
-              annotation.shape === "highlight" && {
-                highlightRounded: annotation.rounded ?? false,
-              }),
-            ...(annotation.kind === "shape" &&
-              annotation.shape === "magnify" && {
-                magnifyZoom: annotation.zoom ?? DEFAULT_MAGNIFY_ZOOM,
-                magnifyLens: annotation.lens ?? DEFAULT_MAGNIFY_LENS,
-                magnifyInset: annotation.from !== undefined,
-              }),
-          }),
         };
       }),
 
@@ -1113,7 +1223,7 @@ export const useEditorStore = create<EditorState>()((set, get) => {
                   : fitBox(
                       { ...annotation, ...moved },
                       area,
-                      isSquareShape(annotation),
+                      annotation.kind === "shape" && isSquareShape(annotation),
                     );
             const rounded = roundPoint(to);
             return rounded.x === annotation.x && rounded.y === annotation.y
@@ -1273,6 +1383,248 @@ export const useEditorStore = create<EditorState>()((set, get) => {
       );
     },
 
+    startCrop: (id = null) => {
+      const state = get();
+      if (!selectActiveImage(state)) return;
+      const second = id
+        ? state.design.annotations.find((annotation) => annotation.id === id)
+        : null;
+      if (
+        id &&
+        (second?.kind !== "screenshot" || !state.images[second.imageId])
+      )
+        return;
+      set(() => ({
+        cropping: true,
+        cropId: id,
+        selectedAnnotationId: null,
+        annotationTool: "select",
+      }));
+    },
+
+    cancelCrop: () =>
+      set((state) => ({
+        cropping: false,
+        cropId: null,
+        // Back to the second screenshot, if that was being cropped.
+        selectedAnnotationId: state.cropId ?? state.selectedAnnotationId,
+      })),
+
+    applyCrop: (crop) => {
+      const state = get();
+      if (state.cropId) {
+        const id = state.cropId;
+        set((current) =>
+          commitDesign(
+            current,
+            updateAnnotation(current.design, id, (annotation) =>
+              annotation.kind === "screenshot"
+                ? recropScreenshot(annotation, crop, current.images)
+                : null,
+            ) ?? current.design,
+            undefined,
+            // Still selected, as before cropping.
+            { cropping: false, cropId: null, selectedAnnotationId: id },
+          ),
+        );
+        return;
+      }
+      const shot = shotOf(state.design);
+      const original = shot.imageId ? state.images[shot.imageId] : undefined;
+      if (
+        !original ||
+        ![crop.x, crop.y, crop.width, crop.height].every(finite)
+      ) {
+        set(() => ({ cropping: false }));
+        return;
+      }
+      const next = normalizeCrop(crop, original);
+      const { annotations, removed } = recropAnnotations(
+        state.design.annotations,
+        shot.crop,
+        next,
+        original,
+      );
+      // A device that no longer fits gives way, as for a new screenshot.
+      const kind = frameForScreenshot(
+        shot.frame.kind,
+        croppedSize(original, next),
+      );
+      const notes = [
+        removed === 1
+          ? "1 annotation was outside the crop and was removed."
+          : removed > 1
+            ? `${removed} annotations were outside the crop and were removed.`
+            : null,
+        kind === shot.frame.kind
+          ? null
+          : `The frame changed to ${FRAME_LABELS[kind]} to fit.`,
+      ].filter(Boolean);
+      set((current) =>
+        commitDesign(
+          current,
+          {
+            ...updateShot(current.design, {
+              crop: next,
+              frame: { ...shot.frame, kind },
+            }),
+            annotations,
+          },
+          undefined,
+          {
+            cropping: false,
+            selectedAnnotationId: null,
+            notice: notes.length
+              ? {
+                  id: (current.notice?.id ?? 0) + 1,
+                  kind: "info",
+                  message: notes.join(" "),
+                }
+              : current.notice,
+          },
+        ),
+      );
+    },
+
+    addScreenshot: (image) => {
+      const state = get();
+      const main = selectActiveImage(state);
+      if (!main) return;
+      const mainFrame = shotOf(state.design).frame.kind;
+      const existing = state.design.annotations.find(
+        (annotation) => annotation.kind === "screenshot",
+      );
+      const extra = {
+        images: { ...state.images, [image.id]: image },
+        notice: null,
+        annotationTool: "select" as const,
+      };
+      // There's only ever one: a new image goes in its place, as wide.
+      if (existing) {
+        const id = existing.id;
+        set((current) =>
+          commitDesign(
+            current,
+            updateAnnotation(current.design, id, (annotation) =>
+              annotation.kind === "screenshot"
+                ? replacedScreenshot(annotation, image)
+                : null,
+            ) ?? current.design,
+            undefined,
+            { ...extra, selectedAnnotationId: id },
+          ),
+        );
+        return;
+      }
+      const area = annotationArea(state) ?? FAR;
+      const kind = newInsetFrame(mainFrame, image);
+      const aspect = insetAspect(image, kind);
+      // Level with the top of the main screenshot's frame.
+      const { shot } = computeLayout(main, state.design);
+      const top = -shot.image.y / shot.image.width;
+      // No taller than it, so a phone beside a laptop is as tall.
+      const tallest = shot.height / shot.image.width;
+      // To the right of the main screenshot and as wide, where there's room;
+      // otherwise over it.
+      const left = 1 + INSET_GAP;
+      const room = Math.min(
+        area.x + area.width - left,
+        (area.y + area.height - top) / aspect,
+      );
+      const width = Math.min(
+        room >= MIN_INSET_ROOM ? Math.min(1, room) : INSET_WIDTH,
+        tallest / aspect,
+      );
+      const box = roundBox(
+        fitBox({ x: left, y: top, width, height: width * aspect }, area),
+      );
+      const id = newAnnotationId();
+      set((current) =>
+        commitDesign(
+          current,
+          {
+            ...current.design,
+            annotations: [
+              ...current.design.annotations,
+              {
+                id,
+                kind: "screenshot",
+                imageId: image.id,
+                ...box,
+                crop: null,
+                frame: kind,
+                title: "",
+                url: "",
+              },
+            ],
+          },
+          undefined,
+          {
+            ...extra,
+            selectedAnnotationId: id,
+            insetHint: current.insetHint + 1,
+          },
+        ),
+      );
+    },
+
+    resizeScreenshot: (id, x, y, width) => {
+      if (![x, y, width].every(finite) || width <= 0) return;
+      commit(
+        (design) =>
+          updateAnnotation(design, id, (annotation) =>
+            annotation.kind === "screenshot"
+              ? {
+                  ...annotation,
+                  ...roundBox({
+                    x,
+                    y,
+                    width,
+                    height: width * (annotation.height / annotation.width),
+                  }),
+                }
+              : null,
+          ),
+        `annotation-resize-${id}`,
+      );
+    },
+
+    setScreenshotFrame: (id, kind) => {
+      if (!isFrameKind(kind)) return;
+      const { images } = get();
+      commit((design) =>
+        updateAnnotation(design, id, (annotation) => {
+          if (annotation.kind !== "screenshot" || annotation.frame === kind)
+            return null;
+          const original = images[annotation.imageId];
+          if (!original) return null;
+          const shown = croppedSize(original, annotation.crop);
+          if (!frameFits(kind, shown)) return null;
+          // As wide, from the same top-left.
+          return withInsetHeight({ ...annotation, frame: kind }, images);
+        }),
+      );
+    },
+
+    setScreenshotText: (id, patch) =>
+      commit(
+        (design) =>
+          updateAnnotation(design, id, (annotation) => {
+            if (annotation.kind !== "screenshot") return null;
+            const next = { ...annotation };
+            if (typeof patch.title === "string")
+              next.title = patch.title.slice(0, MAX_FRAME_TEXT);
+            if (typeof patch.url === "string")
+              next.url = patch.url.slice(0, MAX_FRAME_TEXT);
+            return next.title === annotation.title &&
+              next.url === annotation.url
+              ? null
+              : next;
+          }),
+        // Typing merges into one step.
+        `screenshot-text-${id}`,
+      ),
+
     resizeStep: (id, centre, size) => {
       if (!finite(centre.x) || !finite(centre.y) || !finite(size)) return;
       const to = { ...roundPoint(centre), size: clampStepSize(size) };
@@ -1341,6 +1693,8 @@ export const useEditorStore = create<EditorState>()((set, get) => {
       }),
 
     pasteAnnotation: (annotation) => {
+      // There's only one second screenshot.
+      if (annotation.kind === "screenshot") return null;
       const state = get();
       const area = annotationArea(state) ?? FAR;
       const id = newAnnotationId();
@@ -1356,7 +1710,7 @@ export const useEditorStore = create<EditorState>()((set, get) => {
             : fitBox(
                 { ...annotation, ...moved },
                 area,
-                isSquareShape(annotation),
+                annotation.kind === "shape" && isSquareShape(annotation),
               ),
       );
       const number = state.design.nextStep;
@@ -1411,6 +1765,7 @@ export const useEditorStore = create<EditorState>()((set, get) => {
           revision: state.revision + 1,
           mergeKey: null,
           selectedAnnotationId: null,
+          cropping: false,
           images: {
             ...state.images,
             ...Object.fromEntries(images.map((image) => [image.id, image])),
@@ -1426,6 +1781,7 @@ export const useEditorStore = create<EditorState>()((set, get) => {
             ...Object.fromEntries(images.map((image) => [image.id, image])),
           },
           selectedAnnotationId: null,
+          cropping: false,
         }),
       ),
 
@@ -1456,7 +1812,16 @@ export const useEditorStore = create<EditorState>()((set, get) => {
 export const selectShot = (state: EditorState): ShotLayer =>
   state.design.layers[0];
 
+/** The main screenshot as shown: cropped, if it is. */
 export const selectActiveImage = (state: EditorState): LoadedImage | null => {
+  const { imageId, crop } = state.design.layers[0];
+  const image = imageId ? state.images[imageId] : undefined;
+  if (!image) return null;
+  return crop ? croppedImage(image, crop) : image;
+};
+
+/** The main screenshot as it was added, before any crop. */
+export const selectOriginalImage = (state: EditorState): LoadedImage | null => {
   const id = state.design.layers[0].imageId;
   return id ? (state.images[id] ?? null) : null;
 };

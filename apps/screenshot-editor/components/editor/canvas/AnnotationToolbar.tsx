@@ -4,7 +4,9 @@ import {
   ChevronDown,
   Circle,
   CopyPlus,
+  Crop,
   Highlighter,
+  ImagePlus,
   MousePointer2,
   MoveUpRight,
   PictureInPicture2,
@@ -13,7 +15,7 @@ import {
   Search,
   Trash2,
 } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import {
   ANNOTATION_COLOR_NAMES,
   ANNOTATION_COLORS,
@@ -36,6 +38,9 @@ import {
   type AnnotationTool,
 } from "@/lib/store/editor";
 import { pasteAnnotation } from "@/lib/annotationClipboard";
+import { ACCEPT_ATTR } from "@/lib/image/accept";
+import { ingestFile } from "@/lib/image/ingest";
+import { takeCropPicture } from "@/lib/render/cropPicture";
 import { useAnimatedWidth } from "@/lib/hooks/useAnimatedWidth";
 import { currentPlatform, isApplePlatform } from "@/lib/platform";
 import { ToolbarTooltip } from "./ToolbarTooltip";
@@ -151,6 +156,70 @@ function FillIcon({ filled }: { filled: boolean }) {
         strokeWidth="2"
       />
     </svg>
+  );
+}
+
+/** Starts cropping the selected second screenshot, or else the main one. */
+function CropButton() {
+  const startCrop = useEditorStore((state) => state.startCrop);
+  const selectAnnotation = useEditorStore((state) => state.selectAnnotation);
+  const second = useEditorStore((state) => {
+    const selected = selectSelectedAnnotation(state);
+    return selected?.kind === "screenshot" ? selected.id : null;
+  });
+  return (
+    <ToolButton
+      label={second ? "Crop second screenshot" : "Crop screenshot"}
+      onClick={() => {
+        if (second) {
+          startCrop(second);
+          return;
+        }
+        selectAnnotation(null);
+        // Once the selection has left the canvas, so it isn't in the picture.
+        requestAnimationFrame(() => {
+          takeCropPicture();
+          startCrop();
+        });
+      }}
+    >
+      <Crop aria-hidden />
+    </ToolButton>
+  );
+}
+
+/** Adds a second screenshot, from a file, or replaces the one there is. */
+function AddScreenshotButton() {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const added = useEditorStore((state) =>
+    state.design.annotations.some(
+      (annotation) => annotation.kind === "screenshot",
+    ),
+  );
+  return (
+    <>
+      <ToolButton
+        label={added ? "Replace second screenshot" : "Add second screenshot"}
+        hint={added ? "keeps its place and size" : "placed beside the main one"}
+        onClick={() => inputRef.current?.click()}
+      >
+        <ImagePlus aria-hidden />
+      </ToolButton>
+      <input
+        ref={inputRef}
+        type="file"
+        accept={ACCEPT_ATTR}
+        className="hidden"
+        tabIndex={-1}
+        aria-hidden
+        data-testid="second-screenshot-input"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          event.target.value = ""; // so picking the same file again still fires change
+          if (file) void ingestFile(file, "inset");
+        }}
+      />
+    </>
   );
 }
 
@@ -521,6 +590,8 @@ export function AnnotationToolbar() {
   const magnifyMode =
     tool === "magnify" ||
     (selected?.kind === "shape" && selected.shape === "magnify");
+  // A second screenshot takes its look from the main one: no colour.
+  const selectedScreenshot = selected?.kind === "screenshot";
   // Highlights are always a border and a light fill.
   const showCorners =
     tool === "highlight" ||
@@ -586,6 +657,9 @@ export function AnnotationToolbar() {
         >
           <ScanSearch aria-hidden />
         </ToolButton>
+        <Divider />
+        <CropButton />
+        <AddScreenshotButton />
         <ToolOptions show={showCorners}>
           <Divider />
           <ToolButton
@@ -640,7 +714,7 @@ export function AnnotationToolbar() {
             <Divider />
             <MagnifyZoom />
           </div>
-        ) : (
+        ) : selectedScreenshot ? null : (
           <div
             key="colours"
             className="flex animate-tool-options items-center gap-1"
@@ -680,13 +754,16 @@ export function AnnotationToolbar() {
             <>
               <Divider />
               {selected.kind === "step" && <StepNumberField step={selected} />}
-              <ToolButton
-                label="Duplicate annotation"
-                hint={`${isApplePlatform(currentPlatform()) ? "⌘" : "Ctrl"}+D`}
-                onClick={() => pasteAnnotation(selected)}
-              >
-                <CopyPlus aria-hidden />
-              </ToolButton>
+              {/* There's only one second screenshot. */}
+              {selected.kind !== "screenshot" && (
+                <ToolButton
+                  label="Duplicate annotation"
+                  hint={`${isApplePlatform(currentPlatform()) ? "⌘" : "Ctrl"}+D`}
+                  onClick={() => pasteAnnotation(selected)}
+                >
+                  <CopyPlus aria-hidden />
+                </ToolButton>
+              )}
               <ToolButton
                 label="Delete annotation"
                 onClick={() => removeAnnotation(selected.id)}

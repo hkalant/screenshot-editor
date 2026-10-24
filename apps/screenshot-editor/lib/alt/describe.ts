@@ -9,8 +9,10 @@ import { DEFAULT_MAGNIFY_ZOOM, magnifyArea } from "@/lib/design/magnify";
 import {
   LINE_ENDS,
   type Annotation,
+  type AnnotationColor,
   type ArrowAnnotation,
   type LineEnd,
+  type ScreenshotAnnotation,
   type ShapeAnnotation,
 } from "@/lib/design/schema";
 
@@ -167,7 +169,7 @@ function wherePhrase(point: Point, aspect: number) {
   return `at ${place}`;
 }
 
-const colourOf = (annotation: { color: Annotation["color"] }) =>
+const colourOf = (annotation: { color: AnnotationColor }) =>
   ANNOTATION_COLOR_NAMES[annotation.color].toLowerCase();
 
 const isLine = (arrow: ArrowAnnotation) =>
@@ -256,9 +258,11 @@ export function describeAnnotations(
   lines: readonly FoundLine[],
   device: DeviceKind | null = null,
 ): string {
+  // Blurred, or covered by a second screenshot.
   const blurs = annotations.filter(
-    (annotation): annotation is ShapeAnnotation =>
-      annotation.kind === "shape" && annotation.shape === "blur",
+    (annotation): annotation is ShapeAnnotation | ScreenshotAnnotation =>
+      (annotation.kind === "shape" && annotation.shape === "blur") ||
+      annotation.kind === "screenshot",
   );
   // Private text stays private.
   const visible = toPhrases(
@@ -288,7 +292,15 @@ export function describeAnnotations(
       text:
         annotation.kind === "shape"
           ? describeShape(annotation, visible, aspect)
-          : describeArrow(annotation, visible, aspect),
+          : annotation.kind === "screenshot"
+            ? `A second screenshot is shown ${wherePhrase(
+                {
+                  x: annotation.x + annotation.width / 2,
+                  y: annotation.y + annotation.height / 2,
+                },
+                aspect,
+              )}.`
+            : describeArrow(annotation, visible, aspect),
     }))
     .sort((a, b) => a.at - b.at)
     .map((sentence) => sentence.text);

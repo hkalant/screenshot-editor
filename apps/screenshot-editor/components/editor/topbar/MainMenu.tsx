@@ -41,6 +41,12 @@ type View = "menu" | "shortcuts";
 export function MainMenu({ onReplace }: { onReplace: () => void }) {
   const { preference, setPreference } = useTheme();
   const hasImage = useEditorStore((state) => !!selectActiveImage(state));
+  // Replacing clears the annotations, and a second screenshot is one.
+  const hasSecond = useEditorStore((state) =>
+    state.design.annotations.some(
+      (annotation) => annotation.kind === "screenshot",
+    ),
+  );
   const loading = useEditorStore((state) => state.loading);
   const busy = useEditorStore((state) => state.loading || state.restoring);
   const canCopy = useSyncExternalStore(subscribe, canCopyImages, () => false);
@@ -134,7 +140,11 @@ export function MainMenu({ onReplace }: { onReplace: () => void }) {
                 <ImagePlus className="size-4" aria-hidden />
               )}
             </span>
-            {hasImage ? "Replace screenshot…" : "Add screenshot…"}
+            {!hasImage
+              ? "Add screenshot…"
+              : hasSecond
+                ? "Replace all screenshots…"
+                : "Replace screenshot…"}
             <MenuShortcut keys={apple ? "⌘O" : "Ctrl+O"} />
           </button>
           {/* Pasting or dropping works too, which few would guess. */}
@@ -142,9 +152,11 @@ export function MainMenu({ onReplace }: { onReplace: () => void }) {
             id="replace-hint"
             className="pr-2.5 pb-1 pl-10.5 text-xs text-muted-foreground"
           >
-            {hasImage
-              ? "Or paste or drop a new one onto the page."
-              : "Or paste or drop one onto the page."}
+            {!hasImage
+              ? "Or paste or drop one onto the page."
+              : hasSecond
+                ? "Also clears the second screenshot and all annotations. Or paste or drop a new one onto the page."
+                : "Or paste or drop a new one onto the page."}
           </p>
           <div className="my-1 h-px bg-border" aria-hidden />
           <button

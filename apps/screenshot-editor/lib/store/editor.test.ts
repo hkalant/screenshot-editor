@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { computeLayout } from "@/lib/design/layout";
+import { referencedImageIds } from "@/lib/design/refs";
 import { createDefaultDesign, defaultShotStyle } from "@/lib/design/defaults";
 import { getGradientPreset } from "@/lib/design/gradients";
 import { SHADOW_PRESETS } from "@/lib/design/shadows";
@@ -67,10 +69,8 @@ describe("editor store: style", () => {
     expect(shot().padding).toBe(11);
     state().setRadius(70);
     expect(shot().radius).toBe(64);
-    state().setScale(9);
+    state().resizeShot(9, 0.5, 0.5);
     expect(shot().scale).toBe(1.5);
-    state().setRotation(-60.4);
-    expect(shot().rotation).toBe(-45);
     state().setPosition(-1, 2);
     expect(shot().position).toEqual({ x: 0, y: 1 });
     state().setBorder({ width: 30, opacity: 2 });
@@ -206,7 +206,7 @@ describe("editor store: style", () => {
     expect(state().design.canvas).toEqual({ preset: "auto" });
   });
 
-  it("nudges and aligns only on fixed canvases", () => {
+  it("nudges only on fixed canvases", () => {
     state().setImage(fakeImage("a", 800, 400));
     state().setCanvasPreset("auto");
     state().nudge(10, 0);
@@ -214,12 +214,6 @@ describe("editor store: style", () => {
     state().setCustomSize(1000, 1000);
     state().nudge(10, -20);
     expect(shot().position).toEqual({ x: 0.51, y: 0.48 });
-    state().setPadding(50);
-    state().setScale(0.5);
-    state().alignTo("start", "end");
-    // 900 px available: the shot is 450 x 225 at scale 0.5.
-    expect(shot().position.x).toBeCloseTo(0.275);
-    expect(shot().position.y).toBeCloseTo(0.8375);
   });
 
   it("limits frame texts and keeps the image and canvas on reset", () => {
@@ -228,7 +222,7 @@ describe("editor store: style", () => {
     state().setImage(fakeImage("a"));
     state().setCanvasPreset("og");
     state().setSolidColor("#123456");
-    state().setRotation(10);
+    state().setRadius(30);
     state().resetStyle();
     expect(shot()).toMatchObject({ ...defaultShotStyle(), imageId: "a" });
     expect(state().design.canvas.preset).toBe("og");
@@ -422,6 +416,69 @@ describe("editor store: annotations", () => {
     state().setImage(fakeImage("shot", 1000, 500));
   });
 
+  it("adds a second screenshot whose height follows its frame", () => {
+    // Laptop-shaped, so it can have a window frame.
+    state().setImage(fakeImage("shot", 1200, 750));
+    state().addScreenshot(fakeImage("second", 800, 500));
+    const [second] = annotations();
+    expect(second).toMatchObject({
+      kind: "screenshot",
+      imageId: "second",
+      width: 0.6,
+      height: 0.375,
+    });
+    expect(state().selectedAnnotationId).toBe(second.id);
+    expect(referencedImageIds(state().design)).toContain("second");
+
+    // Its own frame: the main one's changing leaves it.
+    state().setFrame({ kind: "macos" });
+    expect(annotations()[0]).toMatchObject({ frame: "none", height: 0.375 });
+    // A window frame makes it taller, in one step.
+    state().setScreenshotFrame(second.id, "macos");
+    const framed = annotations()[0];
+    expect(framed.kind === "screenshot" && framed.height).toBeGreaterThan(
+      0.375,
+    );
+    // Not a phone: it isn't shaped like one.
+    state().setScreenshotFrame(second.id, "phone");
+    expect(annotations()[0]).toMatchObject({ frame: "macos" });
+    state().undo();
+    expect(annotations()[0]).toMatchObject({ frame: "none", height: 0.375 });
+    state().undo();
+    expect(shot().frame.kind).toBe("none");
+
+    // Resized, it keeps its shape.
+    state().resizeScreenshot(second.id, 0.1, 0.1, 0.3);
+    expect(annotations()[0]).toMatchObject({
+      x: 0.1,
+      y: 0.1,
+      width: 0.3,
+      height: 0.1875,
+    });
+  });
+
+  it("puts a new second screenshot in place of the one there already", () => {
+    state().addScreenshot(fakeImage("second", 800, 400));
+    const [second] = annotations();
+    state().resizeScreenshot(second.id, 0.1, 0.1, 0.4);
+    state().addScreenshot(fakeImage("third", 800, 800));
+    expect(annotations()).toHaveLength(1);
+    expect(annotations()[0]).toMatchObject({
+      id: second.id,
+      imageId: "third",
+      // Square, inside the old 2:1 box.
+      x: 0.1,
+      y: 0.1,
+      width: 0.2,
+      height: 0.2,
+    });
+    expect(referencedImageIds(state().design)).not.toContain("second");
+    // Nor can it be copied.
+    expect(state().pasteAnnotation(annotations()[0])).toBeNull();
+    state().undo();
+    expect(annotations()[0]).toMatchObject({ imageId: "second", height: 0.2 });
+  });
+
   it("numbers steps in order and can start again from 1", () => {
     state().addStep({ x: 0.1, y: 0.1 });
     state().addStep({ x: 0.2, y: 0.1 });
@@ -501,7 +558,7 @@ describe("editor store: annotations", () => {
     state().addStep({ x: 0.1, y: 0.1 });
     state().setAnnotationColor("#ff0000");
     expect(state().annotationColor).toBe("#f9c909");
-    expect(annotations()[0].color).toBe("#f9c909");
+    expect(annotations()[0]).toMatchObject({ color: "#f9c909" });
   });
 
   it("adds filled or outline shapes, and changes the selected one", () => {
@@ -706,5 +763,120 @@ describe("editor store: annotations", () => {
     state().setImage(fakeImage("other"));
     expect(annotations()).toEqual([]);
     expect(state().design.nextStep).toBe(1);
+  });
+});
+
+describe("editor store: cropping", () => {
+  beforeEach(() => {
+    state().setImage(fakeImage("shot", 1000, 500));
+  });
+
+  it("crops the screenshot in one step, keeping annotations over the same spot", () => {
+    state().addStep({ x: 0.75, y: 0.1 });
+    state().addStep({ x: 0.1, y: 0.1 });
+    state().startCrop();
+    expect(state().cropping).toBe(true);
+    state().applyCrop({ x: 0.5, y: 0, width: 0.5, height: 0.5 });
+    expect(state().cropping).toBe(false);
+    expect(shot().crop).toEqual({ x: 0.5, y: 0, width: 0.5, height: 0.5 });
+    expect(selectActiveImage(state())).toMatchObject({
+      width: 500,
+      height: 250,
+    });
+    // The step on the left half went with it.
+    expect(state().design.annotations).toHaveLength(1);
+    expect(state().design.annotations[0]).toMatchObject({ x: 0.5, y: 0.2 });
+    expect(state().notice?.message).toBe(
+      "1 annotation was outside the crop and was removed.",
+    );
+    // The original is kept, and saved.
+    expect(referencedImageIds(state().design)).toEqual(["shot"]);
+
+    state().undo();
+    expect(shot().crop).toBeNull();
+    expect(state().design.annotations).toHaveLength(2);
+    expect(selectActiveImage(state())).toMatchObject({ width: 1000 });
+  });
+
+  it("crops again from the original, and the whole image is no crop", () => {
+    state().applyCrop({ x: 0.5, y: 0, width: 0.5, height: 0.5 });
+    state().applyCrop({ x: 0, y: 0, width: 1, height: 1 });
+    expect(shot().crop).toBeNull();
+  });
+
+  it("swaps a device that no longer fits, and a new screenshot has no crop", () => {
+    state().setImage(fakeImage("phone", 400, 860));
+    state().setFrame({ kind: "phone" });
+    state().applyCrop({ x: 0, y: 0, width: 1, height: 0.3 });
+    expect(shot().frame.kind).not.toBe("phone");
+    expect(state().notice?.message).toMatch(/^The frame changed to/);
+    state().setImage(fakeImage("next", 800, 600));
+    expect(shot().crop).toBeNull();
+  });
+});
+
+describe("editor store: the second screenshot's frame", () => {
+  it("starts in the main one's frame where it fits, else one that fits it", () => {
+    state().setImage(fakeImage("laptop", 1440, 900));
+    state().setFrame({ kind: "browser" });
+    state().addScreenshot(fakeImage("page", 1200, 800));
+    expect(state().design.annotations[0]).toMatchObject({ frame: "browser" });
+
+    // A phone screenshot goes in a phone, as tall as the main one.
+    state().addScreenshot(fakeImage("phone", 390, 844));
+    const [phone] = state().design.annotations;
+    expect(phone).toMatchObject({ frame: "phone" });
+    const layout = computeLayout(
+      selectActiveImage(state())!,
+      state().design,
+    ).shot;
+    expect(phone.kind === "screenshot" && phone.height).toBeLessThanOrEqual(
+      layout.height / layout.image.width + 0.0001,
+    );
+  });
+
+  it("has no frame beside a main screenshot without one", () => {
+    state().setImage(fakeImage("laptop", 1440, 900));
+    state().addScreenshot(fakeImage("phone", 390, 844));
+    expect(state().design.annotations[0]).toMatchObject({ frame: "none" });
+  });
+});
+
+describe("editor store: cropping the second screenshot", () => {
+  beforeEach(() => {
+    state().setImage(fakeImage("shot", 1000, 500));
+    state().addScreenshot(fakeImage("second", 800, 400));
+  });
+
+  it("crops it in place: what's left stays where it was", () => {
+    const [before] = state().design.annotations;
+    if (before.kind !== "screenshot") throw new Error("Not a screenshot");
+    state().startCrop(before.id);
+    expect(state()).toMatchObject({ cropping: true, cropId: before.id });
+    // The right half.
+    state().applyCrop({ x: 0.5, y: 0, width: 0.5, height: 1 });
+    const [after] = state().design.annotations;
+    if (after.kind !== "screenshot") throw new Error("Not a screenshot");
+    expect(after.id).toBe(before.id);
+    expect(after.crop).toEqual({ x: 0.5, y: 0, width: 0.5, height: 1 });
+    expect(after.x).toBeCloseTo(before.x + before.width / 2);
+    expect(after.y).toBeCloseTo(before.y);
+    expect(after.width).toBeCloseTo(before.width / 2);
+    expect(after.height).toBeCloseTo(before.height);
+    expect(state()).toMatchObject({
+      cropping: false,
+      cropId: null,
+      selectedAnnotationId: before.id,
+    });
+    // The main screenshot isn't touched.
+    expect(shot().crop).toBeNull();
+
+    state().undo();
+    expect(state().design.annotations[0]).toEqual(before);
+  });
+
+  it("only starts on a second screenshot that's there", () => {
+    state().startCrop("nothing");
+    expect(state().cropping).toBe(false);
   });
 });

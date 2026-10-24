@@ -49,6 +49,8 @@ export function useShortcuts({ onOpen }: { onOpen: () => void }) {
     const apple = isApplePlatform(currentPlatform());
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.defaultPrevented || event.isComposing) return;
+      // Crop mode has keys of its own (see CropView).
+      if (useEditorStore.getState().cropping) return;
       const command = matchShortcut(event, apple);
       if (!command || !shortcutApplies(command, focusContext(event))) return;
       const state = useEditorStore.getState();
@@ -64,9 +66,10 @@ export function useShortcuts({ onOpen }: { onOpen: () => void }) {
           break;
         case "copy": {
           // The selected annotation, else the image. The browser's copy
-          // event that follows puts the annotation on the clipboard.
+          // event that follows puts the annotation on the clipboard. There's
+          // only one second screenshot, so that copies the image.
           const selected = selectSelectedAnnotation(state);
-          if (selected) {
+          if (selected && selected.kind !== "screenshot") {
             copyAnnotation(selected);
             return;
           }

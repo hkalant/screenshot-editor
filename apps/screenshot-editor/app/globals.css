@@ -274,6 +274,31 @@
   }
 }
 
+/* A hint over the zoom controls: it rises into place, stays a while and
+   fades away (see CanvasHint.tsx for how long). */
+@keyframes hint-show {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  6%,
+  92% {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@utility animate-hint {
+  animation: hint-show 4500ms ease-out both;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
 /* The welcome tour: its backdrop fades in, its cards pop, and the
    dropdown chevron in the Frame & Style step nudges downward. */
 @keyframes tour-pop {

@@ -1,3 +1,4 @@
+import { originalImageId } from "@/lib/image/crop";
 import { suggestedStem } from "@/lib/export/filename";
 import {
   chooseSaveTarget,
@@ -37,7 +38,8 @@ export async function saveProject(): Promise<void> {
       action: "Save",
       description:
         "Save your work as a project file so you can open it later and keep editing every annotation.",
-      stem: rememberedStem(image.id) ?? suggestedStem(image.name),
+      stem:
+        rememberedStem(originalImageId(image.id)) ?? suggestedStem(image.name),
       extension: PROJECT_EXTENSION,
       mime: "application/json",
       typeLabel: "Screenshot Editor project",
@@ -45,7 +47,7 @@ export async function saveProject(): Promise<void> {
       alsoStrip: [".json"],
     });
     if (!save) return;
-    rememberStem(image.id, save.stem);
+    rememberStem(originalImageId(image.id), save.stem);
     // The design as it is now, after the dialog.
     const now = useEditorStore.getState();
     const text = await serializeProject(now.design, now.images);

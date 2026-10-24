@@ -120,10 +120,28 @@ export const frameSpecSchema = z.object({
   url: z.string().max(MAX_FRAME_TEXT),
 });
 
+/**
+ * The part of a screenshot that's shown, as fractions of the original image
+ * across and down. The original is kept, so a crop can be widened again.
+ */
+export const cropSchema = z
+  .object({
+    x: z.number().min(0).max(1),
+    y: z.number().min(0).max(1),
+    width: z.number().positive().max(1),
+    height: z.number().positive().max(1),
+  })
+  .refine(
+    (crop) => crop.x + crop.width <= 1.0001 && crop.y + crop.height <= 1.0001,
+    "The crop must stay inside the image",
+  );
+
 export const shotLayerSchema = z.object({
   id: z.string().min(1),
   kind: z.literal("shot"),
   imageId: z.string().min(1).nullable(),
+  /** The whole image when null. Designs saved before cropping get none. */
+  crop: cropSchema.nullable().default(null),
   padding: z.number().int().min(PADDING.min).max(PADDING.max),
   scale: z.number().min(SHOT_SCALE.min).max(SHOT_SCALE.max),
   position: z.object({
@@ -253,10 +271,36 @@ export const arrowAnnotationSchema = z.object({
   bend: z.number().min(-0.5).max(0.5).default(0),
 });
 
+/**
+ * A second screenshot, placed over or beside the main one like an
+ * annotation, in a frame of its own, with the main screenshot's frame theme,
+ * shadow, border and corners. Its height follows from its image and frame
+ * (see inset.ts). There is at most one.
+ */
+export const screenshotAnnotationSchema = z.object({
+  id: z.string().min(1),
+  kind: z.literal("screenshot"),
+  imageId: z.string().min(1),
+  /** Top-left corner of the framed screenshot. */
+  x: imagePosition,
+  y: imagePosition,
+  width: imageUnit.positive(),
+  height: imageUnit.positive(),
+  /** The part of its image that's shown; the whole image when null. */
+  crop: cropSchema.nullable().default(null),
+  /** Its own frame. The theme is the main screenshot's. */
+  frame: z.enum(FRAME_KINDS).default("none"),
+  /** The title a window frame shows. */
+  title: z.string().max(MAX_FRAME_TEXT).default(""),
+  /** The address a browser frame shows. */
+  url: z.string().max(MAX_FRAME_TEXT).default(""),
+});
+
 export const annotationSchema = z.discriminatedUnion("kind", [
   stepAnnotationSchema,
   shapeAnnotationSchema,
   arrowAnnotationSchema,
+  screenshotAnnotationSchema,
 ]);
 
 export const designSchema = z.object({
@@ -301,7 +345,8 @@ export type ShadowSpec = z.infer<typeof shadowSpecSchema>;
 export type FrameKind = (typeof FRAME_KINDS)[number];
 export type FrameSpec = z.infer<typeof frameSpecSchema>;
 export type ShotLayer = z.infer<typeof shotLayerSchema>;
-export type ShotStyle = Omit<ShotLayer, "id" | "kind" | "imageId">;
+export type ShotStyle = Omit<ShotLayer, "id" | "kind" | "imageId" | "crop">;
+export type Crop = z.infer<typeof cropSchema>;
 export type AnnotationColor = (typeof ANNOTATION_COLORS)[number];
 export type ShapeKind = (typeof SHAPE_KINDS)[number];
 export type MagnifyLens = (typeof MAGNIFY_LENSES)[number];
@@ -312,6 +357,7 @@ export type LineEnd = (typeof LINE_ENDS)[number];
 export const isLineEnd = (style: string): style is LineEnd =>
   (LINE_ENDS as readonly string[]).includes(style);
 export type ArrowAnnotation = z.infer<typeof arrowAnnotationSchema>;
+export type ScreenshotAnnotation = z.infer<typeof screenshotAnnotationSchema>;
 export type Annotation = z.infer<typeof annotationSchema>;
 export type Design = z.infer<typeof designSchema>;
 export type DesignV1 = z.infer<typeof designV1Schema>;

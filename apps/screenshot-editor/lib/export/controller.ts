@@ -1,3 +1,4 @@
+import { originalImageId } from "@/lib/image/crop";
 import type Konva from "konva";
 import { computeLayout } from "@/lib/design/layout";
 import { selectActiveImage, useEditorStore } from "@/lib/store/editor";
@@ -31,6 +32,10 @@ export function registerExportStage(
   };
 }
 
+/** The stage on screen, if there is one. */
+export const currentStage = (): Konva.Stage | null =>
+  stageTarget?.stage ?? null;
+
 export const EXPORT_FAILED = "Export failed. Try a smaller size or scale.";
 export const COPY_FAILED = "Couldn't copy the image. Use Export instead.";
 export const COPIED = "Copied!";
@@ -57,7 +62,8 @@ function currentTarget():
     ...stageTarget,
     size: computeLayout(image, state.design).canvas,
     sourceName: image.name,
-    imageId: image.id,
+    // A crop keeps the name chosen before it.
+    imageId: originalImageId(image.id),
   };
 }
 
