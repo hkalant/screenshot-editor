@@ -178,3 +178,40 @@ test("a blur box over a second screenshot blurs that screenshot", async ({
   expect(inside[0]).toBeLessThan(230);
   expect(Math.abs(inside[0] - inside[1])).toBeLessThan(20);
 });
+
+test("with a second screenshot, the menu replaces all screenshots, and a hint says what it is", async ({
+  page,
+}) => {
+  await upload(page, makeSolidPng(IMAGE.width, IMAGE.height, RED));
+  const menu = page.getByRole("dialog", { name: "Menu" });
+  await page.getByRole("button", { name: "Menu" }).click();
+  await expect(
+    menu.getByRole("button", { name: /^Replace screenshot/ }),
+  ).toBeVisible();
+  await page.keyboard.press("Escape");
+
+  await addSecond(page, makeSolidPng(400, 300, [...BLUE]));
+  const hint = page.getByTestId("canvas-hint");
+  await expect(hint).toHaveText(
+    "The second screenshot is treated as an annotation",
+  );
+  await expect(hint).toHaveCount(0, { timeout: 8000 });
+  // Replacing it doesn't say so again.
+  await addSecond(page, makeSolidPng(400, 300, [...GREEN]));
+  await expect(hint).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Menu" }).click();
+  await expect(
+    menu.getByRole("button", { name: /^Replace all screenshots/ }),
+  ).toBeVisible();
+  await expect(
+    menu.getByRole("button", { name: /^Replace screenshot/ }),
+  ).toHaveCount(0);
+  await page.keyboard.press("Escape");
+
+  await page.getByRole("button", { name: "Delete second screenshot" }).click();
+  await page.getByRole("button", { name: "Menu" }).click();
+  await expect(
+    menu.getByRole("button", { name: /^Replace screenshot/ }),
+  ).toBeVisible();
+});

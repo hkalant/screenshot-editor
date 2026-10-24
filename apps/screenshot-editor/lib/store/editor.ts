@@ -119,6 +119,8 @@ export type EditorState = {
   restoring: boolean;
   exporting: boolean;
   notice: Notice | null;
+  /** Goes up with each second screenshot added, to show a hint about it. */
+  insetHint: number;
   exportOptions: ExportOptions;
 
   annotationTool: AnnotationTool;
@@ -468,6 +470,7 @@ export const useEditorStore = create<EditorState>()((set, get) => {
     restoring: false,
     exporting: false,
     notice: null,
+    insetHint: 0,
     exportOptions: { ...DEFAULT_EXPORT_OPTIONS },
     annotationTool: "select",
     annotationColor: DEFAULT_ANNOTATION_COLOR,
@@ -1354,7 +1357,11 @@ export const useEditorStore = create<EditorState>()((set, get) => {
             ],
           },
           undefined,
-          { ...extra, selectedAnnotationId: id },
+          {
+            ...extra,
+            selectedAnnotationId: id,
+            insetHint: current.insetHint + 1,
+          },
         ),
       );
     },

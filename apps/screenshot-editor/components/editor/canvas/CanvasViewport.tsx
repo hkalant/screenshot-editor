@@ -23,6 +23,7 @@ import { cn } from "@/lib/utils";
 import { setZoomHandler, type ZoomCommand } from "@/lib/zoomCommands";
 import { EmptyState } from "../EmptyState";
 import { AnnotationToolbar } from "./AnnotationToolbar";
+import { CanvasHint } from "./CanvasHint";
 import { DesignStage } from "./DesignStage";
 import { ZoomControls } from "./ZoomControls";
 
@@ -193,6 +194,7 @@ export function CanvasViewport({ onUpload, onSample }: Props) {
         <AnnotationToolbar />
       </div>
       <div className="absolute inset-x-0 bottom-0 flex flex-col items-center gap-1 px-3 pb-2">
+        <CanvasHint />
         {showControls && (
           <ZoomControls
             zoom={scale}
