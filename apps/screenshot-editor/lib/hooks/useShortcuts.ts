@@ -49,6 +49,8 @@ export function useShortcuts({ onOpen }: { onOpen: () => void }) {
     const apple = isApplePlatform(currentPlatform());
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.defaultPrevented || event.isComposing) return;
+      // Crop mode has keys of its own (see CropView).
+      if (useEditorStore.getState().cropping) return;
       const command = matchShortcut(event, apple);
       if (!command || !shortcutApplies(command, focusContext(event))) return;
       const state = useEditorStore.getState();

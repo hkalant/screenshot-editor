@@ -24,6 +24,7 @@ import { setZoomHandler, type ZoomCommand } from "@/lib/zoomCommands";
 import { EmptyState } from "../EmptyState";
 import { AnnotationToolbar } from "./AnnotationToolbar";
 import { CanvasHint } from "./CanvasHint";
+import { CropView } from "./CropView";
 import { DesignStage } from "./DesignStage";
 import { ZoomControls } from "./ZoomControls";
 
@@ -45,6 +46,7 @@ export function CanvasViewport({ onUpload, onSample }: Props) {
   const revision = useEditorStore((state) => state.revision);
   const loading = useEditorStore((state) => state.loading);
   const restoring = useEditorStore((state) => state.restoring);
+  const cropping = useEditorStore((state) => state.cropping);
   useEffect(trackInputModality, []);
   const transparent = useEditorStore(
     (state) => state.design.background.kind === "transparent",
@@ -137,6 +139,13 @@ export function CanvasViewport({ onUpload, onSample }: Props) {
       </div>
     );
   }
+
+  if (cropping)
+    return (
+      <div ref={measureRef} className="absolute inset-0 overflow-hidden">
+        {size.width > 0 && <CropView width={size.width} height={size.height} />}
+      </div>
+    );
 
   return (
     <div ref={measureRef} className="absolute inset-0 overflow-hidden">

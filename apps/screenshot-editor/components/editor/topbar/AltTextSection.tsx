@@ -9,6 +9,7 @@ import { readText } from "@/lib/alt/ocr";
 import { imageAspect } from "@/lib/design/annotations";
 import { isDeviceKind } from "@/lib/design/devices";
 import { selectActiveImage, useEditorStore } from "@/lib/store/editor";
+import { originalImageId } from "@/lib/image/crop";
 
 /** Said under the alt text whatever its state: the suggestion is a start. */
 const GUIDELINES =
@@ -49,8 +50,10 @@ export function AltTextSection() {
   const frameKind = useEditorStore(
     (state) => state.design.layers[0].frame.kind,
   );
+  // What's written stays through a crop.
+  const writtenFor = image ? originalImageId(image.id) : null;
   const written = useWrittenAlt((state) =>
-    image ? state.byImage[image.id] : undefined,
+    writtenFor ? state.byImage[writtenFor] : undefined,
   );
   const setWritten = useWrittenAlt((state) => state.set);
   const [reading, setReading] = useState<Reading & { id?: string }>({
@@ -118,7 +121,9 @@ export function AltTextSection() {
         spellCheck
         aria-describedby={noteId}
         placeholder="Describe what the image shows."
-        onChange={(event) => setWritten(image.id, event.target.value)}
+        onChange={(event) =>
+          setWritten(originalImageId(image.id), event.target.value)
+        }
         className="block w-full resize-y rounded-md border border-input bg-background/70 px-3 py-2 text-sm leading-snug outline-none placeholder:text-muted-foreground focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid"
       />
       <p id={noteId} className="text-xs text-muted-foreground" role="status">
@@ -147,7 +152,7 @@ export function AltTextSection() {
             className="rounded-md"
             title="Back to the suggestion"
             aria-label="Back to the suggestion"
-            onClick={() => setWritten(image.id, null)}
+            onClick={() => setWritten(originalImageId(image.id), null)}
           >
             <RotateCcw aria-hidden />
           </Button>

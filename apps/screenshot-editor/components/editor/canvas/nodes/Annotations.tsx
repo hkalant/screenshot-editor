@@ -74,6 +74,7 @@ import type {
   StepAnnotation,
 } from "@/lib/design/schema";
 import { EXPORT_HIDDEN } from "@/lib/export/exportImage";
+import { ANNOTATIONS_ROOT } from "@/lib/render/cropPicture";
 import { CANVAS_FOCUS_ATTRIBUTE } from "@/lib/hooks/useShortcuts";
 import type { LoadedImage } from "@/lib/image/load";
 import { blurredPatch } from "@/lib/render/blurPatch";
@@ -1409,7 +1410,7 @@ export function AnnotationsNode({
   });
 
   return (
-    <Group ref={rootRef} x={image.x} y={image.y}>
+    <Group ref={rootRef} name={ANNOTATIONS_ROOT} x={image.x} y={image.y}>
       {annotations.map(
         (annotation) =>
           annotation.kind === "shape" &&

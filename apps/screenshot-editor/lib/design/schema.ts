@@ -120,10 +120,28 @@ export const frameSpecSchema = z.object({
   url: z.string().max(MAX_FRAME_TEXT),
 });
 
+/**
+ * The part of a screenshot that's shown, as fractions of the original image
+ * across and down. The original is kept, so a crop can be widened again.
+ */
+export const cropSchema = z
+  .object({
+    x: z.number().min(0).max(1),
+    y: z.number().min(0).max(1),
+    width: z.number().positive().max(1),
+    height: z.number().positive().max(1),
+  })
+  .refine(
+    (crop) => crop.x + crop.width <= 1.0001 && crop.y + crop.height <= 1.0001,
+    "The crop must stay inside the image",
+  );
+
 export const shotLayerSchema = z.object({
   id: z.string().min(1),
   kind: z.literal("shot"),
   imageId: z.string().min(1).nullable(),
+  /** The whole image when null. Designs saved before cropping get none. */
+  crop: cropSchema.nullable().default(null),
   padding: z.number().int().min(PADDING.min).max(PADDING.max),
   scale: z.number().min(SHOT_SCALE.min).max(SHOT_SCALE.max),
   position: z.object({
@@ -323,7 +341,8 @@ export type ShadowSpec = z.infer<typeof shadowSpecSchema>;
 export type FrameKind = (typeof FRAME_KINDS)[number];
 export type FrameSpec = z.infer<typeof frameSpecSchema>;
 export type ShotLayer = z.infer<typeof shotLayerSchema>;
-export type ShotStyle = Omit<ShotLayer, "id" | "kind" | "imageId">;
+export type ShotStyle = Omit<ShotLayer, "id" | "kind" | "imageId" | "crop">;
+export type Crop = z.infer<typeof cropSchema>;
 export type AnnotationColor = (typeof ANNOTATION_COLORS)[number];
 export type ShapeKind = (typeof SHAPE_KINDS)[number];
 export type MagnifyLens = (typeof MAGNIFY_LENSES)[number];

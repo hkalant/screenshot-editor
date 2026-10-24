@@ -4,6 +4,7 @@ import {
   ChevronDown,
   Circle,
   CopyPlus,
+  Crop,
   Highlighter,
   ImagePlus,
   MousePointer2,
@@ -39,6 +40,7 @@ import {
 import { pasteAnnotation } from "@/lib/annotationClipboard";
 import { ACCEPT_ATTR } from "@/lib/image/accept";
 import { ingestFile } from "@/lib/image/ingest";
+import { takeCropPicture } from "@/lib/render/cropPicture";
 import { useAnimatedWidth } from "@/lib/hooks/useAnimatedWidth";
 import { currentPlatform, isApplePlatform } from "@/lib/platform";
 import { ToolbarTooltip } from "./ToolbarTooltip";
@@ -154,6 +156,27 @@ function FillIcon({ filled }: { filled: boolean }) {
         strokeWidth="2"
       />
     </svg>
+  );
+}
+
+/** Starts cropping the main screenshot. */
+function CropButton() {
+  const startCrop = useEditorStore((state) => state.startCrop);
+  const selectAnnotation = useEditorStore((state) => state.selectAnnotation);
+  return (
+    <ToolButton
+      label="Crop screenshot"
+      onClick={() => {
+        selectAnnotation(null);
+        // Once the selection has left the canvas, so it isn't in the picture.
+        requestAnimationFrame(() => {
+          takeCropPicture();
+          startCrop();
+        });
+      }}
+    >
+      <Crop aria-hidden />
+    </ToolButton>
   );
 }
 
@@ -627,6 +650,7 @@ export function AnnotationToolbar() {
           <ScanSearch aria-hidden />
         </ToolButton>
         <Divider />
+        <CropButton />
         <AddScreenshotButton />
         <ToolOptions show={showCorners}>
           <Divider />

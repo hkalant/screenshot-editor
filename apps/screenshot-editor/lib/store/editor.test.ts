@@ -754,3 +754,52 @@ describe("editor store: annotations", () => {
     expect(state().design.nextStep).toBe(1);
   });
 });
+
+describe("editor store: cropping", () => {
+  beforeEach(() => {
+    state().setImage(fakeImage("shot", 1000, 500));
+  });
+
+  it("crops the screenshot in one step, keeping annotations over the same spot", () => {
+    state().addStep({ x: 0.75, y: 0.1 });
+    state().addStep({ x: 0.1, y: 0.1 });
+    state().startCrop();
+    expect(state().cropping).toBe(true);
+    state().applyCrop({ x: 0.5, y: 0, width: 0.5, height: 0.5 });
+    expect(state().cropping).toBe(false);
+    expect(shot().crop).toEqual({ x: 0.5, y: 0, width: 0.5, height: 0.5 });
+    expect(selectActiveImage(state())).toMatchObject({
+      width: 500,
+      height: 250,
+    });
+    // The step on the left half went with it.
+    expect(state().design.annotations).toHaveLength(1);
+    expect(state().design.annotations[0]).toMatchObject({ x: 0.5, y: 0.2 });
+    expect(state().notice?.message).toBe(
+      "1 annotation was outside the crop and was removed.",
+    );
+    // The original is kept, and saved.
+    expect(referencedImageIds(state().design)).toEqual(["shot"]);
+
+    state().undo();
+    expect(shot().crop).toBeNull();
+    expect(state().design.annotations).toHaveLength(2);
+    expect(selectActiveImage(state())).toMatchObject({ width: 1000 });
+  });
+
+  it("crops again from the original, and the whole image is no crop", () => {
+    state().applyCrop({ x: 0.5, y: 0, width: 0.5, height: 0.5 });
+    state().applyCrop({ x: 0, y: 0, width: 1, height: 1 });
+    expect(shot().crop).toBeNull();
+  });
+
+  it("swaps a device that no longer fits, and a new screenshot has no crop", () => {
+    state().setImage(fakeImage("phone", 400, 860));
+    state().setFrame({ kind: "phone" });
+    state().applyCrop({ x: 0, y: 0, width: 1, height: 0.3 });
+    expect(shot().frame.kind).not.toBe("phone");
+    expect(state().notice?.message).toMatch(/^The frame changed to/);
+    state().setImage(fakeImage("next", 800, 600));
+    expect(shot().crop).toBeNull();
+  });
+});

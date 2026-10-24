@@ -40,7 +40,13 @@ export function createDefaultDesign(): Design {
     background: defaultBackground(),
     backgroundFx: { blur: 0 },
     layers: [
-      { id: SHOT_LAYER_ID, kind: "shot", imageId: null, ...defaultShotStyle() },
+      {
+        id: SHOT_LAYER_ID,
+        kind: "shot",
+        imageId: null,
+        crop: null,
+        ...defaultShotStyle(),
+      },
     ],
     annotations: [],
     nextStep: 1,

@@ -26,7 +26,12 @@ import {
 import { isHexColor } from "@/lib/design/colors";
 import { createDefaultDesign, defaultShotStyle } from "@/lib/design/defaults";
 import { frameFits, frameForScreenshot } from "@/lib/design/devices";
-import { isFrameKind } from "@/lib/design/frames";
+import {
+  croppedSize,
+  normalizeCrop,
+  recropAnnotations,
+} from "@/lib/design/crop";
+import { FRAME_LABELS, isFrameKind } from "@/lib/design/frames";
 import { insetAspect, insetFrameKind } from "@/lib/design/inset";
 import {
   DEFAULT_GRADIENT,
@@ -53,6 +58,7 @@ import {
   LINE_ENDS,
   type Annotation,
   type AnnotationColor,
+  type Crop,
   type ArrowStyle,
   type LineEnd,
   type Background,
@@ -73,6 +79,7 @@ import {
   sanitizeExportOptions,
   type ExportOptions,
 } from "@/lib/export/options";
+import { croppedImage } from "@/lib/image/crop";
 import type { LoadedImage } from "@/lib/image/load";
 import { clamp } from "@/lib/utils";
 
@@ -121,6 +128,8 @@ export type EditorState = {
   notice: Notice | null;
   /** Goes up with each second screenshot added, to show a hint about it. */
   insetHint: number;
+  /** Choosing the main screenshot's crop, in place of the design. */
+  cropping: boolean;
   exportOptions: ExportOptions;
 
   annotationTool: AnnotationTool;
@@ -212,6 +221,14 @@ export type EditorState = {
   /** Moves an annotation by canvas pixels, keeping it on the screenshot. */
   nudgeAnnotation: (id: string, dx: number, dy: number) => void;
   resizeShape: (id: string, box: Box) => void;
+  /** Starts choosing the main screenshot's crop. */
+  startCrop: () => void;
+  cancelCrop: () => void;
+  /**
+   * Crops the main screenshot to `crop` (fractions of the original), moving
+   * the annotations to stay over the same spots, in one undo step.
+   */
+  applyCrop: (crop: Crop) => void;
   /**
    * Adds a second screenshot beside the main one, or puts `image` in the one
    * there already, and selects it.
@@ -471,6 +488,7 @@ export const useEditorStore = create<EditorState>()((set, get) => {
     exporting: false,
     notice: null,
     insetHint: 0,
+    cropping: false,
     exportOptions: { ...DEFAULT_EXPORT_OPTIONS },
     annotationTool: "select",
     annotationColor: DEFAULT_ANNOTATION_COLOR,
@@ -494,6 +512,8 @@ export const useEditorStore = create<EditorState>()((set, get) => {
           future: [state.design, ...state.future].slice(0, HISTORY_LIMIT),
           revision: state.revision + 1,
           mergeKey: null,
+          // The crop being chosen was for the design that's gone.
+          cropping: false,
         };
       }),
 
@@ -507,6 +527,7 @@ export const useEditorStore = create<EditorState>()((set, get) => {
           future: rest,
           revision: state.revision + 1,
           mergeKey: null,
+          cropping: false,
         };
       }),
 
@@ -525,6 +546,7 @@ export const useEditorStore = create<EditorState>()((set, get) => {
           state,
           updateShot(withoutAnnotations(state.design), {
             imageId: image.id,
+            crop: null,
             // A phone around a laptop screenshot looks wrong: swap the device.
             frame: {
               ...shotOf(state.design).frame,
@@ -536,6 +558,7 @@ export const useEditorStore = create<EditorState>()((set, get) => {
             images: { ...state.images, [image.id]: image },
             notice: null,
             selectedAnnotationId: null,
+            cropping: false,
           },
         ),
       ),
@@ -544,9 +567,12 @@ export const useEditorStore = create<EditorState>()((set, get) => {
       set((state) =>
         commitDesign(
           state,
-          updateShot(withoutAnnotations(state.design), { imageId: null }),
+          updateShot(withoutAnnotations(state.design), {
+            imageId: null,
+            crop: null,
+          }),
           undefined,
-          { selectedAnnotationId: null },
+          { selectedAnnotationId: null, cropping: false },
         ),
       ),
 
@@ -1288,6 +1314,80 @@ export const useEditorStore = create<EditorState>()((set, get) => {
       );
     },
 
+    startCrop: () => {
+      if (!selectActiveImage(get())) return;
+      set(() => ({
+        cropping: true,
+        selectedAnnotationId: null,
+        annotationTool: "select",
+      }));
+    },
+
+    cancelCrop: () => set(() => ({ cropping: false })),
+
+    applyCrop: (crop) => {
+      const state = get();
+      const shot = shotOf(state.design);
+      const original = shot.imageId ? state.images[shot.imageId] : undefined;
+      if (
+        !original ||
+        ![crop.x, crop.y, crop.width, crop.height].every(finite)
+      ) {
+        set(() => ({ cropping: false }));
+        return;
+      }
+      const next = normalizeCrop(crop, original);
+      const { annotations, removed } = recropAnnotations(
+        state.design.annotations,
+        shot.crop,
+        next,
+        original,
+      );
+      // A device that no longer fits gives way, as for a new screenshot.
+      const kind = frameForScreenshot(
+        shot.frame.kind,
+        croppedSize(original, next),
+      );
+      const notes = [
+        removed === 1
+          ? "1 annotation was outside the crop and was removed."
+          : removed > 1
+            ? `${removed} annotations were outside the crop and were removed.`
+            : null,
+        kind === shot.frame.kind
+          ? null
+          : `The frame changed to ${FRAME_LABELS[kind]} to fit.`,
+      ].filter(Boolean);
+      set((current) =>
+        commitDesign(
+          current,
+          {
+            ...updateShot(current.design, {
+              crop: next,
+              frame: { ...shot.frame, kind },
+            }),
+            annotations: annotations.map((annotation) =>
+              annotation.kind === "screenshot"
+                ? withInsetHeight(annotation, current.images, kind)
+                : annotation,
+            ),
+          },
+          undefined,
+          {
+            cropping: false,
+            selectedAnnotationId: null,
+            notice: notes.length
+              ? {
+                  id: (current.notice?.id ?? 0) + 1,
+                  kind: "info",
+                  message: notes.join(" "),
+                }
+              : current.notice,
+          },
+        ),
+      );
+    },
+
     addScreenshot: (image) => {
       const state = get();
       const main = selectActiveImage(state);
@@ -1546,6 +1646,7 @@ export const useEditorStore = create<EditorState>()((set, get) => {
           revision: state.revision + 1,
           mergeKey: null,
           selectedAnnotationId: null,
+          cropping: false,
           images: {
             ...state.images,
             ...Object.fromEntries(images.map((image) => [image.id, image])),
@@ -1561,6 +1662,7 @@ export const useEditorStore = create<EditorState>()((set, get) => {
             ...Object.fromEntries(images.map((image) => [image.id, image])),
           },
           selectedAnnotationId: null,
+          cropping: false,
         }),
       ),
 
@@ -1591,7 +1693,16 @@ export const useEditorStore = create<EditorState>()((set, get) => {
 export const selectShot = (state: EditorState): ShotLayer =>
   state.design.layers[0];
 
+/** The main screenshot as shown: cropped, if it is. */
 export const selectActiveImage = (state: EditorState): LoadedImage | null => {
+  const { imageId, crop } = state.design.layers[0];
+  const image = imageId ? state.images[imageId] : undefined;
+  if (!image) return null;
+  return crop ? croppedImage(image, crop) : image;
+};
+
+/** The main screenshot as it was added, before any crop. */
+export const selectOriginalImage = (state: EditorState): LoadedImage | null => {
   const id = state.design.layers[0].imageId;
   return id ? (state.images[id] ?? null) : null;
 };
