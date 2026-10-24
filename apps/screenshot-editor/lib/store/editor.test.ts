@@ -68,10 +68,8 @@ describe("editor store: style", () => {
     expect(shot().padding).toBe(11);
     state().setRadius(70);
     expect(shot().radius).toBe(64);
-    state().setScale(9);
+    state().resizeShot(9, 0.5, 0.5);
     expect(shot().scale).toBe(1.5);
-    state().setRotation(-60.4);
-    expect(shot().rotation).toBe(-45);
     state().setPosition(-1, 2);
     expect(shot().position).toEqual({ x: 0, y: 1 });
     state().setBorder({ width: 30, opacity: 2 });
@@ -207,7 +205,7 @@ describe("editor store: style", () => {
     expect(state().design.canvas).toEqual({ preset: "auto" });
   });
 
-  it("nudges and aligns only on fixed canvases", () => {
+  it("nudges only on fixed canvases", () => {
     state().setImage(fakeImage("a", 800, 400));
     state().setCanvasPreset("auto");
     state().nudge(10, 0);
@@ -215,12 +213,6 @@ describe("editor store: style", () => {
     state().setCustomSize(1000, 1000);
     state().nudge(10, -20);
     expect(shot().position).toEqual({ x: 0.51, y: 0.48 });
-    state().setPadding(50);
-    state().setScale(0.5);
-    state().alignTo("start", "end");
-    // 900 px available: the shot is 450 x 225 at scale 0.5.
-    expect(shot().position.x).toBeCloseTo(0.275);
-    expect(shot().position.y).toBeCloseTo(0.8375);
   });
 
   it("limits frame texts and keeps the image and canvas on reset", () => {
@@ -229,7 +221,7 @@ describe("editor store: style", () => {
     state().setImage(fakeImage("a"));
     state().setCanvasPreset("og");
     state().setSolidColor("#123456");
-    state().setRotation(10);
+    state().setRadius(30);
     state().resetStyle();
     expect(shot()).toMatchObject({ ...defaultShotStyle(), imageId: "a" });
     expect(state().design.canvas.preset).toBe("og");

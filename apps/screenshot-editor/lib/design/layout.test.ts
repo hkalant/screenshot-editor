@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createDefaultDesign } from "./defaults";
 import {
-  alignedPosition,
   computeLayout,
   computePreviewScale,
   fitWithin,
@@ -212,25 +211,6 @@ describe("auto canvas size", () => {
     const side = MAX_DESIGN_SIDE + 2 * PADDING.max;
     expect(side * 4).toBeLessThanOrEqual(MAX_CANVAS_SIDE);
     expect((side * 2) ** 2).toBeLessThanOrEqual(MAX_CANVAS_AREA);
-  });
-});
-
-describe("alignedPosition", () => {
-  it("lines the shot up with the padding", () => {
-    const layout = computeLayout(
-      { width: 800, height: 400 },
-      design(
-        { padding: 50, scale: 0.5 },
-        { preset: "custom", width: 1000, height: 1000 },
-      ),
-    );
-    // 900 px available, so the shot is 450 x 225 at scale 0.5.
-    const start = alignedPosition(layout, 50, "start", "start");
-    expect(start.x).toBeCloseTo((50 + 225) / 1000);
-    expect(start.y).toBeCloseTo((50 + 112.5) / 1000);
-    const end = alignedPosition(layout, 50, "end", "center");
-    expect(end.x).toBeCloseTo((1000 - 50 - 225) / 1000);
-    expect(end.y).toBe(0.5);
   });
 });
 

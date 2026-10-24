@@ -224,30 +224,6 @@ function scaleDevice(device: DeviceGeometry, scale: number): DeviceGeometry {
   };
 }
 
-/**
- * The shot position (centre, as a fraction of the canvas) that lines its
- * unrotated edges up with the padding: "start" is left or top.
- */
-export function alignedPosition(
-  layout: DesignLayout,
-  padding: number,
-  horizontal: Alignment,
-  vertical: Alignment,
-): { x: number; y: number } {
-  const along = (alignment: Alignment, canvas: number, size: number) => {
-    if (alignment === "center") return 0.5;
-    const centre =
-      alignment === "start" ? padding + size / 2 : canvas - padding - size / 2;
-    return Math.min(1, Math.max(0, centre / canvas));
-  };
-  return {
-    x: along(horizontal, layout.canvas.width, layout.shot.width),
-    y: along(vertical, layout.canvas.height, layout.shot.height),
-  };
-}
-
-export type Alignment = "start" | "center" | "end";
-
 // Low enough that a 4000 px canvas still fits a cramped phone workspace.
 export const MIN_PREVIEW_SCALE = 0.01;
 

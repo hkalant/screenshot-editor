@@ -33,8 +33,7 @@ import {
   getGradientPreset,
   normalizeAngle,
 } from "@/lib/design/gradients";
-import { alignedPosition, computeLayout } from "@/lib/design/layout";
-import type { Alignment } from "@/lib/design/layout";
+import { computeLayout } from "@/lib/design/layout";
 import {
   BLUR,
   BORDER_WIDTH,
@@ -173,14 +172,11 @@ export type EditorState = {
   setCustomSize: (width: number, height: number) => void;
 
   setPadding: (pixels: number) => void;
-  setScale: (scale: number) => void;
   /** Resizes the shot from a corner: its new scale and centre together. */
   resizeShot: (scale: number, x: number, y: number) => void;
   setPosition: (x: number, y: number) => void;
   /** Moves the shot by canvas pixels (fixed canvases only). */
   nudge: (dx: number, dy: number) => void;
-  alignTo: (horizontal: Alignment, vertical: Alignment) => void;
-  setRotation: (degrees: number) => void;
   setRadius: (pixels: number) => void;
   setShadowPreset: (id: string) => void;
   setShadow: (patch: ShadowPatch) => void;
@@ -734,16 +730,6 @@ export const useEditorStore = create<EditorState>()((set, get) => {
       );
     },
 
-    setScale: (scale) => {
-      if (!finite(scale)) return;
-      commitShot(
-        () => ({
-          scale: round(clamp(scale, SHOT_SCALE.min, SHOT_SCALE.max), 2),
-        }),
-        "scale",
-      );
-    },
-
     resizeShot: (scale, x, y) => {
       if (!finite(scale) || !finite(x) || !finite(y)) return;
       commitShot(
@@ -783,32 +769,6 @@ export const useEditorStore = create<EditorState>()((set, get) => {
           },
         };
       }, "position");
-    },
-
-    alignTo: (horizontal, vertical) => {
-      const state = get();
-      const image = selectActiveImage(state);
-      if (!image || state.design.canvas.preset === "auto") return;
-      const layout = computeLayout(image, state.design);
-      const position = alignedPosition(
-        layout,
-        shotOf(state.design).padding,
-        horizontal,
-        vertical,
-      );
-      commitShot(() => ({
-        position: { x: round(position.x, 4), y: round(position.y, 4) },
-      }));
-    },
-
-    setRotation: (degrees) => {
-      if (!finite(degrees)) return;
-      commitShot(
-        () => ({
-          rotation: Math.round(clamp(degrees, ROTATION.min, ROTATION.max)) + 0,
-        }),
-        "rotation",
-      );
     },
 
     setRadius: (pixels) => {
