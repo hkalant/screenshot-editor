@@ -252,3 +252,36 @@ test("a second screenshot is cropped in place", async ({ page }) => {
     page.getByRole("button", { name: "Delete second screenshot" }),
   ).toBeVisible();
 });
+
+test("a phone screenshot beside a laptop one goes in a phone, and each has its own frame", async ({
+  page,
+}) => {
+  await upload(page, makeSolidPng(1440, 900, RED));
+  await chooseFrame(page, "macOS browser");
+  await addSecond(page, makeSolidPng(390, 844, [...BLUE]));
+
+  // Selected, the sidebar shows its frame: a phone, and no window frames.
+  const secondFrame = page.getByRole("radiogroup", {
+    name: "Frame of the second screenshot",
+  });
+  await expect(
+    secondFrame.getByRole("radio", { name: "Phone", exact: true }),
+  ).toHaveAttribute("aria-checked", "true");
+  await expect(
+    secondFrame.getByRole("radio", { name: "macOS browser", exact: true }),
+  ).toBeDisabled();
+  await secondFrame.getByRole("radio", { name: "None", exact: true }).click();
+  await expect(
+    secondFrame.getByRole("radio", { name: "None", exact: true }),
+  ).toHaveAttribute("aria-checked", "true");
+
+  // The main one keeps its own.
+  await page.keyboard.press("Escape");
+  const mainFrame = page.getByRole("radiogroup", {
+    name: "Frame",
+    exact: true,
+  });
+  await expect(
+    mainFrame.getByRole("radio", { name: "macOS browser", exact: true }),
+  ).toHaveAttribute("aria-checked", "true");
+});

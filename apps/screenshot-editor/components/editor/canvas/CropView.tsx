@@ -22,9 +22,8 @@ import {
 } from "@/lib/design/crop";
 import { isDeviceKind } from "@/lib/design/devices";
 import { FRAME_LABELS } from "@/lib/design/frames";
-import { sharesFrame } from "@/lib/design/inset";
 import { computePreviewScale } from "@/lib/design/layout";
-import type { Crop } from "@/lib/design/schema";
+import type { Crop, FrameKind } from "@/lib/design/schema";
 import { isEditableTarget } from "@/lib/dom";
 import type { LoadedImage } from "@/lib/image/load";
 import { cropPicture } from "@/lib/render/cropPicture";
@@ -114,6 +113,7 @@ export function CropView({ width, height }: Props) {
       <CropArea
         image={secondImage}
         crop={second.crop}
+        frameKind={second.frame}
         second
         width={width}
         height={height}
@@ -122,13 +122,20 @@ export function CropView({ width, height }: Props) {
   }
   if (!main) return null;
   return (
-    <CropArea image={main} crop={shot.crop} width={width} height={height} />
+    <CropArea
+      image={main}
+      crop={shot.crop}
+      frameKind={shot.frame.kind}
+      width={width}
+      height={height}
+    />
   );
 }
 
 function CropArea({
   image,
   crop: start,
+  frameKind,
   second = false,
   width,
   height,
@@ -136,17 +143,15 @@ function CropArea({
   image: LoadedImage;
   /** The crop the screenshot has now. */
   crop: Crop | null;
+  /** The frame it's in. */
+  frameKind: FrameKind;
   /** The second screenshot, not the main one. */
   second?: boolean;
 }) {
-  const frameKind = useEditorStore(
-    (state) => state.design.layers[0].frame.kind,
-  );
   const applyCrop = useEditorStore((state) => state.applyCrop);
   const cancelCrop = useEditorStore((state) => state.cancelCrop);
   // A device only fits its own shape, so the crop keeps the shape it has.
-  // (The second screenshot is never in one.)
-  const device = !second && isDeviceKind(frameKind) ? frameKind : null;
+  const device = isDeviceKind(frameKind) ? frameKind : null;
   const current = croppedSize(image, start);
   const ratio = device ? current.width / current.height : null;
   const [crop, setCrop] = useState<Crop>(start ?? FULL_CROP);
@@ -330,7 +335,7 @@ function CropArea({
           <p className="shrink text-xs text-muted-foreground max-sm:hidden">
             {device
               ? `Keeps the ${FRAME_LABELS[device].toLowerCase()} shape, so the frame still fits.`
-              : frameKind === "none" || (second && !sharesFrame(frameKind))
+              : frameKind === "none"
                 ? `Drag the edges or corners to crop the ${second ? "second " : ""}screenshot.`
                 : `Cropping the ${second ? "second " : ""}screenshot. The frame fits around it afterwards.`}
           </p>

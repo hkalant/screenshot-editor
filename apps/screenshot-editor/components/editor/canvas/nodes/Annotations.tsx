@@ -52,7 +52,6 @@ import {
   MAGNIFY_BORDER_COLOR,
   magnifyArea,
 } from "@/lib/design/magnify";
-import { insetFrameKind } from "@/lib/design/inset";
 import { insetBox, type Rect as LayoutRect } from "@/lib/design/layout";
 import {
   arrowEndNear,
@@ -82,7 +81,8 @@ import { blurredPatch } from "@/lib/render/blurPatch";
 import { FRAME_FONT_FAMILY } from "@/lib/render/frame";
 import { useEditorStore } from "@/lib/store/editor";
 import { useFrameFont } from "./Chrome";
-import { FramedShot } from "./FramedShot";
+import { DeviceNode } from "./Device";
+import { FramedShot, shadowProps } from "./FramedShot";
 
 /** Marks annotation nodes, so a press on one picks it up instead of drawing. */
 const ANNOTATION_NAME = "annotation";
@@ -300,17 +300,21 @@ function useInset(annotation: ScreenshotAnnotation, unit: number) {
   const shot = useEditorStore((state) => state.design.layers[0]);
   if (!original) return null;
   const image = shownImage(original, annotation.crop);
-  const kind = insetFrameKind(shot.frame.kind);
   return {
     image,
     shot,
     frame: {
       ...shot.frame,
-      kind,
+      kind: annotation.frame,
       title: annotation.title,
       url: annotation.url,
     },
-    box: insetBox(image, kind, annotation.width * unit, shot.radius),
+    box: insetBox(
+      image,
+      annotation.frame,
+      annotation.width * unit,
+      shot.radius,
+    ),
   };
 }
 
@@ -335,14 +339,32 @@ function ScreenshotBody({
       />
       {inset && (
         <Group listening={false}>
-          <FramedShot
-            image={inset.image}
-            box={inset.box}
-            frame={inset.frame}
-            shadow={inset.shot.shadow}
-            border={inset.shot.border}
-            listening={false}
-          />
+          {inset.box.device ? (
+            <DeviceNode
+              device={inset.box.device}
+              shadow={shadowProps(inset.shot.shadow)}
+              listening={false}
+            >
+              <KonvaImage
+                image={inset.image.source}
+                x={inset.box.image.x}
+                y={inset.box.image.y}
+                width={inset.box.image.width}
+                height={inset.box.image.height}
+                cornerRadius={inset.box.imageRadii}
+                listening={false}
+              />
+            </DeviceNode>
+          ) : (
+            <FramedShot
+              image={inset.image}
+              box={inset.box}
+              frame={inset.frame}
+              shadow={inset.shot.shadow}
+              border={inset.shot.border}
+              listening={false}
+            />
+          )}
         </Group>
       )}
     </>
@@ -370,8 +392,12 @@ function useBlurSource(
     const original = images[annotation.imageId];
     if (!original) continue;
     const image = shownImage(original, annotation.crop);
-    const kind = insetFrameKind(shot.frame.kind);
-    const box = insetBox(image, kind, annotation.width * unit, shot.radius);
+    const box = insetBox(
+      image,
+      annotation.frame,
+      annotation.width * unit,
+      shot.radius,
+    );
     // The picture inside the frame, in image widths.
     const x = annotation.x + box.image.x / unit;
     const y = annotation.y + box.image.y / unit;

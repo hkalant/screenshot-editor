@@ -33,7 +33,7 @@ import {
   recropAnnotations,
 } from "@/lib/design/crop";
 import { FRAME_LABELS, isFrameKind } from "@/lib/design/frames";
-import { insetAspect, insetFrameKind } from "@/lib/design/inset";
+import { insetAspect, newInsetFrame } from "@/lib/design/inset";
 import {
   DEFAULT_GRADIENT,
   getGradientPreset,
@@ -242,6 +242,8 @@ export type EditorState = {
   resizeScreenshot: (id: string, x: number, y: number, width: number) => void;
   /** Puts a second screenshot in the main screenshot's frame, or takes it out. */
   /** The title or address a second screenshot's frame shows. */
+  /** Puts a second screenshot in `kind` of frame, if it fits it. */
+  setScreenshotFrame: (id: string, kind: FrameKind) => void;
   setScreenshotText: (
     id: string,
     patch: Partial<Pick<ScreenshotAnnotation, "title" | "url">>,
@@ -355,38 +357,37 @@ const INSET_WIDTH = 0.6;
 function withInsetHeight(
   annotation: ScreenshotAnnotation,
   images: Record<string, LoadedImage>,
-  mainFrame: FrameKind,
 ): ScreenshotAnnotation {
   const original = images[annotation.imageId];
   if (!original) return annotation;
   const image = shownImage(original, annotation.crop);
   const height =
     Math.round(
-      annotation.width * insetAspect(image, insetFrameKind(mainFrame)) * 10000,
+      annotation.width * insetAspect(image, annotation.frame) * 10000,
     ) / 10000;
   return height === annotation.height ? annotation : { ...annotation, height };
 }
 /**
  * A second screenshot cropped to `crop`: what's still shown keeps its size
- * and place on the canvas, and the frame fits round it.
+ * and place on the canvas, and the frame fits round it (a device that no
+ * longer fits gives way, as for the main screenshot).
  */
 function recropScreenshot(
   annotation: ScreenshotAnnotation,
   crop: Crop,
   images: Record<string, LoadedImage>,
-  mainFrame: FrameKind,
 ): ScreenshotAnnotation | null {
   const original = images[annotation.imageId];
   if (!original || ![crop.x, crop.y, crop.width, crop.height].every(finite))
     return null;
   const next = normalizeCrop(crop, original);
-  const kind = insetFrameKind(mainFrame);
   const before = annotation.crop ?? FULL_CROP;
   const after = next ?? FULL_CROP;
   const oldShown = croppedSize(original, annotation.crop);
   const newShown = croppedSize(original, next);
+  const kind = frameForScreenshot(annotation.frame, newShown);
   // Image widths per pixel of the original, inside the frame.
-  const old = framedInsetBox(oldShown, kind, annotation.width, 0);
+  const old = framedInsetBox(oldShown, annotation.frame, annotation.width, 0);
   const perPixel = old.image.width / oldShown.width;
   // The new frame for a picture that wide, from a box 1 wide.
   const unit = framedInsetBox(newShown, kind, 1, 0);
@@ -395,6 +396,7 @@ function recropScreenshot(
   return {
     ...annotation,
     crop: next,
+    frame: kind,
     ...roundBox({
       x:
         annotation.x +
@@ -408,6 +410,31 @@ function recropScreenshot(
         box.image.y,
       width,
       height: box.height,
+    }),
+  };
+}
+
+/**
+ * A second screenshot showing `image` instead: in its frame if that fits the
+ * new image, and inside its old box, from the same top-left.
+ */
+function replacedScreenshot(
+  annotation: ScreenshotAnnotation,
+  image: LoadedImage,
+): ScreenshotAnnotation {
+  const frame = frameForScreenshot(annotation.frame, image);
+  const aspect = insetAspect(image, frame);
+  const width = Math.min(annotation.width, annotation.height / aspect);
+  return {
+    ...annotation,
+    imageId: image.id,
+    crop: null,
+    frame,
+    ...roundBox({
+      x: annotation.x,
+      y: annotation.y,
+      width,
+      height: width * aspect,
     }),
   };
 }
@@ -930,16 +957,7 @@ export const useEditorStore = create<EditorState>()((set, get) => {
             next.title = patch.title.slice(0, MAX_FRAME_TEXT);
           if (typeof patch.url === "string")
             next.url = patch.url.slice(0, MAX_FRAME_TEXT);
-          // Second screenshots in the frame take its new bar height.
-          const { images } = get();
-          return {
-            ...updateShot(design, { frame: next }),
-            annotations: design.annotations.map((annotation) =>
-              annotation.kind === "screenshot"
-                ? withInsetHeight(annotation, images, next.kind)
-                : annotation,
-            ),
-          };
+          return updateShot(design, { frame: next });
         },
         // Typing a title or address merges; picking a frame or theme doesn't.
         patch.kind === undefined && patch.theme === undefined
@@ -1402,12 +1420,7 @@ export const useEditorStore = create<EditorState>()((set, get) => {
             current,
             updateAnnotation(current.design, id, (annotation) =>
               annotation.kind === "screenshot"
-                ? recropScreenshot(
-                    annotation,
-                    crop,
-                    current.images,
-                    shotOf(current.design).frame.kind,
-                  )
+                ? recropScreenshot(annotation, crop, current.images)
                 : null,
             ) ?? current.design,
             undefined,
@@ -1456,11 +1469,7 @@ export const useEditorStore = create<EditorState>()((set, get) => {
               crop: next,
               frame: { ...shot.frame, kind },
             }),
-            annotations: annotations.map((annotation) =>
-              annotation.kind === "screenshot"
-                ? withInsetHeight(annotation, current.images, kind)
-                : annotation,
-            ),
+            annotations,
           },
           undefined,
           {
@@ -1482,7 +1491,7 @@ export const useEditorStore = create<EditorState>()((set, get) => {
       const state = get();
       const main = selectActiveImage(state);
       if (!main) return;
-      const kind = insetFrameKind(shotOf(state.design).frame.kind);
+      const mainFrame = shotOf(state.design).frame.kind;
       const existing = state.design.annotations.find(
         (annotation) => annotation.kind === "screenshot",
       );
@@ -1499,11 +1508,7 @@ export const useEditorStore = create<EditorState>()((set, get) => {
             current,
             updateAnnotation(current.design, id, (annotation) =>
               annotation.kind === "screenshot"
-                ? withInsetHeight(
-                    { ...annotation, imageId: image.id, crop: null },
-                    { [image.id]: image },
-                    kind,
-                  )
+                ? replacedScreenshot(annotation, image)
                 : null,
             ) ?? current.design,
             undefined,
@@ -1513,10 +1518,13 @@ export const useEditorStore = create<EditorState>()((set, get) => {
         return;
       }
       const area = annotationArea(state) ?? FAR;
+      const kind = newInsetFrame(mainFrame, image);
       const aspect = insetAspect(image, kind);
       // Level with the top of the main screenshot's frame.
       const { shot } = computeLayout(main, state.design);
       const top = -shot.image.y / shot.image.width;
+      // No taller than it, so a phone beside a laptop is as tall.
+      const tallest = shot.height / shot.image.width;
       // To the right of the main screenshot and as wide, where there's room;
       // otherwise over it.
       const left = 1 + INSET_GAP;
@@ -1524,7 +1532,10 @@ export const useEditorStore = create<EditorState>()((set, get) => {
         area.x + area.width - left,
         (area.y + area.height - top) / aspect,
       );
-      const width = room >= MIN_INSET_ROOM ? Math.min(1, room) : INSET_WIDTH;
+      const width = Math.min(
+        room >= MIN_INSET_ROOM ? Math.min(1, room) : INSET_WIDTH,
+        tallest / aspect,
+      );
       const box = roundBox(
         fitBox({ x: left, y: top, width, height: width * aspect }, area),
       );
@@ -1542,6 +1553,7 @@ export const useEditorStore = create<EditorState>()((set, get) => {
                 imageId: image.id,
                 ...box,
                 crop: null,
+                frame: kind,
                 title: "",
                 url: "",
               },
@@ -1575,6 +1587,23 @@ export const useEditorStore = create<EditorState>()((set, get) => {
               : null,
           ),
         `annotation-resize-${id}`,
+      );
+    },
+
+    setScreenshotFrame: (id, kind) => {
+      if (!isFrameKind(kind)) return;
+      const { images } = get();
+      commit((design) =>
+        updateAnnotation(design, id, (annotation) => {
+          if (annotation.kind !== "screenshot" || annotation.frame === kind)
+            return null;
+          const original = images[annotation.imageId];
+          if (!original) return null;
+          const shown = croppedSize(original, annotation.crop);
+          if (!frameFits(kind, shown)) return null;
+          // As wide, from the same top-left.
+          return withInsetHeight({ ...annotation, frame: kind }, images);
+        }),
       );
     },
 

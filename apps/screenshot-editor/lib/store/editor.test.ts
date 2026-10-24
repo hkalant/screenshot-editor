@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { computeLayout } from "@/lib/design/layout";
 import { referencedImageIds } from "@/lib/design/refs";
 import { createDefaultDesign, defaultShotStyle } from "@/lib/design/defaults";
 import { getGradientPreset } from "@/lib/design/gradients";
@@ -418,23 +419,32 @@ describe("editor store: annotations", () => {
   it("adds a second screenshot whose height follows its frame", () => {
     // Laptop-shaped, so it can have a window frame.
     state().setImage(fakeImage("shot", 1200, 750));
-    state().addScreenshot(fakeImage("second", 800, 400));
+    state().addScreenshot(fakeImage("second", 800, 500));
     const [second] = annotations();
     expect(second).toMatchObject({
       kind: "screenshot",
       imageId: "second",
       width: 0.6,
-      height: 0.3,
+      height: 0.375,
     });
     expect(state().selectedAnnotationId).toBe(second.id);
     expect(referencedImageIds(state().design)).toContain("second");
 
-    // A window frame on the main screenshot goes round it too, in one step.
+    // Its own frame: the main one's changing leaves it.
     state().setFrame({ kind: "macos" });
+    expect(annotations()[0]).toMatchObject({ frame: "none", height: 0.375 });
+    // A window frame makes it taller, in one step.
+    state().setScreenshotFrame(second.id, "macos");
     const framed = annotations()[0];
-    expect(framed.kind === "screenshot" && framed.height).toBeGreaterThan(0.3);
+    expect(framed.kind === "screenshot" && framed.height).toBeGreaterThan(
+      0.375,
+    );
+    // Not a phone: it isn't shaped like one.
+    state().setScreenshotFrame(second.id, "phone");
+    expect(annotations()[0]).toMatchObject({ frame: "macos" });
     state().undo();
-    expect(annotations()[0]).toMatchObject({ height: 0.3 });
+    expect(annotations()[0]).toMatchObject({ frame: "none", height: 0.375 });
+    state().undo();
     expect(shot().frame.kind).toBe("none");
 
     // Resized, it keeps its shape.
@@ -443,7 +453,7 @@ describe("editor store: annotations", () => {
       x: 0.1,
       y: 0.1,
       width: 0.3,
-      height: 0.15,
+      height: 0.1875,
     });
   });
 
@@ -456,10 +466,11 @@ describe("editor store: annotations", () => {
     expect(annotations()[0]).toMatchObject({
       id: second.id,
       imageId: "third",
+      // Square, inside the old 2:1 box.
       x: 0.1,
       y: 0.1,
-      width: 0.4,
-      height: 0.4,
+      width: 0.2,
+      height: 0.2,
     });
     expect(referencedImageIds(state().design)).not.toContain("second");
     // Nor can it be copied.
@@ -801,6 +812,33 @@ describe("editor store: cropping", () => {
     expect(state().notice?.message).toMatch(/^The frame changed to/);
     state().setImage(fakeImage("next", 800, 600));
     expect(shot().crop).toBeNull();
+  });
+});
+
+describe("editor store: the second screenshot's frame", () => {
+  it("starts in the main one's frame where it fits, else one that fits it", () => {
+    state().setImage(fakeImage("laptop", 1440, 900));
+    state().setFrame({ kind: "browser" });
+    state().addScreenshot(fakeImage("page", 1200, 800));
+    expect(state().design.annotations[0]).toMatchObject({ frame: "browser" });
+
+    // A phone screenshot goes in a phone, as tall as the main one.
+    state().addScreenshot(fakeImage("phone", 390, 844));
+    const [phone] = state().design.annotations;
+    expect(phone).toMatchObject({ frame: "phone" });
+    const layout = computeLayout(
+      selectActiveImage(state())!,
+      state().design,
+    ).shot;
+    expect(phone.kind === "screenshot" && phone.height).toBeLessThanOrEqual(
+      layout.height / layout.image.width + 0.0001,
+    );
+  });
+
+  it("has no frame beside a main screenshot without one", () => {
+    state().setImage(fakeImage("laptop", 1440, 900));
+    state().addScreenshot(fakeImage("phone", 390, 844));
+    expect(state().design.annotations[0]).toMatchObject({ frame: "none" });
   });
 });
 

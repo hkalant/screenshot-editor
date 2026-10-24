@@ -15,6 +15,7 @@ import {
   FRAMES_WITH_URL,
   isFrameKind,
 } from "@/lib/design/frames";
+import { croppedSize } from "@/lib/design/crop";
 import { MAX_FRAME_TEXT } from "@/lib/design/limits";
 import type { FrameTheme } from "@/lib/render/frame";
 import type { FrameKind } from "@/lib/design/schema";
@@ -124,10 +125,23 @@ export function FrameOptions() {
   const frame = useEditorStore((state) => selectShot(state).frame);
   const setFrame = useEditorStore((state) => state.setFrame);
   const setScreenshotText = useEditorStore((state) => state.setScreenshotText);
-  const image = useEditorStore(selectActiveImage);
-  // While the second screenshot is selected, the title and address are its own.
+  const setScreenshotFrame = useEditorStore(
+    (state) => state.setScreenshotFrame,
+  );
+  const main = useEditorStore(selectActiveImage);
+  // While the second screenshot is selected, its frame, title and address
+  // are edited here; the theme stays shared.
   const selected = useEditorStore(selectSelectedAnnotation);
   const second = selected?.kind === "screenshot" ? selected : null;
+  const secondImage = useEditorStore((state) =>
+    second ? state.images[second.imageId] : undefined,
+  );
+  const image = second
+    ? secondImage && croppedSize(secondImage, second.crop)
+    : main;
+  const kind = second ? second.frame : frame.kind;
+  const choose = (next: FrameKind) =>
+    second ? setScreenshotFrame(second.id, next) : setFrame({ kind: next });
   const text = second ?? frame;
   const setText = (patch: { title?: string; url?: string }) =>
     second ? setScreenshotText(second.id, patch) : setFrame(patch);
@@ -135,29 +149,37 @@ export function FrameOptions() {
   // Without a screenshot there is no shape to go by, so every device is offered.
   const fitting = image ? fittingDevices(image) : null;
   const hintId = useId();
-  const device = isDeviceKind(frame.kind);
+  const device = isDeviceKind(kind);
 
   return (
     <div className="space-y-6">
+      {second && (
+        <p className="text-xs text-muted-foreground" data-testid="frame-for">
+          <span className="font-medium text-foreground">
+            Second screenshot.
+          </span>{" "}
+          Click the main screenshot to change its frame instead.
+        </p>
+      )}
       {/* One choice: a window frame or a device. The section heading already
           says "Frame", so the group isn't labelled twice on screen. */}
       <ToggleGroup.Root
         type="single"
-        aria-label="Frame"
-        value={frame.kind}
+        aria-label={second ? "Frame of the second screenshot" : "Frame"}
+        value={kind}
         // Radix reports "" when the active frame is clicked again; keep it.
-        onValueChange={(kind) => {
-          if (isFrameKind(kind)) setFrame({ kind });
+        onValueChange={(next) => {
+          if (isFrameKind(next)) choose(next);
         }}
         className="space-y-5"
       >
         <div className="grid grid-cols-3 gap-2">
-          {FRAME_OPTIONS.map((kind) => {
-            const fits = !image || frameFits(kind, image);
+          {FRAME_OPTIONS.map((option) => {
+            const fits = !image || frameFits(option, image);
             return (
               <FrameItem
-                key={kind}
-                kind={kind}
+                key={option}
+                kind={option}
                 theme={frame.theme}
                 disabled={!fits}
                 describedBy={fits ? undefined : hintId}
@@ -168,12 +190,12 @@ export function FrameOptions() {
         <div className="space-y-3">
           <h3 className="text-xs font-medium text-muted-foreground">Devices</h3>
           <div className="grid grid-cols-3 gap-2">
-            {DEVICE_OPTIONS.map((kind) => (
+            {DEVICE_OPTIONS.map((option) => (
               <FrameItem
-                key={kind}
-                kind={kind}
+                key={option}
+                kind={option}
                 theme={frame.theme}
-                disabled={!(fitting ?? DEVICE_KINDS).includes(kind)}
+                disabled={!(fitting ?? DEVICE_KINDS).includes(option)}
                 describedBy={hintId}
               />
             ))}
@@ -184,8 +206,9 @@ export function FrameOptions() {
         </div>
       </ToggleGroup.Root>
 
-      {frame.kind !== "none" && !device && (
+      {kind !== "none" && !device && (
         <Segmented
+          // Both screenshots' frames have it.
           label="Frame theme"
           glide
           value={frame.theme}
@@ -194,7 +217,7 @@ export function FrameOptions() {
         />
       )}
 
-      {FRAMES_WITH_TITLE.includes(frame.kind) && (
+      {FRAMES_WITH_TITLE.includes(kind) && (
         <TextField
           label={`Window title${of}`}
           value={text.title}
@@ -203,7 +226,7 @@ export function FrameOptions() {
         />
       )}
 
-      {FRAMES_WITH_URL.includes(frame.kind) && (
+      {FRAMES_WITH_URL.includes(kind) && (
         <TextField
           label={`Address${of}`}
           value={text.url}

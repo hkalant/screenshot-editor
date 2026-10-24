@@ -189,16 +189,41 @@ export function framedBox(
   };
 }
 
+/** A second screenshot laid out in its frame: a window frame or a device. */
+export type InsetBox = FramedBox & {
+  /** The device drawn around it, if its frame is one. */
+  device: DeviceGeometry | null;
+};
+
 /** A second screenshot `width` canvas px wide, frame included. */
 export function insetBox(
   source: Size,
   kind: FrameKind,
   width: number,
   cornerRadius: number,
-): FramedBox {
+): InsetBox {
   const image = fitWithin(source, MAX_DESIGN_SIDE);
+  if (isDeviceKind(kind)) {
+    const natural = deviceGeometry(kind, image);
+    const scale = width / natural.width;
+    const device = scaleDevice(natural, scale);
+    return {
+      width: device.width,
+      height: device.height,
+      // The device has its own corners.
+      radius: 0,
+      image: device.screen,
+      imageRadii: device.screen.radii,
+      chrome: null,
+      unit: frameMetrics(kind, image.width).unit * scale,
+      device,
+    };
+  }
   const { ring } = frameMetrics(kind, image.width);
-  return framedBox(image, kind, width / (image.width + 2 * ring), cornerRadius);
+  return {
+    ...framedBox(image, kind, width / (image.width + 2 * ring), cornerRadius),
+    device: null,
+  };
 }
 
 function scalePart<T extends DevicePart>(part: T, scale: number): T {
