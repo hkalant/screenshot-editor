@@ -535,21 +535,32 @@ case_check_live() {
   # (server_pids is not local: the trap runs after the function has returned.)
   server_pids=()
   trap 'kill "${server_pids[@]}" 2> /dev/null || true' EXIT
+  # The site with icons and a link preview image, named in the home page's head.
+  local checked="$work/checked"
+  mkdir -p "$checked"
+  cp -R "$site/." "$checked/"
+  printf '<svg xmlns="http://www.w3.org/2000/svg"/>\n' > "$checked/icon.svg"
+  printf 'png\n' > "$checked/icon2.png"
+  printf 'png\n' > "$checked/opengraph-image.png"
+  local head='<link rel="icon" href="/'"$sub"'/icon.svg?icon.1.svg" sizes="any" type="image/svg+xml"/><link rel="icon" href="/'"$sub"'/icon2.png?icon2.1.png" sizes="32x32" type="image/png"/><meta property="og:image" content="https://example.com/'"$sub"'/opengraph-image.png?og.1.png"/><meta name="twitter:image" content="https://example.com/'"$sub"'/opengraph-image.png?og.1.png"/>'
+  sed -i.bak "s#<head>#<head>$head#" "$checked/index.html" && rm "$checked/index.html.bak"
   live="$work/live/$sub"
   mkdir -p "$live"
-  cp -R "$site/." "$live/"
+  cp -R "$checked/." "$live/"
   printf '%s\n' "$version_json" > "$live/version.json"
 
   # The app's own strict static server stands in for Bitbucket.
   port="$(free_port)"
   node "$scripts/static-server.mjs" --dir "$live" --base "/$sub" --port "$port" > "$work/logs/static-server.log" 2>&1 &
   server_pids+=($!)
-  # A host that serves everything except the top index.html as application/octet-stream.
+  # A host that serves everything except the top index.html as application/octet-stream,
+  # and turns link preview bots away.
   wrong_port="$(free_port)"
   node -e '
     const http = require("http"), fs = require("fs"), path = require("path");
     const [root, base, port] = process.argv.slice(1);
     http.createServer((req, res) => {
+      if (/facebookexternalhit/.test(req.headers["user-agent"] || "")) { res.writeHead(403); res.end(); return; }
       let rel = decodeURIComponent(req.url.split("?")[0]);
       if (!rel.startsWith(base + "/")) { res.writeHead(404); res.end(); return; }
       rel = rel.slice(base.length + 1);
@@ -569,47 +580,69 @@ case_check_live() {
   # Everything in place: exit 0, and a summary with the URL and the results.
   : > "$GITHUB_STEP_SUMMARY"
   rc=0
-  env "${live_env[@]}" bash "$check_live" "$site" > "$last_output" 2>&1 || rc=$?
+  env "${live_env[@]}" bash "$check_live" "$checked" > "$last_output" 2>&1 || rc=$?
   sed 's/^/    | /' "$last_output"
   assert_eq "$rc" 0 "exit code for a complete site"
   assert_output_contains "All required checks passed"
   grep -qF "Live URL: http://127.0.0.1:$port/$sub/" "$GITHUB_STEP_SUMMARY" || fail "summary has no live URL"
   grep -qF "| Static files | PASS | all 4 " "$GITHUB_STEP_SUMMARY" || fail "summary does not list 4 static files"
+  for row in "GET /$sub/icon.svg | PASS | 200 image/svg+xml" "GET /$sub/icon2.png | PASS | 200 image/png" \
+    "GET /$sub/opengraph-image.png | PASS | 200 image/png" "GET /$sub/ as a link preview bot | PASS" \
+    "GET /$sub/opengraph-image.png as a link preview bot | PASS"; do
+    grep -qF "| $row" "$GITHUB_STEP_SUMMARY" || fail "summary has no row: $row"
+  done
   if grep -qF "| FAIL |" "$GITHUB_STEP_SUMMARY"; then
     fail "the summary reports a failed check"
   fi
 
   # Another commit is live: a warning, and exit 0.
   rc=0
-  env "${live_env[@]}" GITHUB_SHA="$sha2" bash "$check_live" "$site" > "$last_output" 2>&1 || rc=$?
+  env "${live_env[@]}" GITHUB_SHA="$sha2" bash "$check_live" "$checked" > "$last_output" 2>&1 || rc=$?
   sed 's/^/    | /' "$last_output"
   assert_eq "$rc" 0 "exit code when the new version never shows up"
   assert_output_contains "::warning title=Site not live yet::"
 
   # A page, CSS and JavaScript with the wrong content type are hard failures.
   rc=0
-  env "${live_env[@]}" CHECK_LIVE_ORIGIN="http://127.0.0.1:$wrong_port" bash "$check_live" "$site" > "$last_output" 2>&1 || rc=$?
+  env "${live_env[@]}" CHECK_LIVE_ORIGIN="http://127.0.0.1:$wrong_port" bash "$check_live" "$checked" > "$last_output" 2>&1 || rc=$?
   sed 's/^/    | /' "$last_output"
   assert_eq "$rc" 1 "exit code for wrong content types"
   assert_output_contains "PASS  GET /$sub/: 200 text/html"
   assert_output_contains "::error::GET /$sub/editor/: expected 200 text/html, got 200 application/octet-stream"
   assert_output_contains "::error::GET /$sub/_next/static/chunks/app.css: expected text/css, got application/octet-stream"
   assert_output_contains "::error::GET /$sub/_next/static/chunks/app.js: expected a JavaScript content type, got application/octet-stream"
+  # Icons with the wrong type, and link preview bots turned away, are warnings only.
+  assert_output_contains "::warning::GET /$sub/icon.svg: expected image/svg+xml, got application/octet-stream"
+  assert_output_contains "::warning::GET /$sub/ as a link preview bot: expected 200 text/html, got 403"
+  assert_output_contains "::warning::GET /$sub/opengraph-image.png as a link preview bot: expected 200 and an image type, got 403"
+  if grep -qE "::error::GET /$sub/(icon|opengraph)" "$last_output"; then
+    fail "a wrong image type should not fail the check"
+  fi
 
   # A missing chunk is a hard failure.
   rm "$live/_next/static/chunks/app.css"
   rc=0
-  env "${live_env[@]}" bash "$check_live" "$site" > "$last_output" 2>&1 || rc=$?
+  env "${live_env[@]}" bash "$check_live" "$checked" > "$last_output" 2>&1 || rc=$?
   sed 's/^/    | /' "$last_output"
   assert_eq "$rc" 1 "exit code when a chunk is missing"
   assert_output_contains "::error::GET /$sub/_next/static/chunks/app.css: expected 200, got 404"
 
-  # A missing page is a hard failure, even when every static file loads.
+  # A missing icon or link preview image is a hard failure.
   cp "$site/_next/static/chunks/app.css" "$live/_next/static/chunks/app.css"
+  rm "$live/icon2.png" "$live/opengraph-image.png"
+  rc=0
+  env "${live_env[@]}" bash "$check_live" "$checked" > "$last_output" 2>&1 || rc=$?
+  sed 's/^/    | /' "$last_output"
+  assert_eq "$rc" 1 "exit code when an icon and the preview image are missing"
+  assert_output_contains "::error::GET /$sub/icon2.png: expected 200, got 404"
+  assert_output_contains "::error::GET /$sub/opengraph-image.png: expected 200, got 404"
+  cp "$checked/icon2.png" "$checked/opengraph-image.png" "$live/"
+
+  # A missing page is a hard failure, even when every static file loads.
   rm "$live/editor/index.html"
   : > "$GITHUB_STEP_SUMMARY"
   rc=0
-  env "${live_env[@]}" bash "$check_live" "$site" > "$last_output" 2>&1 || rc=$?
+  env "${live_env[@]}" bash "$check_live" "$checked" > "$last_output" 2>&1 || rc=$?
   sed 's/^/    | /' "$last_output"
   assert_eq "$rc" 1 "exit code when a page is missing"
   assert_output_contains "::error::GET /$sub/editor/: expected 200 text/html, got 404"
@@ -664,7 +697,7 @@ run_case "branch lookup error (exit 128) fails every attempt, never taken for an
 run_case "rejected push is retried and lands as one fast-forward commit" case_rejected_push_is_retried
 run_case "owner pushes during the deploy: no force push, their commit is kept" case_concurrent_owner_push_is_kept
 if command -v node > /dev/null && command -v curl > /dev/null; then
-  run_case "check-live.sh on local servers: pass, not live yet, wrong types, missing chunk, missing page" case_check_live
+  run_case "check-live.sh on local servers: pass, not live yet, wrong types, preview bots, missing chunk, icon, page" case_check_live
 else
   skipped=$((skipped + 1))
   echo "SKIP: check-live.sh against a local static server (needs node and curl)"

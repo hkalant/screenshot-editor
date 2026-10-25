@@ -8,7 +8,7 @@ import { NO_GUIDES, type CentreGuides } from "@/lib/render/snap";
 export const useGuides = create<CentreGuides>()(() => ({ ...NO_GUIDES }));
 
 // Brookes pink: a primary colour that stands out on most designs.
-const GUIDE_COLOR = "#d10373";
+export const GUIDE_COLOR = "#d10373";
 
 type Props = {
   canvas: Size;

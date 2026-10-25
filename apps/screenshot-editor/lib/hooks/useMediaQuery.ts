@@ -14,7 +14,13 @@ export function useMediaQuery(query: string): boolean {
     (onChange: () => void) => {
       const list = window.matchMedia(query);
       list.addEventListener("change", onChange);
-      return () => list.removeEventListener("change", onChange);
+      // WebKit can miss a change when the window is resized quickly, and the
+      // layout would then stay as it was; a resize checks again.
+      window.addEventListener("resize", onChange);
+      return () => {
+        list.removeEventListener("change", onChange);
+        window.removeEventListener("resize", onChange);
+      };
     },
     [query],
   );

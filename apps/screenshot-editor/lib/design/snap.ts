@@ -1,4 +1,4 @@
-import type { Point } from "./annotations";
+import type { Box, Point } from "./annotations";
 import { arrowCurve } from "./arrowShape";
 import type { Annotation } from "./schema";
 
@@ -114,4 +114,62 @@ export function arrowEndNear(
     ),
     distance,
   );
+}
+
+/** The lines a dragged second screenshot lined up on, in image widths. */
+export type AlignGuides = {
+  /** The ys horizontal lines mark: tops, middles or bottoms level. */
+  y: number[];
+  /** The xs vertical lines mark: centred across. */
+  x: number[];
+};
+
+// Lines this close (in image widths) count as level: rounding, not a gap.
+const LEVEL = 1e-6;
+
+/**
+ * Where a box `size` in size (a second screenshot) goes when dragged to
+ * `position` (its top-left): within `distance` of being level with `target`
+ * (tops, middles or bottoms), or of being centred on it across, it moves
+ * there. Each direction snaps on its own, to the nearest line (middles win a
+ * tie). The guides are every line it is then level on: a box as tall as the
+ * target is level at the top, middle and bottom at once.
+ */
+export function alignBox(
+  size: { width: number; height: number },
+  position: Point,
+  target: Box,
+  distance: number,
+): { position: Point; guides: AlignGuides } {
+  // `pairs` are an offset into the box and the line on the target it meets.
+  const along = (start: number, pairs: [number, number][]) => {
+    let snapped = start;
+    let best = distance;
+    let found = false;
+    for (const [offset, line] of pairs) {
+      const d = Math.abs(start + offset - line);
+      // Later pairs must be clearly closer: equal ones differ by rounding.
+      if (found ? d < best - LEVEL : d <= distance) {
+        snapped = line - offset;
+        best = d;
+        found = true;
+      }
+    }
+    const lines = found
+      ? pairs
+          .filter(([offset, line]) => Math.abs(snapped + offset - line) < LEVEL)
+          .map(([, line]) => line)
+      : [];
+    return { start: snapped, lines };
+  };
+  const y = along(position.y, [
+    [size.height / 2, target.y + target.height / 2],
+    [0, target.y],
+    [size.height, target.y + target.height],
+  ]);
+  const x = along(position.x, [[size.width / 2, target.x + target.width / 2]]);
+  return {
+    position: { x: x.start, y: y.start },
+    guides: { x: x.lines, y: y.lines },
+  };
 }

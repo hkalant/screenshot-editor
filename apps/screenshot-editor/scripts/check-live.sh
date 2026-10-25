@@ -6,7 +6,9 @@
 # Waits until <SITE_SUBFOLDER>/version.json shows GITHUB_SHA. If it never does, that is a
 # warning (Bitbucket may serve another branch, or need longer), not a failure. Once it is
 # live, the pages and every /_next/static/ file the local HTML references must load with
-# the right content type, or the script exits 1. A few more checks only print warnings.
+# the right content type, and the icons and link preview image the home page names must
+# load, or the script exits 1. A few more checks only print warnings, among them whether
+# link preview bots (iMessage, Slack, Facebook, X) can fetch the page and image.
 #
 # Environment:
 #   BITBUCKET_WORKSPACE   Bitbucket workspace ID; the site is https://<workspace>.bitbucket.io/.
@@ -53,13 +55,18 @@ site_url="$origin$sub_path"
 curl_opts=(--silent --show-error --connect-timeout 10 --max-time 30 --retry 3 --retry-delay 2 --retry-connrefused)
 
 # probe <GET|HEAD> <url>: sets status (000 when the request failed) and type (lowercase,
-# without parameters such as charset). Redirects are not followed.
+# without parameters such as charset). Redirects are not followed. When probe_agent is
+# set, it is sent as the User-Agent.
 status=""
 type=""
+probe_agent=""
 probe() {
   local args=("${curl_opts[@]}" --output /dev/null --write-out '%{http_code} %{content_type}')
   if [ "$1" = HEAD ]; then
     args+=(--head)
+  fi
+  if [ -n "$probe_agent" ]; then
+    args+=(--user-agent "$probe_agent")
   fi
   local out
   out="$(curl "${args[@]}" "$2" 2> /dev/null)" || true
@@ -187,6 +194,80 @@ done
 if [ "${#assets[@]}" -gt 0 ] && [ "$asset_failures" -eq 0 ]; then
   record PASS "Static files" "all ${#assets[@]} /_next/static/ files from the pages load with the right type"
 fi
+
+# The icons and the link preview image the home page names. Each must load; a wrong
+# content type is only a warning, as browsers often cope with one.
+# image_type <url>: the content types its extension may be served with.
+image_type() {
+  case "${1%%\?*}" in
+    *.svg) echo image/svg+xml ;;
+    *.png) echo image/png ;;
+    *.ico) echo "image/x-icon image/vnd.microsoft.icon" ;;
+    *.jpg | *.jpeg) echo image/jpeg ;;
+    *) echo "" ;;
+  esac
+}
+home_head="$(grep -oE '<(link|meta) [^>]*>' "$site_dir/index.html" || true)"
+mapfile -t icons < <(
+  printf '%s\n' "$home_head" |
+    { grep -E 'rel="(icon|shortcut icon|apple-touch-icon)"' || true; } |
+    sed -nE 's/.* href="([^"]+)".*/\1/p' | LC_ALL=C sort -u
+)
+mapfile -t preview_images < <(
+  printf '%s\n' "$home_head" |
+    { grep -E '(property|name)="(og|twitter):image"' || true; } |
+    sed -nE 's/.* content="([^"]+)".*/\1/p' | LC_ALL=C sort -u
+)
+if [ "${#icons[@]}" -eq 0 ]; then
+  record FAIL "Icons" "the home page names no icons"
+fi
+if [ "${#preview_images[@]}" -eq 0 ]; then
+  record FAIL "Link preview image" "the home page has no og:image"
+fi
+for image in "${icons[@]}" "${preview_images[@]}"; do
+  path="$image"
+  if [[ "$image" =~ ^https?://[^/]+ ]]; then
+    # Absolute, as og:image must be: it should name this site, then is checked here.
+    path="${image#"${BASH_REMATCH[0]}"}"
+    if [ -z "${CHECK_LIVE_ORIGIN:-}" ] && [ "${BASH_REMATCH[0]}" != "$origin" ]; then
+      record FAIL "$image" "names ${BASH_REMATCH[0]}, not $origin; link previews will look there"
+      continue
+    fi
+  fi
+  probe GET "$origin$path"
+  expected="$(image_type "$path")"
+  if [ "$status" != 200 ]; then
+    record FAIL "GET ${path%%\?*}" "expected 200, got $status"
+  elif [ -n "$expected" ] && [[ " $expected " != *" $type "* ]]; then
+    record WARN "GET ${path%%\?*}" "expected ${expected// / or }, got ${type:-(no content type)}"
+  else
+    record PASS "GET ${path%%\?*}" "200 $type"
+  fi
+done
+
+# Link previews (iMessage, Slack, Facebook, X) fetch the page and image as these bots. A
+# host that turns them away leaves links without a title or image: a warning.
+preview_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) facebookexternalhit/1.1 Facebot Twitterbot/1.0"
+probe_agent="$preview_agent"
+probe GET "$site_url"
+if [ "$status" = 200 ] && [ "$type" = text/html ]; then
+  record PASS "GET $sub_path as a link preview bot" "200 $type"
+else
+  record WARN "GET $sub_path as a link preview bot" "expected 200 text/html, got $status ${type:-(no content type)}; shared links may show no title or image"
+fi
+for image in "${preview_images[@]}"; do
+  path="$image"
+  if [[ "$image" =~ ^https?://[^/]+ ]]; then
+    path="${image#"${BASH_REMATCH[0]}"}"
+  fi
+  probe GET "$origin$path"
+  if [ "$status" = 200 ] && [[ "$type" == image/* ]]; then
+    record PASS "GET ${path%%\?*} as a link preview bot" "200 $type"
+  else
+    record WARN "GET ${path%%\?*} as a link preview bot" "expected 200 and an image type, got $status ${type:-(no content type)}; shared links may show no image"
+  fi
+done
+probe_agent=""
 
 # 3. Warnings only: things that matter less, or that depend on how Bitbucket serves files.
 mapfile -t payloads < <(find "$site_dir" -maxdepth 1 -type f -name '__next.*.txt' | LC_ALL=C sort)

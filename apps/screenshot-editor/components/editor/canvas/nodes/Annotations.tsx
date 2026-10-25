@@ -54,6 +54,8 @@ import {
 } from "@/lib/design/magnify";
 import { insetBox, type Rect as LayoutRect } from "@/lib/design/layout";
 import {
+  type AlignGuides,
+  alignBox,
   arrowEndNear,
   SNAP_DISTANCE,
   snapMove,
@@ -83,6 +85,7 @@ import { useEditorStore } from "@/lib/store/editor";
 import { useFrameFont } from "./Chrome";
 import { DeviceNode } from "./Device";
 import { FramedShot, shadowProps } from "./FramedShot";
+import { GUIDE_COLOR } from "./Guides";
 
 /** Marks annotation nodes, so a press on one picks it up instead of drawing. */
 const ANNOTATION_NAME = "annotation";
@@ -157,6 +160,8 @@ function setFrame(frame: SelectionFrame | null) {
 type Props = {
   /** The screenshot, relative to the shot. Annotations are placed from it. */
   image: LayoutRect;
+  /** The whole shot, frame or device included, in canvas px. */
+  outline: { width: number; height: number };
   /** The screenshot's pixels, which blur boxes blur. */
   source: LoadedImage;
   /** Where annotations can go (the whole canvas), in image widths. */
@@ -839,6 +844,7 @@ function placeShape(
 /** Steps, shapes and arrows over the screenshot, and the tools that add and edit them. */
 export function AnnotationsNode({
   image,
+  outline,
   source,
   area,
   zoom,
@@ -863,6 +869,8 @@ export function AnnotationsNode({
   const [draft, setDraft] = useState<Box | null>(null);
   /** The point a dragged annotation has snapped to, marked while it holds. */
   const [snapGuide, setSnapGuide] = useState<Point | null>(null);
+  /** The lines a dragged second screenshot lined up on, while it holds. */
+  const [alignGuides, setAlignGuides] = useState<AlignGuides | null>(null);
   const [arrowDraft, setArrowDraft] = useState<{
     start: Point;
     end: Point;
@@ -870,6 +878,13 @@ export function AnnotationsNode({
 
   // Lengths are in image widths; this turns them into canvas px.
   const unit = image.width;
+  // The main screenshot's whole outline, which a second one lines up with.
+  const shotBox: Box = {
+    x: -image.x / unit,
+    y: -image.y / unit,
+    width: outline.width / unit,
+    height: outline.height / unit,
+  };
   // Sizes (lines, steps, corners) follow the longer side instead, so a
   // portrait screenshot's annotations are as heavy as a landscape one's.
   const weight = unit * annotationWeight(image.height / image.width);
@@ -1108,15 +1123,22 @@ export function AnnotationsNode({
       const node = event.target;
       // Near a key point of another annotation, it lands exactly on it,
       // unless Alt is held.
+      const distance = SNAP_DISTANCE / (unit * zoom);
       const snapped = event.evt.altKey
         ? { position: { x: node.x() / unit, y: node.y() / unit }, target: null }
         : snapMove(
             annotation,
             { x: node.x() / unit, y: node.y() / unit },
             targetsBesides(annotation.id),
-            SNAP_DISTANCE / (unit * zoom),
+            distance,
           );
-      const at = snapped.position;
+      // A second screenshot not on a point lines up with the main one:
+      // level with it (tops, middles or bottoms), or centred across.
+      const aligned =
+        annotation.kind === "screenshot" && !event.evt.altKey && !snapped.target
+          ? alignBox(annotation, snapped.position, shotBox, distance)
+          : null;
+      const at = aligned?.position ?? snapped.position;
       let to: Point;
       if (annotation.kind === "step") {
         to = clampToArea(at, area);
@@ -1140,6 +1162,12 @@ export function AnnotationsNode({
           ? snapped.target
           : null,
       );
+      setAlignGuides(
+        aligned && {
+          x: to.x === at.x ? aligned.guides.x : [],
+          y: to.y === at.y ? aligned.guides.y : [],
+        },
+      );
       // Kept on the screenshot even when the stored position doesn't change.
       node.position({ x: to.x * unit, y: to.y * unit });
       useEditorStore.getState().moveAnnotation(annotation.id, to);
@@ -1147,6 +1175,7 @@ export function AnnotationsNode({
     onDragEnd: (event: KonvaEventObject<DragEvent>) => {
       event.cancelBubble = true;
       setSnapGuide(null);
+      setAlignGuides(null);
       stopMoving(annotation.id);
       setCursor(event.target, "grab");
     },
@@ -1539,6 +1568,46 @@ export function AnnotationsNode({
             )}
           </Group>
         ),
+      )}
+      {alignGuides && selected?.kind === "screenshot" && (
+        // Across both screenshots, a little beyond them.
+        <Group name={EXPORT_HIDDEN} listening={false}>
+          {(() => {
+            const over = 16 / zoom;
+            const line = { stroke: GUIDE_COLOR, strokeWidth: 1 / zoom };
+            const left = Math.min(shotBox.x, selected.x) * unit - over;
+            const right =
+              Math.max(shotBox.x + shotBox.width, selected.x + selected.width) *
+                unit +
+              over;
+            const top = Math.min(shotBox.y, selected.y) * unit - over;
+            const bottom =
+              Math.max(
+                shotBox.y + shotBox.height,
+                selected.y + selected.height,
+              ) *
+                unit +
+              over;
+            return (
+              <>
+                {alignGuides.y.map((y) => (
+                  <Line
+                    key={`y${y}`}
+                    points={[left, y * unit, right, y * unit]}
+                    {...line}
+                  />
+                ))}
+                {alignGuides.x.map((x) => (
+                  <Line
+                    key={`x${x}`}
+                    points={[x * unit, top, x * unit, bottom]}
+                    {...line}
+                  />
+                ))}
+              </>
+            );
+          })()}
+        </Group>
       )}
       {snapGuide && (
         // A ring and cross on the point it snapped to.

@@ -1,122 +1,290 @@
 /**
- * The welcome modal's picture: a screenshot in a browser frame on a brand
- * gradient, with the editor's annotations on it (a numbered step, a box, an
- * arrow and a magnifier). Drawn here so it stays sharp at any size.
+ * The welcome modal's picture: two screenshots on a stepped pink background,
+ * one in a browser frame and one in a phone, with the editor's tools on them
+ * (numbered steps, a box, an arrow, a blur, a magnifier and crop marks).
+ * Drawn here so it stays sharp at any size. app/opengraph-image.png is the
+ * same picture, for link previews.
  */
 export function TourIllustration({ className }: { className?: string }) {
   return (
     <svg
-      viewBox="0 0 560 280"
+      viewBox="0 0 1040 680"
       className={className}
       role="img"
-      aria-label="A screenshot in a browser frame on a gradient, with an arrow, a box, a numbered step and a magnifier on it"
+      aria-label="Two screenshots, framed, annotated, blurred, magnified and cropped on a stepped pink background"
     >
       <defs>
-        <linearGradient id="tour-bg" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#d10373" />
-          <stop offset="0.55" stopColor="#e8566a" />
-          <stop offset="1" stopColor="#f9c909" />
-        </linearGradient>
-        <filter id="tour-shadow" x="-20%" y="-20%" width="140%" height="150%">
-          <feDropShadow
-            dx="0"
-            dy="14"
-            stdDeviation="14"
-            floodColor="#424a52"
-            floodOpacity="0.35"
-          />
+        <clipPath id="tour-canvas">
+          <rect width="1040" height="680" rx="6" />
+        </clipPath>
+        <clipPath id="tour-browser">
+          <rect x="56" y="64" width="620" height="440" rx="6" />
+        </clipPath>
+        <clipPath id="tour-field">
+          <rect x="85" y="325" width="298" height="38" rx="4" />
+        </clipPath>
+        <clipPath id="tour-loupe">
+          <circle cx="524" cy="560" r="80" />
+        </clipPath>
+        <filter id="tour-blurArea" x="-10%" y="-20%" width="120%" height="140%">
+          <feGaussianBlur stdDeviation="5" />
         </filter>
-        <clipPath id="tour-window">
-          <rect x="110" y="44" width="340" height="236" rx="12" />
-        </clipPath>
-        <clipPath id="tour-lens">
-          <circle cx="430" cy="196" r="44" />
-        </clipPath>
       </defs>
-
-      <rect width="560" height="280" fill="url(#tour-bg)" />
-      <circle cx="70" cy="40" r="90" fill="#ffffff" opacity="0.08" />
-      <circle cx="520" cy="270" r="120" fill="#ffffff" opacity="0.08" />
-
-      {/* The framed screenshot, running off the bottom edge. */}
-      <g filter="url(#tour-shadow)">
-        <rect x="110" y="44" width="340" height="260" rx="12" fill="#ffffff" />
-      </g>
-      <g clipPath="url(#tour-window)">
-        <rect x="110" y="44" width="340" height="30" fill="#eceded" />
-        <circle cx="128" cy="59" r="4.5" fill="#c70540" />
-        <circle cx="143" cy="59" r="4.5" fill="#f9c909" />
-        <circle cx="158" cy="59" r="4.5" fill="#006338" />
-        <rect x="180" y="52" width="200" height="14" rx="7" fill="#ffffff" />
-
-        {/* Page content */}
-        <rect x="130" y="92" width="120" height="12" rx="6" fill="#424a52" />
-        <rect x="130" y="114" width="190" height="8" rx="4" fill="#d9dbdc" />
-        <rect x="130" y="128" width="160" height="8" rx="4" fill="#d9dbdc" />
-        <rect x="130" y="152" width="92" height="64" rx="8" fill="#eceded" />
-        <rect x="232" y="152" width="92" height="64" rx="8" fill="#eceded" />
-        <rect x="334" y="152" width="96" height="64" rx="8" fill="#f2ced9" />
-        <rect x="344" y="166" width="54" height="8" rx="4" fill="#c70540" />
-        <rect x="344" y="182" width="72" height="6" rx="3" fill="#ffffff" />
-        <rect x="130" y="232" width="300" height="8" rx="4" fill="#d9dbdc" />
-        <rect x="130" y="246" width="240" height="8" rx="4" fill="#d9dbdc" />
-
-        {/* Annotations: a box round the title and a numbered step. */}
-        <rect
-          x="122"
-          y="84"
-          width="136"
-          height="28"
-          rx="6"
-          fill="none"
-          stroke="#d10373"
-          strokeWidth="3"
-        />
-      </g>
-      <circle cx="262" cy="84" r="13" fill="#d10373" />
-      <text
-        x="262"
-        y="84"
-        dy="0.35em"
-        textAnchor="middle"
-        fontSize="14"
-        fontWeight="700"
-        fill="#ffffff"
-        fontFamily="system-ui, sans-serif"
+      <g
+        clipPath="url(#tour-canvas)"
+        fontFamily="'Helvetica Neue', Helvetica, Arial, sans-serif"
       >
-        1
-      </text>
+        {/* Stepped background. */}
+        <rect x="0" y="0" width="208" height="680" fill="#6a2150" />
+        <rect x="208" y="0" width="208" height="680" fill="#d10373" />
+        <rect x="416" y="0" width="208" height="680" fill="#e368ab" />
+        <rect x="624" y="0" width="208" height="680" fill="#f6cde3" />
+        <rect x="832" y="0" width="208" height="680" fill="#fae5f1" />
 
-      {/* A curved arrow from the left margin to the cards. */}
-      <path
-        d="M52 210 Q 86 150 160 168"
-        fill="none"
-        stroke="#ffffff"
-        strokeWidth="6"
-        strokeLinecap="round"
-      />
-      <path d="M150 154 L 176 171 L 148 182 Z" fill="#ffffff" />
+        {/* Browser: shadow. */}
+        <rect x="72" y="80" width="620" height="440" rx="6" fill="#424a52" />
+        {/* Browser frame and page. */}
+        <g clipPath="url(#tour-browser)">
+          <rect x="56" y="64" width="620" height="440" fill="#ffffff" />
+          <rect x="56" y="64" width="620" height="40" fill="#eceded" />
+          <line
+            x1="56"
+            y1="103.5"
+            x2="676"
+            y2="103.5"
+            stroke="#d9dbdc"
+            strokeWidth="1"
+          />
+          <circle cx="77" cy="84" r="5" fill="#8e9297" />
+          <circle cx="93" cy="84" r="5" fill="#8e9297" />
+          <circle cx="109" cy="84" r="5" fill="#8e9297" />
+          <rect x="146" y="73" width="320" height="22" rx="4" fill="#ffffff" />
+          <rect x="158" y="81" width="140" height="6" rx="2" fill="#d9dbdc" />
 
-      {/* A magnifier showing the pink card up close. */}
-      <g clipPath="url(#tour-lens)">
-        <rect x="380" y="146" width="100" height="100" fill="#f2ced9" />
-        <rect x="388" y="172" width="92" height="14" rx="7" fill="#c70540" />
-        <rect x="388" y="200" width="120" height="10" rx="5" fill="#ffffff" />
+          <rect x="84" y="128" width="24" height="24" rx="4" fill="#424a52" />
+          <rect x="124" y="137" width="56" height="7" rx="2" fill="#d9dbdc" />
+          <rect x="192" y="137" width="56" height="7" rx="2" fill="#d9dbdc" />
+          <rect x="260" y="137" width="56" height="7" rx="2" fill="#d9dbdc" />
+
+          <rect x="84" y="180" width="340" height="20" rx="2" fill="#424a52" />
+          <rect x="84" y="210" width="240" height="20" rx="2" fill="#424a52" />
+          <rect x="84" y="250" width="420" height="10" rx="2" fill="#d9dbdc" />
+          <rect x="84" y="268" width="380" height="10" rx="2" fill="#d9dbdc" />
+
+          <g filter="url(#tour-blurArea)">
+            <text x="84" y="314" fontSize="13" fontWeight="600" fill="#424a52">
+              Email address
+            </text>
+            <rect
+              x="84.5"
+              y="324.5"
+              width="299"
+              height="39"
+              rx="4"
+              fill="#ffffff"
+              stroke="#8e9297"
+            />
+            <g clipPath="url(#tour-field)">
+              <text x="96" y="349" fontSize="15" fill="#000000">
+                jordan.lee@example.com
+              </text>
+            </g>
+            <text x="84" y="390" fontSize="13" fontWeight="600" fill="#424a52">
+              Display name
+            </text>
+            <rect
+              x="84.5"
+              y="400.5"
+              width="299"
+              height="39"
+              rx="4"
+              fill="#ffffff"
+              stroke="#8e9297"
+            />
+            <text x="96" y="425" fontSize="15" fill="#000000">
+              Jordan
+            </text>
+          </g>
+
+          <rect x="436" y="400" width="150" height="40" rx="4" fill="#f9c909" />
+          <text
+            x="511"
+            y="425"
+            fontSize="15"
+            fontWeight="600"
+            fill="#000000"
+            textAnchor="middle"
+          >
+            Save changes
+          </text>
+          <rect
+            x="425.5"
+            y="389.5"
+            width="171"
+            height="61"
+            rx="4.5"
+            fill="none"
+            stroke="#d10373"
+            strokeWidth="3"
+          />
+
+          <g
+            transform="translate(56 64)"
+            fill="none"
+            stroke="#000000"
+            strokeWidth="4"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M 588 142 Q 604 250 552 318" />
+            <path d="M 554 299 L 552 318 L 569 311" />
+          </g>
+        </g>
+        <rect
+          x="56.5"
+          y="64.5"
+          width="619"
+          height="439"
+          rx="5.5"
+          fill="none"
+          stroke="#d9dbdc"
+        />
+
+        {/* Magnifier. */}
+        <line
+          x1="511"
+          y1="442"
+          x2="524"
+          y2="478"
+          stroke="#424a52"
+          strokeWidth="3"
+          strokeLinecap="round"
+        />
+        <circle cx="524" cy="560" r="84" fill="#ffffff" />
+        <g clipPath="url(#tour-loupe)">
+          <rect x="412" y="527" width="224" height="66" rx="6" fill="#f9c909" />
+          <text
+            x="524"
+            y="570"
+            fontSize="28"
+            fontWeight="600"
+            fill="#000000"
+            textAnchor="middle"
+          >
+            Save changes
+          </text>
+        </g>
+        <circle
+          cx="524"
+          cy="560"
+          r="81.5"
+          fill="none"
+          stroke="#424a52"
+          strokeWidth="5"
+        />
+
+        {/* Phone: shadow, frame, screen. */}
+        <rect x="782" y="108" width="210" height="450" rx="34" fill="#424a52" />
+        <rect x="770" y="96" width="210" height="450" rx="34" fill="#000000" />
+        <rect x="780" y="106" width="190" height="430" rx="26" fill="#ffffff" />
+        <rect x="845" y="120" width="60" height="8" rx="4" fill="#d9dbdc" />
+        <rect x="796" y="148" width="120" height="16" rx="2" fill="#424a52" />
+        <rect x="796" y="176" width="90" height="8" rx="2" fill="#d9dbdc" />
+        <g fill="#d9dbdc">
+          <circle cx="810" cy="216" r="14" />
+          <circle cx="810" cy="258" r="14" />
+          <circle cx="810" cy="300" r="14" />
+          <circle cx="810" cy="342" r="14" />
+          <circle cx="810" cy="384" r="14" />
+          <rect x="834" y="220" width="64" height="6" rx="2" />
+          <rect x="834" y="262" width="70" height="6" rx="2" />
+          <rect x="834" y="304" width="58" height="6" rx="2" />
+          <rect x="834" y="346" width="66" height="6" rx="2" />
+          <rect x="834" y="388" width="52" height="6" rx="2" />
+        </g>
+        <g fill="#8e9297">
+          <rect x="834" y="206" width="96" height="8" rx="2" />
+          <rect x="834" y="248" width="84" height="8" rx="2" />
+          <rect x="834" y="290" width="104" height="8" rx="2" />
+          <rect x="834" y="332" width="76" height="8" rx="2" />
+          <rect x="834" y="374" width="92" height="8" rx="2" />
+        </g>
+        <rect x="796" y="484" width="158" height="36" rx="4" fill="#f9c909" />
+        <text
+          x="875"
+          y="507"
+          fontSize="13"
+          fontWeight="600"
+          fill="#000000"
+          textAnchor="middle"
+        >
+          Continue
+        </text>
+
+        {/* Crop marks. */}
+        <g fill="none" stroke="#000000" strokeWidth="4" strokeLinecap="square">
+          <path d="M756 108 V82 H782" />
+          <path d="M968 82 H994 V108" />
+          <path d="M756 534 V560 H782" />
+          <path d="M968 560 H994 V534" />
+        </g>
+
+        {/* Numbered markers. */}
+        <g fontSize="17" fontWeight="700" textAnchor="middle">
+          <g>
+            <circle
+              cx="414"
+              cy="344"
+              r="17"
+              fill="#f9c909"
+              stroke="#000000"
+              strokeWidth="2"
+            />
+            <text x="414" y="350" fill="#000000">
+              2
+            </text>
+          </g>
+          <g>
+            <circle
+              cx="614"
+              cy="504"
+              r="17"
+              fill="#f9c909"
+              stroke="#000000"
+              strokeWidth="2"
+            />
+            <text x="614" y="510" fill="#000000">
+              3
+            </text>
+          </g>
+          <g>
+            <circle
+              cx="754"
+              cy="562"
+              r="17"
+              fill="#f9c909"
+              stroke="#000000"
+              strokeWidth="2"
+            />
+            <text x="754" y="568" fill="#000000">
+              4
+            </text>
+          </g>
+          <g>
+            <circle
+              cx="56"
+              cy="64"
+              r="17"
+              fill="#f9c909"
+              stroke="#000000"
+              strokeWidth="2"
+            />
+            <text x="56" y="70" fill="#000000">
+              1
+            </text>
+          </g>
+        </g>
       </g>
-      <circle
-        cx="430"
-        cy="196"
-        r="44"
-        fill="none"
-        stroke="#ffffff"
-        strokeWidth="5"
-      />
-      <path
-        d="M462 228 L 490 256"
-        stroke="#ffffff"
-        strokeWidth="9"
-        strokeLinecap="round"
-      />
     </svg>
   );
 }
