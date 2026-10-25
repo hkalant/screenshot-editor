@@ -37,7 +37,8 @@ export function shortcutGroups(apple: boolean): ShortcutGroup[] {
         { keys: [shift, "Drag"], action: "Straight arrows and lines (45°)" },
         {
           keys: [apple ? "⌥" : "Alt", "Drag"],
-          action: "Move without snapping to other annotations",
+          action:
+            "Move without snapping to other annotations or the main screenshot",
         },
         { keys: [mod, "+"], action: "Zoom in" },
         { keys: [mod, "−"], action: "Zoom out" },

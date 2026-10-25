@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Annotation } from "./schema";
-import { snapMove, snapPoint, snapTargets } from "./snap";
+import { alignBox, snapMove, snapPoint, snapTargets } from "./snap";
 
 /** Points rounded clear of floating-point noise. */
 const round = (value: unknown): unknown =>
@@ -97,5 +97,59 @@ describe("snapMove", () => {
         target: null,
       },
     );
+  });
+});
+
+describe("alignBox", () => {
+  // The main screenshot's outline, and a phone beside it, taller than it.
+  const shot = { x: -0.1, y: -0.1, width: 1.2, height: 0.8 };
+  const phone = { width: 0.3, height: 0.9 };
+
+  it("lines the middles up when close", () => {
+    // The shot's middle is at 0.3; the phone's is at -0.13 + 0.45 = 0.32.
+    const result = alignBox(phone, { x: 1.2, y: -0.13 }, shot, 0.05);
+    expect(round(result)).toEqual({
+      position: { x: 1.2, y: -0.15 },
+      guides: { x: [], y: [0.3] },
+    });
+  });
+
+  it("lines up tops or bottoms", () => {
+    expect(round(alignBox(phone, { x: 1.2, y: -0.12 }, shot, 0.03))).toEqual({
+      position: { x: 1.2, y: -0.1 },
+      guides: { x: [], y: [-0.1] },
+    });
+    expect(round(alignBox(phone, { x: 1.2, y: -0.18 }, shot, 0.03))).toEqual({
+      position: { x: 1.2, y: -0.2 },
+      guides: { x: [], y: [0.7] },
+    });
+  });
+
+  it("marks every line that is level, for a box as tall as the shot", () => {
+    // Tops, middles and bottoms all line up at once.
+    const result = alignBox(
+      { width: 0.3, height: 0.8 },
+      { x: 1.2, y: -0.11 },
+      shot,
+      0.05,
+    );
+    expect(round(result)).toEqual({
+      position: { x: 1.2, y: -0.1 },
+      guides: { x: [], y: [0.3, -0.1, 0.7] },
+    });
+  });
+
+  it("centres it across, over the shot", () => {
+    expect(round(alignBox(phone, { x: 0.34, y: 2 }, shot, 0.02))).toEqual({
+      position: { x: 0.35, y: 2 },
+      guides: { x: [0.5], y: [] },
+    });
+  });
+
+  it("leaves it where it is when nothing is close", () => {
+    expect(alignBox(phone, { x: 1.2, y: 0.5 }, shot, 0.01)).toEqual({
+      position: { x: 1.2, y: 0.5 },
+      guides: { x: [], y: [] },
+    });
   });
 });

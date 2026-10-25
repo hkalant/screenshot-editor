@@ -291,3 +291,49 @@ test("a phone screenshot beside a laptop one goes in a phone, and each has its o
     mainFrame.getByRole("radio", { name: "macOS browser", exact: true }),
   ).toHaveAttribute("aria-checked", "true");
 });
+
+test("a second screenshot dragged near the main one's middle lines up with it, unless Alt is held", async ({
+  page,
+}) => {
+  await upload(page, makeSolidPng(IMAGE.width, IMAGE.height, RED));
+  // Over the right of the main one, 180 px tall: its middle is 90 px down,
+  // the main one's 150 px.
+  await addSecond(page, makeSolidPng(400, 300, [...BLUE]));
+  const box = await stage(page).boundingBox();
+  if (!box) throw new Error("No stage");
+  const scale = box.width / (IMAGE.width + 2 * PADDING);
+  // Dropped 4 screen px short of level.
+  const short = 4 / scale;
+  const drag = async (alt: boolean) => {
+    const from = await onImage(page, 0.85, 0.3);
+    const to = await onImage(page, 0.85, (150 - short) / IMAGE.height);
+    if (alt) await page.keyboard.down("Alt");
+    await page.mouse.move(from.x, from.y);
+    await page.mouse.down();
+    await page.mouse.move(to.x, to.y, { steps: 8 });
+    await page.mouse.up();
+    if (alt) await page.keyboard.up("Alt");
+  };
+
+  // Snapped: from 60 to 240 px down, centred on the main one's middle.
+  await drag(false);
+  const rows = (ys: number[]) =>
+    pixelsOnImage(
+      page,
+      ys.map((y) => [0.85, y / IMAGE.height]),
+    );
+  // Just outside it there's its shadow, not blue.
+  const notBlue = (pixel: number[]) => expect(pixel[2]).toBeLessThan(128);
+  const [above, top, bottom, below] = await rows([59, 61, 239, 241]);
+  notBlue(above);
+  expectColor(top, "#0000ff", 12);
+  expectColor(bottom, "#0000ff", 12);
+  notBlue(below);
+
+  // With Alt held it stays where it's dropped, 4 screen px higher.
+  await page.getByRole("button", { name: "Undo" }).click();
+  await drag(true);
+  const [altTop, altBottom] = await rows([61 - short, 239 - short + 2]);
+  expectColor(altTop, "#0000ff", 12);
+  notBlue(altBottom);
+});

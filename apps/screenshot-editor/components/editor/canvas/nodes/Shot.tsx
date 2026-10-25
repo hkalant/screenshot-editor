@@ -179,6 +179,7 @@ export function ShotNode({ image, shot, layout, zoom }: Props) {
       {body}
       <AnnotationsNode
         image={box.image}
+        outline={box}
         source={image}
         area={area}
         zoom={zoom}
