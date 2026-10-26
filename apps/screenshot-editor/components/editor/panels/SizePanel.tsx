@@ -235,7 +235,7 @@ function SizeFields({
           type="button"
           aria-pressed={locked}
           aria-label="Lock aspect ratio"
-          title="Lock aspect ratio"
+          data-tip="Lock aspect ratio"
           onClick={() => onLockedChange(!locked, size)}
           className={cn(
             "flex size-9 shrink-0 items-center justify-center rounded-md border text-muted-foreground outline-none hover:bg-accent focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid",

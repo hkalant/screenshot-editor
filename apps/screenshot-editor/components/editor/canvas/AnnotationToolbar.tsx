@@ -43,7 +43,6 @@ import { ingestFile } from "@/lib/image/ingest";
 import { takeCropPicture } from "@/lib/render/cropPicture";
 import { useAnimatedWidth } from "@/lib/hooks/useAnimatedWidth";
 import { currentPlatform, isApplePlatform } from "@/lib/platform";
-import { ToolbarTooltip } from "./ToolbarTooltip";
 import { ToolOptions } from "./ToolOptions";
 import { cn } from "@/lib/utils";
 import {
@@ -774,7 +773,6 @@ export function AnnotationToolbar() {
           )}
         </ToolOptions>
       </div>
-      <ToolbarTooltip toolbar={boxRef} />
     </div>
   );
 }

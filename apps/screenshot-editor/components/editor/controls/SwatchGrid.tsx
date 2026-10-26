@@ -66,7 +66,7 @@ export function SwatchGrid({
             <button
               key={swatch.id}
               type="button"
-              title={swatch.name}
+              data-tip={swatch.name}
               aria-label={swatch.name}
               aria-pressed={selected}
               onClick={() => onSelect(swatch.id)}

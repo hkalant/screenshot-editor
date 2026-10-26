@@ -45,7 +45,7 @@ export function CopyButton({ compact = false }: { compact?: boolean }) {
         aria-disabled={exporting || undefined}
         className="aria-disabled:opacity-50"
         aria-label="Copy image"
-        title={copied ? undefined : "Copy image"}
+        data-tip={copied ? undefined : "Copy image"}
       >
         <Copy aria-hidden />
         {!compact && (

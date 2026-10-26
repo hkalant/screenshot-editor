@@ -73,7 +73,7 @@ export function SelectionActions({ width, height }: Props) {
         <button
           type="button"
           aria-label={`Duplicate ${name}`}
-          title={`Duplicate ${name}`}
+          data-tip={`Duplicate ${name}`}
           onClick={(event) => {
             keepFocus(event.currentTarget);
             pasteAnnotation(selected);
@@ -86,7 +86,7 @@ export function SelectionActions({ width, height }: Props) {
       <button
         type="button"
         aria-label={`Delete ${name}`}
-        title={`Delete ${name}`}
+        data-tip={`Delete ${name}`}
         onClick={(event) => {
           keepFocus(event.currentTarget);
           removeAnnotation(selected.id);

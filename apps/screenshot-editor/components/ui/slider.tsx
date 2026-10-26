@@ -101,7 +101,7 @@ function Slider({
       <SliderPrimitive.Thumb
         data-slot="slider-thumb"
         aria-label={thumbLabel}
-        title={onReset ? "Double-click to reset" : undefined}
+        data-tip={onReset ? "Double-click to reset" : undefined}
         aria-keyshortcuts={onReset ? "Delete" : undefined}
         // After the second click's drag, so the reset has the last word.
         onDoubleClick={onReset}

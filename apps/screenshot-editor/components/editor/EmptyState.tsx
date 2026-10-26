@@ -34,7 +34,7 @@ const OPTIONS: { icon: LucideIcon; text: ReactNode }[] = [
         Paste a screenshot from your clipboard here with{" "}
         <span className="whitespace-nowrap">
           Ctrl/
-          <abbr title="Cmd" aria-label="Cmd" className="no-underline">
+          <abbr data-tip="Cmd" aria-label="Cmd" className="no-underline">
             ⌘
           </abbr>{" "}
           + V.

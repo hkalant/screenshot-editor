@@ -28,6 +28,7 @@ import { MobilePanel } from "./MobilePanel";
 import { MobileTabs } from "./MobileTabs";
 import { Notice } from "./Notice";
 import { ToolRail } from "./ToolRail";
+import { Tooltips } from "./Tooltips";
 import { TopBar } from "./TopBar";
 import { Tour } from "./tour/Tour";
 import { SaveNameDialog } from "./SaveNameDialog";
@@ -142,6 +143,7 @@ export default function Editor() {
       </div>
       {!desktop && <MobileTabs />}
       <Notice />
+      <Tooltips />
       <Tour enabled={desktop && !phone} />
       <VideoDialog />
       <SaveNameDialog />

@@ -300,7 +300,7 @@ function StepCard({ index }: { index: number }) {
             size="icon"
             className="-mt-1.5 -mr-1.5 size-7"
             aria-label="Close tour"
-            title="Close tour"
+            data-tip="Close tour"
             onClick={end}
           >
             <X aria-hidden />

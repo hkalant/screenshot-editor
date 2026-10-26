@@ -156,7 +156,7 @@ function GradientControls({
             size="icon"
             className="size-6"
             aria-label="Swap colours"
-            title="Swap colours"
+            data-tip="Swap colours"
             onClick={swapGradientStops}
           >
             <ArrowsUpDownIcon />
