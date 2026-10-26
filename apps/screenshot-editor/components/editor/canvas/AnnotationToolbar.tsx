@@ -202,7 +202,11 @@ const subscribe = () => () => {};
 function AddScreenshotButton() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
-  const capturing = useEditorStore((state) => state.capturing);
+  // As for the pink button: not while a picker is open, nor while an image
+  // loads or the saved design is restored, which would replace this one.
+  const busy = useEditorStore(
+    (state) => state.capturing || state.loading || state.restoring,
+  );
   const canCapture = useSyncExternalStore(
     subscribe,
     canCaptureScreen,
@@ -227,7 +231,7 @@ function AddScreenshotButton() {
               label={label}
               hint={hint}
               aria-haspopup="menu"
-              disabled={capturing}
+              disabled={busy}
             >
               <ImagePlus aria-hidden />
             </ToolButton>
@@ -268,7 +272,7 @@ function AddScreenshotButton() {
           </PopoverContent>
         </Popover>
       ) : (
-        <ToolButton label={label} hint={hint} onClick={upload}>
+        <ToolButton label={label} hint={hint} disabled={busy} onClick={upload}>
           <ImagePlus aria-hidden />
         </ToolButton>
       )}
