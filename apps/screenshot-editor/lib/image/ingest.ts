@@ -1,5 +1,6 @@
 import { useEditorStore } from "@/lib/store/editor";
 import { IMAGE_MESSAGES, validateImageFile } from "./accept";
+import { CaptureCancelled, captureScreenFrame } from "./capture";
 import { ImageLoadError, loadImageFromBlob, type LoadedImage } from "./load";
 
 /** Where an incoming image goes: the screenshot, an uploaded background, or a second screenshot. */
@@ -98,4 +99,31 @@ export function ingestSample(
     },
     IMAGE_MESSAGES.sampleFailed,
   );
+}
+
+// One picker at a time, whichever button opened it.
+let capturing = false;
+
+/**
+ * Takes a screenshot through the browser's tab, window or screen picker and
+ * brings it in as a file would be: target "inset" adds it as the second
+ * screenshot. Closing the picker isn't an error. Call it straight from a
+ * click: the picker needs the gesture.
+ */
+export async function ingestScreenCapture(
+  target: IngestTarget = "shot",
+): Promise<void> {
+  if (capturing) return;
+  capturing = true;
+  let file: File;
+  try {
+    file = await captureScreenFrame();
+  } catch (error) {
+    if (!(error instanceof CaptureCancelled))
+      useEditorStore.getState().showError(IMAGE_MESSAGES.captureFailed);
+    return;
+  } finally {
+    capturing = false;
+  }
+  await ingestFile(file, target);
 }

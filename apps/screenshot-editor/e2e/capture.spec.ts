@@ -187,3 +187,73 @@ test("a capture asks first when it would clear annotations", async ({
   await expect.poll(() => captures(page)).toBe(2);
   await expect(dialog).toHaveCount(0);
 });
+
+const annotateTool = (page: import("@playwright/test").Page, name: string) =>
+  page
+    .getByRole("toolbar", { name: "Annotate" })
+    .getByRole("button", { name, exact: true });
+
+test("the second screenshot button's menu captures a second screenshot", async ({
+  page,
+}) => {
+  await upload(page, makeSolidPng(400, 300, [0, 128, 255, 255]));
+  const width = await stage(page).getAttribute("data-width");
+  await annotateTool(page, "Add second screenshot").click();
+  const menu = page.getByRole("menu", { name: "Add second screenshot" });
+  await expect(menu.getByRole("menuitem")).toHaveText([
+    "Upload screenshot",
+    "Capture screen",
+  ]);
+  await menu.getByRole("menuitem", { name: "Capture screen" }).click();
+  await expect(menu).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Delete second screenshot" }),
+  ).toBeVisible();
+  expect(await captures(page)).toBe(1);
+  // The main screenshot stays, so the canvas keeps its size.
+  await expect(stage(page)).toHaveAttribute("data-width", width ?? "");
+  await expect(page.getByTestId("notice")).toHaveCount(0);
+
+  // From now on the menu replaces it.
+  await annotateTool(page, "Replace second screenshot").click();
+  await expect(
+    page
+      .getByRole("menu", { name: "Replace second screenshot" })
+      .getByRole("menuitem"),
+  ).toHaveText(["Upload new screenshot", "Capture screen"]);
+});
+
+test("Upload screenshot in that menu opens the file picker", async ({
+  page,
+}) => {
+  await upload(page, makeSolidPng(400, 300, [0, 128, 255, 255]));
+  await annotateTool(page, "Add second screenshot").click();
+  const chooser = page.waitForEvent("filechooser");
+  await page.getByRole("menuitem", { name: "Upload screenshot" }).click();
+  await (
+    await chooser
+  ).setFiles({
+    name: "second.png",
+    mimeType: "image/png",
+    buffer: makeSolidPng(200, 150, [255, 0, 0, 255]),
+  });
+  await expect(
+    page.getByRole("button", { name: "Delete second screenshot" }),
+  ).toBeVisible();
+  expect(await captures(page)).toBe(0);
+});
+
+test("cancelling a second screenshot's capture adds nothing and shows no error", async ({
+  page,
+}) => {
+  await upload(page, makeSolidPng(400, 300, [0, 128, 255, 255]));
+  await page.evaluate(() => {
+    (window as unknown as { capture: { cancel: boolean } }).capture.cancel =
+      true;
+  });
+  await annotateTool(page, "Add second screenshot").click();
+  await page.getByRole("menuitem", { name: "Capture screen" }).click();
+  await expect.poll(() => captures(page)).toBe(1);
+  await expect(annotateTool(page, "Add second screenshot")).toBeVisible();
+  await expect(page.getByTestId("notice")).toHaveCount(0);
+});

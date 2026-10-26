@@ -7,13 +7,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { IMAGE_MESSAGES } from "@/lib/image/accept";
-import {
-  CaptureCancelled,
-  canCaptureScreen,
-  captureScreenFrame,
-} from "@/lib/image/capture";
-import { ingestFile } from "@/lib/image/ingest";
+import { canCaptureScreen } from "@/lib/image/capture";
+import { ingestScreenCapture } from "@/lib/image/ingest";
 import { useEditorStore } from "@/lib/store/editor";
 
 const subscribe = () => () => {};
@@ -62,11 +57,7 @@ export function CaptureButton({ compact = false }: { compact?: boolean }) {
     setCapturing(true);
     try {
       // Straight from the click: the picker needs the gesture.
-      const file = await captureScreenFrame();
-      await ingestFile(file);
-    } catch (error) {
-      if (!(error instanceof CaptureCancelled))
-        useEditorStore.getState().showError(IMAGE_MESSAGES.captureFailed);
+      await ingestScreenCapture();
     } finally {
       setCapturing(false);
     }
