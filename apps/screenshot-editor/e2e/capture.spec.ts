@@ -10,6 +10,9 @@ test.beforeEach(async ({ page }) => {
     const state = {
       stopped: false,
       cancel: false,
+      // While set, the picker stays open until release() is called.
+      hold: false,
+      release: () => {},
       calls: 0,
       focus: [] as string[],
     };
@@ -29,6 +32,8 @@ test.beforeEach(async ({ page }) => {
     // script didn't take in WebKit.
     const fake = async () => {
       state.calls += 1;
+      if (state.hold)
+        await new Promise<void>((resolve) => (state.release = resolve));
       if (state.cancel)
         throw new DOMException("Permission denied", "NotAllowedError");
       const canvas = document.createElement("canvas");
@@ -256,4 +261,29 @@ test("cancelling a second screenshot's capture adds nothing and shows no error",
   await expect.poll(() => captures(page)).toBe(1);
   await expect(annotateTool(page, "Add second screenshot")).toBeVisible();
   await expect(page.getByTestId("notice")).toHaveCount(0);
+});
+
+test("while a picker is open, both capture buttons are greyed out", async ({
+  page,
+}) => {
+  await upload(page, makeSolidPng(400, 300, [0, 128, 255, 255]));
+  await page.evaluate(() => {
+    (window as unknown as { capture: { hold: boolean } }).capture.hold = true;
+  });
+  await annotateTool(page, "Add second screenshot").click();
+  await page.getByRole("menuitem", { name: "Capture screen" }).click();
+  await expect.poll(() => captures(page)).toBe(1);
+  await expect(captureButton(page)).toBeDisabled();
+  await expect(annotateTool(page, "Add second screenshot")).toBeDisabled();
+
+  await page.evaluate(() =>
+    (
+      window as unknown as { capture: { release: () => void } }
+    ).capture.release(),
+  );
+  await expect(
+    page.getByRole("button", { name: "Delete second screenshot" }),
+  ).toBeVisible();
+  await expect(captureButton(page)).toBeEnabled();
+  await expect(annotateTool(page, "Replace second screenshot")).toBeEnabled();
 });

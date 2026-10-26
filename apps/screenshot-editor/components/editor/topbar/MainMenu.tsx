@@ -19,7 +19,11 @@ import {
 import { runCopy } from "@/lib/export/controller";
 import { canCopyImages } from "@/lib/export/exportImage";
 import { useTheme } from "@/lib/hooks/useTheme";
-import { selectActiveImage, useEditorStore } from "@/lib/store/editor";
+import {
+  selectActiveImage,
+  selectHasSecondScreenshot,
+  useEditorStore,
+} from "@/lib/store/editor";
 import { currentPlatform, isApplePlatform } from "@/lib/platform";
 import { nextThemePreference, THEME_LABELS } from "@/lib/theme";
 import { useTourStore } from "@/lib/tour/tour";
@@ -42,11 +46,7 @@ export function MainMenu({ onReplace }: { onReplace: () => void }) {
   const { preference, setPreference } = useTheme();
   const hasImage = useEditorStore((state) => !!selectActiveImage(state));
   // Replacing clears the annotations, and a second screenshot is one.
-  const hasSecond = useEditorStore((state) =>
-    state.design.annotations.some(
-      (annotation) => annotation.kind === "screenshot",
-    ),
-  );
+  const hasSecond = useEditorStore(selectHasSecondScreenshot);
   const loading = useEditorStore((state) => state.loading);
   const busy = useEditorStore((state) => state.loading || state.restoring);
   const canCopy = useSyncExternalStore(subscribe, canCopyImages, () => false);
