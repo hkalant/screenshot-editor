@@ -70,8 +70,19 @@ jobs:
       - name: Build the static site
         run: npm run build
 
+      # Usually under a minute, but the download sometimes stalls and would
+      # otherwise hold the job until its 30-minute limit. Each try gets 5 minutes.
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium firefox webkit
+        timeout-minutes: 17
+        run: |
+          for attempt in 1 2 3; do
+            if timeout 300 npx playwright install --with-deps chromium firefox webkit; then
+              exit 0
+            fi
+            echo "::warning::Installing the Playwright browsers failed or stalled (try $attempt of 3)."
+            sleep 10
+          done
+          exit 1
 
       - name: End-to-end tests
         run: npm run test:e2e
