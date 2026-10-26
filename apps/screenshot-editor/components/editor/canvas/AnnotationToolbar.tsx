@@ -17,13 +17,7 @@ import {
   Trash2,
   Upload,
 } from "lucide-react";
-import {
-  useRef,
-  useState,
-  useSyncExternalStore,
-  type ComponentProps,
-  type ReactNode,
-} from "react";
+import { useRef, useState, type ComponentProps, type ReactNode } from "react";
 import {
   ANNOTATION_COLOR_NAMES,
   ANNOTATION_COLORS,
@@ -41,16 +35,17 @@ import {
   type StepAnnotation,
 } from "@/lib/design/schema";
 import {
+  selectHasSecondScreenshot,
   selectSelectedAnnotation,
   useEditorStore,
   type AnnotationTool,
 } from "@/lib/store/editor";
 import { pasteAnnotation } from "@/lib/annotationClipboard";
 import { ACCEPT_ATTR } from "@/lib/image/accept";
-import { canCaptureScreen } from "@/lib/image/capture";
 import { ingestFile, ingestScreenCapture } from "@/lib/image/ingest";
 import { takeCropPicture } from "@/lib/render/cropPicture";
 import { useAnimatedWidth } from "@/lib/hooks/useAnimatedWidth";
+import { useCanCaptureScreen } from "@/lib/hooks/useCanCaptureScreen";
 import { currentPlatform, isApplePlatform } from "@/lib/platform";
 import { ToolOptions } from "./ToolOptions";
 import { cn } from "@/lib/utils";
@@ -192,8 +187,6 @@ function CropButton() {
   );
 }
 
-const subscribe = () => () => {};
-
 /**
  * Adds a second screenshot, or replaces the one there is. Where the browser
  * can capture the screen, a menu offers a capture besides a file; elsewhere
@@ -207,16 +200,8 @@ function AddScreenshotButton() {
   const busy = useEditorStore(
     (state) => state.capturing || state.loading || state.restoring,
   );
-  const canCapture = useSyncExternalStore(
-    subscribe,
-    canCaptureScreen,
-    () => false,
-  );
-  const added = useEditorStore((state) =>
-    state.design.annotations.some(
-      (annotation) => annotation.kind === "screenshot",
-    ),
-  );
+  const canCapture = useCanCaptureScreen();
+  const added = useEditorStore(selectHasSecondScreenshot);
   const label = added ? "Replace second screenshot" : "Add second screenshot";
   const hint = added
     ? "keeps its place and size"

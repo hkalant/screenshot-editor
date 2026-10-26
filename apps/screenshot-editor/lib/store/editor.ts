@@ -1870,5 +1870,11 @@ export const selectSelectedAnnotation = (
     : null;
 };
 
+/** Whether the design has a second screenshot (there is at most one). */
+export const selectHasSecondScreenshot = (state: EditorState): boolean =>
+  state.design.annotations.some(
+    (annotation) => annotation.kind === "screenshot",
+  );
+
 export const selectCanUndo = (state: EditorState) => state.past.length > 0;
 export const selectCanRedo = (state: EditorState) => state.future.length > 0;

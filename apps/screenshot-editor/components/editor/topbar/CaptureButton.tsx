@@ -1,17 +1,15 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { canCaptureScreen } from "@/lib/image/capture";
+import { useCanCaptureScreen } from "@/lib/hooks/useCanCaptureScreen";
 import { ingestScreenCapture } from "@/lib/image/ingest";
-import { useEditorStore } from "@/lib/store/editor";
-
-const subscribe = () => () => {};
+import { selectHasSecondScreenshot, useEditorStore } from "@/lib/store/editor";
 
 const PINK = "bg-(--obu-pink) text-white hover:bg-(--obu-pink)/85";
 
@@ -36,21 +34,13 @@ function CameraFilled() {
  */
 export function CaptureButton({ compact = false }: { compact?: boolean }) {
   const busy = useEditorStore((state) => state.loading || state.restoring);
-  const supported = useSyncExternalStore(
-    subscribe,
-    canCaptureScreen,
-    () => false,
-  );
+  const supported = useCanCaptureScreen();
   const capturing = useEditorStore((state) => state.capturing);
   const [confirming, setConfirming] = useState(false);
   const annotated = useEditorStore(
     (state) => state.design.annotations.length > 0,
   );
-  const hasSecond = useEditorStore((state) =>
-    state.design.annotations.some(
-      (annotation) => annotation.kind === "screenshot",
-    ),
-  );
+  const hasSecond = useEditorStore(selectHasSecondScreenshot);
 
   // Straight from the click: the picker needs the gesture.
   const capture = () => void ingestScreenCapture();

@@ -21,6 +21,7 @@ import type { FrameTheme } from "@/lib/render/frame";
 import type { FrameKind } from "@/lib/design/schema";
 import {
   selectActiveImage,
+  selectHasSecondScreenshot,
   selectSelectedAnnotation,
   selectShot,
   useEditorStore,
@@ -133,11 +134,7 @@ export function FrameOptions() {
   // are edited here; the theme stays shared.
   const selected = useEditorStore(selectSelectedAnnotation);
   const second = selected?.kind === "screenshot" ? selected : null;
-  const hasSecond = useEditorStore((state) =>
-    state.design.annotations.some(
-      (annotation) => annotation.kind === "screenshot",
-    ),
-  );
+  const hasSecond = useEditorStore(selectHasSecondScreenshot);
   const secondImage = useEditorStore((state) =>
     second ? state.images[second.imageId] : undefined,
   );
