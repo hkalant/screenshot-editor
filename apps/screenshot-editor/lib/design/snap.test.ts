@@ -146,6 +146,38 @@ describe("alignBox", () => {
     });
   });
 
+  it("goes to the nearest of the top, middle and bottom when several are close", () => {
+    // The phone's top, middle and bottom are 0.05 apart from the shot's.
+    const at = (y: number) => round(alignBox(phone, { x: 1.2, y }, shot, 0.1));
+    expect(at(-0.11)).toEqual({
+      position: { x: 1.2, y: -0.1 },
+      guides: { x: [], y: [-0.1] },
+    });
+    expect(at(-0.14)).toEqual({
+      position: { x: 1.2, y: -0.15 },
+      guides: { x: [], y: [0.3] },
+    });
+    expect(at(-0.19)).toEqual({
+      position: { x: 1.2, y: -0.2 },
+      guides: { x: [], y: [0.7] },
+    });
+  });
+
+  it("lines the middles up on a tie", () => {
+    // Halfway between the top and the middle being level.
+    expect(round(alignBox(phone, { x: 1.2, y: -0.125 }, shot, 0.1))).toEqual({
+      position: { x: 1.2, y: -0.15 },
+      guides: { x: [], y: [0.3] },
+    });
+  });
+
+  it("lines up down and across at once", () => {
+    expect(round(alignBox(phone, { x: 0.34, y: -0.11 }, shot, 0.02))).toEqual({
+      position: { x: 0.35, y: -0.1 },
+      guides: { x: [0.5], y: [-0.1] },
+    });
+  });
+
   it("leaves it where it is when nothing is close", () => {
     expect(alignBox(phone, { x: 1.2, y: 0.5 }, shot, 0.01)).toEqual({
       position: { x: 1.2, y: 0.5 },

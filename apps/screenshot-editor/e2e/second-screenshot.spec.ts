@@ -292,48 +292,59 @@ test("a phone screenshot beside a laptop one goes in a phone, and each has its o
   ).toHaveAttribute("aria-checked", "true");
 });
 
-test("a second screenshot dragged near the main one's middle lines up with it, unless Alt is held", async ({
-  page,
-}) => {
-  await upload(page, makeSolidPng(IMAGE.width, IMAGE.height, RED));
-  // Over the right of the main one, 180 px tall: its middle is 90 px down,
-  // the main one's 150 px.
-  await addSecond(page, makeSolidPng(400, 300, [...BLUE]));
-  const box = await stage(page).boundingBox();
-  if (!box) throw new Error("No stage");
-  const scale = box.width / (IMAGE.width + 2 * PADDING);
-  // Dropped 4 screen px short of level.
-  const short = 4 / scale;
-  const drag = async (alt: boolean) => {
-    const from = await onImage(page, 0.85, 0.3);
-    const to = await onImage(page, 0.85, (150 - short) / IMAGE.height);
-    if (alt) await page.keyboard.down("Alt");
-    await page.mouse.move(from.x, from.y);
-    await page.mouse.down();
-    await page.mouse.move(to.x, to.y, { steps: 8 });
-    await page.mouse.up();
-    if (alt) await page.keyboard.up("Alt");
-  };
+// Over the right of the main one, a second screenshot is 180 px tall and
+// starts at its top. Dropped 4 screen px off level with the main one's top,
+// middle or bottom, it lines up there, unless Alt is held.
+for (const { line, top, off } of [
+  { line: "top", top: 0, off: 1 },
+  { line: "middle", top: 60, off: -1 },
+  { line: "bottom", top: 120, off: 1 },
+]) {
+  test(`a second screenshot dragged near the main one's ${line} lines up with it, unless Alt is held`, async ({
+    page,
+  }) => {
+    await upload(page, makeSolidPng(IMAGE.width, IMAGE.height, RED));
+    await addSecond(page, makeSolidPng(400, 300, [...BLUE]));
+    const box = await stage(page).boundingBox();
+    if (!box) throw new Error("No stage");
+    const scale = box.width / (IMAGE.width + 2 * PADDING);
+    // Where its top is dropped, 4 screen px off level.
+    const dropped = top + (off * 4) / scale;
+    const drag = async (alt: boolean) => {
+      // Grabbed by its middle, 90 px down.
+      const from = await onImage(page, 0.85, 90 / IMAGE.height);
+      const to = await onImage(page, 0.85, (90 + dropped) / IMAGE.height);
+      if (alt) await page.keyboard.down("Alt");
+      await page.mouse.move(from.x, from.y);
+      await page.mouse.down();
+      await page.mouse.move(to.x, to.y, { steps: 8 });
+      await page.mouse.up();
+      if (alt) await page.keyboard.up("Alt");
+    };
+    // Blue just inside its top and bottom; just outside, where that's over
+    // the main one, its shadow, not blue.
+    const expectTopAt = async (at: number) => {
+      const inside = [at + 1.5, at + 178.5];
+      const outside = [at - 1.5, at + 181.5].filter(
+        (y) => y > 0 && y < IMAGE.height,
+      );
+      const pixels = await pixelsOnImage(
+        page,
+        [...inside, ...outside].map((y) => [0.85, y / IMAGE.height]),
+      );
+      for (const pixel of pixels.slice(0, inside.length))
+        expectColor(pixel, "#0000ff", 12);
+      for (const pixel of pixels.slice(inside.length))
+        expect(pixel[2]).toBeLessThan(128);
+    };
 
-  // Snapped: from 60 to 240 px down, centred on the main one's middle.
-  await drag(false);
-  const rows = (ys: number[]) =>
-    pixelsOnImage(
-      page,
-      ys.map((y) => [0.85, y / IMAGE.height]),
-    );
-  // Just outside it there's its shadow, not blue.
-  const notBlue = (pixel: number[]) => expect(pixel[2]).toBeLessThan(128);
-  const [above, top, bottom, below] = await rows([59, 61, 239, 241]);
-  notBlue(above);
-  expectColor(top, "#0000ff", 12);
-  expectColor(bottom, "#0000ff", 12);
-  notBlue(below);
+    // With Alt held it stays where it's dropped. (First, as the top snap
+    // leaves it where it was, with nothing to undo.)
+    await drag(true);
+    await expectTopAt(dropped);
 
-  // With Alt held it stays where it's dropped, 4 screen px higher.
-  await page.getByRole("button", { name: "Undo" }).click();
-  await drag(true);
-  const [altTop, altBottom] = await rows([61 - short, 239 - short + 2]);
-  expectColor(altTop, "#0000ff", 12);
-  notBlue(altBottom);
-});
+    await page.getByRole("button", { name: "Undo" }).click();
+    await drag(false);
+    await expectTopAt(top);
+  });
+}
