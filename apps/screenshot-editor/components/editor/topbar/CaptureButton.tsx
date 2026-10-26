@@ -1,6 +1,5 @@
 "use client";
 
-import { Camera } from "lucide-react";
 import { useState, useSyncExternalStore } from "react";
 import { Button } from "@/components/ui/button";
 import { IMAGE_MESSAGES } from "@/lib/image/accept";
@@ -14,6 +13,18 @@ import { useEditorStore } from "@/lib/store/editor";
 import { cn } from "@/lib/utils";
 
 const subscribe = () => () => {};
+
+/** Lucide's camera, filled, with the lens cut out to show the button. */
+function CameraFilled() {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <path
+        fillRule="evenodd"
+        d="M13.997 4a2 2 0 0 1 1.76 1.05l.486.9A2 2 0 0 0 18.003 7H20a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1.997a2 2 0 0 0 1.759-1.048l.489-.904A2 2 0 0 1 10.004 4zM12 9.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7"
+      />
+    </svg>
+  );
+}
 
 /**
  * Takes a screenshot of a tab, window or screen through the browser's picker
@@ -58,7 +69,7 @@ export function CaptureButton({ compact = false }: { compact?: boolean }) {
       aria-label="Take screenshot"
       title="Take screenshot"
     >
-      <Camera aria-hidden />
+      <CameraFilled />
     </Button>
   );
 }
