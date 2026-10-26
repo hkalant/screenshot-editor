@@ -124,6 +124,8 @@ export type EditorState = {
   loading: boolean;
   /** Reading the autosaved design on startup. */
   restoring: boolean;
+  /** The browser's screen picker is open, from either capture button. */
+  capturing: boolean;
   exporting: boolean;
   notice: Notice | null;
   /** Goes up with each second screenshot added, to show a hint about it. */
@@ -281,6 +283,7 @@ export type EditorState = {
   setMobilePanel: (panel: MobilePanelId | null) => void;
   setLoading: (loading: boolean) => void;
   setRestoring: (restoring: boolean) => void;
+  setCapturing: (capturing: boolean) => void;
   setExporting: (exporting: boolean) => void;
   setExportOptions: (patch: Partial<ExportOptions>) => void;
   showError: (message: string) => void;
@@ -562,6 +565,7 @@ export const useEditorStore = create<EditorState>()((set, get) => {
     mobilePanel: null,
     loading: false,
     restoring: false,
+    capturing: false,
     exporting: false,
     notice: null,
     insetHint: 0,
@@ -1789,6 +1793,7 @@ export const useEditorStore = create<EditorState>()((set, get) => {
     setMobilePanel: (panel) => set(() => ({ mobilePanel: panel })),
     setLoading: (loading) => set(() => ({ loading })),
     setRestoring: (restoring) => set(() => ({ restoring })),
+    setCapturing: (capturing) => set(() => ({ capturing })),
     setExporting: (exporting) => set(() => ({ exporting })),
     setExportOptions: (patch) =>
       set((state) => ({

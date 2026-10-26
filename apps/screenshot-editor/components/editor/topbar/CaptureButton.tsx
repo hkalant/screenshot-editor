@@ -41,7 +41,7 @@ export function CaptureButton({ compact = false }: { compact?: boolean }) {
     canCaptureScreen,
     () => false,
   );
-  const [capturing, setCapturing] = useState(false);
+  const capturing = useEditorStore((state) => state.capturing);
   const [confirming, setConfirming] = useState(false);
   const annotated = useEditorStore(
     (state) => state.design.annotations.length > 0,
@@ -52,16 +52,8 @@ export function CaptureButton({ compact = false }: { compact?: boolean }) {
     ),
   );
 
-  const capture = async () => {
-    if (capturing) return;
-    setCapturing(true);
-    try {
-      // Straight from the click: the picker needs the gesture.
-      await ingestScreenCapture();
-    } finally {
-      setCapturing(false);
-    }
-  };
+  // Straight from the click: the picker needs the gesture.
+  const capture = () => void ingestScreenCapture();
 
   if (!supported) return null;
   return (
@@ -72,7 +64,7 @@ export function CaptureButton({ compact = false }: { compact?: boolean }) {
           onClick={(event) => {
             if (annotated) return; // the popover asks first
             event.preventDefault();
-            void capture();
+            capture();
           }}
           disabled={busy || capturing}
           className={PINK}
@@ -116,7 +108,7 @@ export function CaptureButton({ compact = false }: { compact?: boolean }) {
             onClick={() => {
               setConfirming(false);
               // Straight from this click: the picker needs the gesture.
-              void capture();
+              capture();
             }}
           >
             <CameraFilled />

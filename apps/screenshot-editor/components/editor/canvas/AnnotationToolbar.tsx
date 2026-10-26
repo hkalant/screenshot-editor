@@ -202,6 +202,7 @@ const subscribe = () => () => {};
 function AddScreenshotButton() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
+  const capturing = useEditorStore((state) => state.capturing);
   const canCapture = useSyncExternalStore(
     subscribe,
     canCaptureScreen,
@@ -222,7 +223,12 @@ function AddScreenshotButton() {
       {canCapture ? (
         <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger asChild>
-            <ToolButton label={label} hint={hint} aria-haspopup="menu">
+            <ToolButton
+              label={label}
+              hint={hint}
+              aria-haspopup="menu"
+              disabled={capturing}
+            >
               <ImagePlus aria-hidden />
             </ToolButton>
           </PopoverTrigger>

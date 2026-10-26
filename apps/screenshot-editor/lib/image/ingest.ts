@@ -101,9 +101,6 @@ export function ingestSample(
   );
 }
 
-// One picker at a time, whichever button opened it.
-let capturing = false;
-
 /**
  * Takes a screenshot through the browser's tab, window or screen picker and
  * brings it in as a file would be: target "inset" adds it as the second
@@ -113,8 +110,10 @@ let capturing = false;
 export async function ingestScreenCapture(
   target: IngestTarget = "shot",
 ): Promise<void> {
+  // One picker at a time, whichever button opened it; both show it.
+  const { capturing, setCapturing } = useEditorStore.getState();
   if (capturing) return;
-  capturing = true;
+  setCapturing(true);
   let file: File;
   try {
     file = await captureScreenFrame();
@@ -123,7 +122,7 @@ export async function ingestScreenCapture(
       useEditorStore.getState().showError(IMAGE_MESSAGES.captureFailed);
     return;
   } finally {
-    capturing = false;
+    setCapturing(false);
   }
   await ingestFile(file, target);
 }
