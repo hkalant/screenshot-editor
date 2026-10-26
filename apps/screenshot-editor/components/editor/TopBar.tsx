@@ -2,6 +2,7 @@
 
 import { X } from "lucide-react";
 import { BrookesLogo } from "./BrookesLogo";
+import { CaptureButton } from "./topbar/CaptureButton";
 import { CopyButton } from "./topbar/CopyButton";
 import { ExportMenu } from "./topbar/ExportMenu";
 import { HistoryButtons } from "./topbar/HistoryButtons";
@@ -42,6 +43,7 @@ export function TopBar({ onReplace }: Props) {
       </div>
       <div className="flex-1" />
       <CopyButton />
+      <CaptureButton />
       <div
         className="mx-1 h-5 w-px bg-border @max-[33rem]/bar:hidden"
         aria-hidden

@@ -3,6 +3,7 @@
 import { ImageUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { selectActiveImage, useEditorStore } from "@/lib/store/editor";
+import { CaptureButton } from "./topbar/CaptureButton";
 import { CopyButton } from "./topbar/CopyButton";
 import { ExportMenu } from "./topbar/ExportMenu";
 import { HelpMenu } from "./topbar/HelpMenu";
@@ -40,6 +41,7 @@ export function MobileBar({ onReplace }: Props) {
         </Button>
       )}
       <CopyButton compact />
+      <CaptureButton compact />
       <ExportMenu compact />
       <HelpMenu />
     </header>
