@@ -103,6 +103,31 @@ test("a second screenshot is added over the main one, replaced, and undone", asy
   await expect(tool(page, "Add second screenshot")).toBeVisible();
 });
 
+test("where the browser can't capture the screen, the button opens the file picker", async ({
+  page,
+}) => {
+  // As on phones.
+  await page.addInitScript(() => {
+    delete (MediaDevices.prototype as { getDisplayMedia?: unknown })
+      .getDisplayMedia;
+  });
+  await page.goto("./");
+  await upload(page, makeSolidPng(IMAGE.width, IMAGE.height, RED));
+  const chooser = page.waitForEvent("filechooser");
+  await tool(page, "Add second screenshot").click();
+  await (
+    await chooser
+  ).setFiles({
+    name: "second.png",
+    mimeType: "image/png",
+    buffer: makeSolidPng(400, 300, [...BLUE]),
+  });
+  await expect(
+    page.getByRole("button", { name: "Delete second screenshot" }),
+  ).toBeVisible();
+  await expect(page.getByRole("menu")).toHaveCount(0);
+});
+
 test("a second screenshot has its own address in the sidebar and is kept after a reload", async ({
   page,
 }) => {

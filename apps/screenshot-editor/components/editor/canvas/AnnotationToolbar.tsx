@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Camera,
   ChevronDown,
   Circle,
   CopyPlus,
@@ -14,8 +15,15 @@ import {
   ScanSearch,
   Search,
   Trash2,
+  Upload,
 } from "lucide-react";
-import { useRef, useState, type ReactNode } from "react";
+import {
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type ComponentProps,
+  type ReactNode,
+} from "react";
 import {
   ANNOTATION_COLOR_NAMES,
   ANNOTATION_COLORS,
@@ -39,7 +47,8 @@ import {
 } from "@/lib/store/editor";
 import { pasteAnnotation } from "@/lib/annotationClipboard";
 import { ACCEPT_ATTR } from "@/lib/image/accept";
-import { ingestFile } from "@/lib/image/ingest";
+import { canCaptureScreen } from "@/lib/image/capture";
+import { ingestFile, ingestScreenCapture } from "@/lib/image/ingest";
 import { takeCropPicture } from "@/lib/render/cropPicture";
 import { useAnimatedWidth } from "@/lib/hooks/useAnimatedWidth";
 import { currentPlatform, isApplePlatform } from "@/lib/platform";
@@ -54,38 +63,34 @@ import {
 import { Slider } from "@/components/ui/slider";
 
 const buttonClass =
-  "flex size-8 shrink-0 items-center justify-center rounded-sm text-foreground outline-none transition-colors hover:bg-accent focus-visible:outline-3 focus-visible:outline-solid focus-visible:outline-offset-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-40 aria-pressed:bg-(--tool-active) aria-pressed:shadow-[inset_0_0_0_1px_var(--tool-active-edge)] [&_svg]:size-4";
+  "flex size-8 shrink-0 items-center justify-center rounded-sm text-foreground outline-none transition-colors hover:bg-accent focus-visible:outline-3 focus-visible:outline-solid focus-visible:outline-offset-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-40 data-[state=open]:bg-accent aria-pressed:bg-(--tool-active) aria-pressed:shadow-[inset_0_0_0_1px_var(--tool-active-edge)] [&_svg]:size-4";
 
+/** Takes a popover trigger's props too, so it can open a menu. */
 function ToolButton({
   label,
   hint,
   pressed,
-  disabled,
-  onClick,
-  children,
+  ...props
 }: {
   label: string;
   /** More in the tooltip than the name. */
   hint?: string;
   pressed?: boolean;
-  disabled?: boolean;
-  onClick: () => void;
-  children: ReactNode;
-}) {
+} & ComponentProps<"button">) {
   return (
     <button
+      {...props}
       type="button"
       aria-label={label}
       data-tip={hint ? `${label} (${hint})` : label}
       aria-pressed={pressed}
-      disabled={disabled}
-      onClick={onClick}
       className={buttonClass}
-    >
-      {children}
-    </button>
+    />
   );
 }
+
+const menuItemClass =
+  "flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left text-sm transition-colors outline-none hover:bg-accent focus-visible:bg-accent aria-checked:font-medium [&_svg]:size-4";
 
 const Divider = () => (
   <span className="mx-0.5 h-5 w-px shrink-0 bg-border" aria-hidden />
@@ -187,23 +192,80 @@ function CropButton() {
   );
 }
 
-/** Adds a second screenshot, from a file, or replaces the one there is. */
+const subscribe = () => () => {};
+
+/**
+ * Adds a second screenshot, or replaces the one there is. Where the browser
+ * can capture the screen, a menu offers a capture besides a file; elsewhere
+ * (phones) the button opens the file picker.
+ */
 function AddScreenshotButton() {
   const inputRef = useRef<HTMLInputElement>(null);
+  const [open, setOpen] = useState(false);
+  const canCapture = useSyncExternalStore(
+    subscribe,
+    canCaptureScreen,
+    () => false,
+  );
   const added = useEditorStore((state) =>
     state.design.annotations.some(
       (annotation) => annotation.kind === "screenshot",
     ),
   );
+  const label = added ? "Replace second screenshot" : "Add second screenshot";
+  const hint = added
+    ? "keeps its place and size"
+    : "placed beside the main one";
+  const upload = () => inputRef.current?.click();
   return (
     <>
-      <ToolButton
-        label={added ? "Replace second screenshot" : "Add second screenshot"}
-        hint={added ? "keeps its place and size" : "placed beside the main one"}
-        onClick={() => inputRef.current?.click()}
-      >
-        <ImagePlus aria-hidden />
-      </ToolButton>
+      {canCapture ? (
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger asChild>
+            <ToolButton label={label} hint={hint} aria-haspopup="menu">
+              <ImagePlus aria-hidden />
+            </ToolButton>
+          </PopoverTrigger>
+          <PopoverContent
+            align="start"
+            // Icons in line with the button's, as in the shape menu.
+            alignOffset={-12}
+            className="w-auto p-2.5"
+            role="menu"
+            aria-label={label}
+          >
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setOpen(false);
+                upload();
+              }}
+              className={menuItemClass}
+            >
+              <Upload aria-hidden />
+              {added ? "Upload new screenshot" : "Upload screenshot"}
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setOpen(false);
+                // Straight from the click: the picker needs the gesture.
+                void ingestScreenCapture("inset");
+              }}
+              className={menuItemClass}
+            >
+              <Camera aria-hidden />
+              Capture screen
+            </button>
+          </PopoverContent>
+        </Popover>
+      ) : (
+        <ToolButton label={label} hint={hint} onClick={upload}>
+          <ImagePlus aria-hidden />
+        </ToolButton>
+      )}
       <input
         ref={inputRef}
         type="file"
@@ -346,7 +408,7 @@ function ToolMenu<T extends AnnotationTool>({
             role="menuitemradio"
             aria-checked={item.tool === current.tool}
             onClick={() => pick(item.tool)}
-            className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left text-sm transition-colors outline-none hover:bg-accent focus-visible:bg-accent aria-checked:font-medium [&_svg]:size-4"
+            className={menuItemClass}
           >
             {item.icon}
             {item.label}
