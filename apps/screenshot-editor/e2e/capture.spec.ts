@@ -42,16 +42,17 @@ test.beforeEach(async ({ page }) => {
       paint();
       const stream = canvas.captureStream(30);
       // A canvas stream only sends frames when the canvas changes.
-      const timer = setInterval(paint, 30);
-      for (const track of stream.getTracks()) {
-        const stop = track.stop.bind(track);
-        track.stop = () => {
-          state.stopped = true;
-          clearInterval(timer);
-          stop();
-        };
-      }
+      timer = window.setInterval(paint, 30);
       return stream;
+    };
+    // On the prototype, not the track: WebKit can hand the editor a new
+    // wrapper for the same track, without a stop set on the old one.
+    let timer: number | undefined;
+    const stop = MediaStreamTrack.prototype.stop;
+    MediaStreamTrack.prototype.stop = function () {
+      state.stopped = true;
+      window.clearInterval(timer);
+      stop.call(this);
     };
     Object.defineProperty(MediaDevices.prototype, "getDisplayMedia", {
       configurable: true,
