@@ -8,7 +8,9 @@ test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     const state = { stopped: false, cancel: false };
     (window as unknown as { capture: typeof state }).capture = state;
-    navigator.mediaDevices.getDisplayMedia = async () => {
+    // Set on the prototype: setting it on navigator.mediaDevices from an init
+    // script didn't take in WebKit.
+    const fake = async () => {
       if (state.cancel)
         throw new DOMException("Permission denied", "NotAllowedError");
       const canvas = document.createElement("canvas");
@@ -33,6 +35,10 @@ test.beforeEach(async ({ page }) => {
       }
       return stream;
     };
+    Object.defineProperty(MediaDevices.prototype, "getDisplayMedia", {
+      configurable: true,
+      value: fake,
+    });
   });
   await page.goto("./");
   await expectEmptyState(page);
