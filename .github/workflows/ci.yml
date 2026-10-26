@@ -36,6 +36,13 @@ jobs:
     name: Lint, test and build
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    # Playwright's image has the browsers and their system packages, so nothing comes from
+    # the runner's Ubuntu mirror, which has stalled the browser install for 30 minutes.
+    # Its version must match @playwright/test in package.json. As the runner's user, as
+    # Playwright's docs advise: Firefox won't run as root with another user's home.
+    container:
+      image: mcr.microsoft.com/playwright:v1.56.1-noble
+      options: --user 1001
     steps:
       - name: Check out
         uses: actions/checkout@v7
@@ -69,9 +76,6 @@ jobs:
 
       - name: Build the static site
         run: npm run build
-
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium firefox webkit
 
       - name: End-to-end tests
         run: npm run test:e2e

@@ -1,5 +1,6 @@
 import { expect, test } from "./helpers/fixtures";
-import { expectEmptyState, stage, useAutoSize } from "./helpers/editor";
+import { expectEmptyState, stage, upload, useAutoSize } from "./helpers/editor";
+import { makeSolidPng } from "./helpers/png";
 
 // The browser's own picker can't be driven from a test, so getDisplayMedia is
 // replaced with a canvas stream of a known size and colour. It records
@@ -9,6 +10,7 @@ test.beforeEach(async ({ page }) => {
     const state = {
       stopped: false,
       cancel: false,
+      calls: 0,
       focus: [] as string[],
     };
     // Records what the editor asks of the picker's focus switch.
@@ -26,6 +28,7 @@ test.beforeEach(async ({ page }) => {
     // Set on the prototype: setting it on navigator.mediaDevices from an init
     // script didn't take in WebKit.
     const fake = async () => {
+      state.calls += 1;
       if (state.cancel)
         throw new DOMException("Permission denied", "NotAllowedError");
       const canvas = document.createElement("canvas");
@@ -39,16 +42,17 @@ test.beforeEach(async ({ page }) => {
       paint();
       const stream = canvas.captureStream(30);
       // A canvas stream only sends frames when the canvas changes.
-      const timer = setInterval(paint, 30);
-      for (const track of stream.getTracks()) {
-        const stop = track.stop.bind(track);
-        track.stop = () => {
-          state.stopped = true;
-          clearInterval(timer);
-          stop();
-        };
-      }
+      timer = window.setInterval(paint, 30);
       return stream;
+    };
+    // On the prototype, not the track: WebKit can hand the editor a new
+    // wrapper for the same track, without a stop set on the old one.
+    let timer: number | undefined;
+    const stop = MediaStreamTrack.prototype.stop;
+    MediaStreamTrack.prototype.stop = function () {
+      state.stopped = true;
+      window.clearInterval(timer);
+      stop.call(this);
     };
     Object.defineProperty(MediaDevices.prototype, "getDisplayMedia", {
       configurable: true,
@@ -139,4 +143,47 @@ test("the screenshot button names itself in a tooltip on hover", async ({
 }) => {
   await captureButton(page).hover();
   await expect(page.getByTestId("tooltip")).toHaveText("Take screenshot");
+});
+
+const captures = (page: import("@playwright/test").Page) =>
+  page.evaluate(
+    () => (window as unknown as { capture: { calls: number } }).capture.calls,
+  );
+
+test("a capture over a plain screenshot replaces it without asking", async ({
+  page,
+}) => {
+  await upload(page, makeSolidPng(400, 300, [0, 128, 255, 255]));
+  await captureButton(page).click();
+  await expect.poll(() => captures(page)).toBe(1);
+  await expect(page.getByText("Replace the screenshot?")).toHaveCount(0);
+});
+
+test("a capture asks first when it would clear annotations", async ({
+  page,
+}) => {
+  await upload(page, makeSolidPng(400, 300, [0, 128, 255, 255]));
+  await page.getByTestId("second-screenshot-input").setInputFiles({
+    name: "second.png",
+    mimeType: "image/png",
+    buffer: makeSolidPng(200, 150, [255, 0, 0, 255]),
+  });
+  await captureButton(page).click();
+  const dialog = page.getByRole("dialog", { name: "Replace the screenshot?" });
+  await expect(dialog).toContainText(
+    "also clears the second screenshot and all annotations",
+  );
+  // Cancel keeps everything, and opens no picker.
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+  await expect(dialog).toHaveCount(0);
+  expect(await captures(page)).toBe(0);
+
+  await captureButton(page).click();
+  await dialog.getByRole("button", { name: "Capture screen" }).click();
+  await expect.poll(() => captures(page)).toBe(1);
+  await expect(dialog).toHaveCount(0);
+  // The second screenshot went with it, so the next capture doesn't ask.
+  await captureButton(page).click();
+  await expect.poll(() => captures(page)).toBe(2);
+  await expect(dialog).toHaveCount(0);
 });
