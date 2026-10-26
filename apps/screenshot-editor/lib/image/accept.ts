@@ -29,6 +29,7 @@ export const IMAGE_MESSAGES = {
   unreadable: "Couldn't read that image.",
   dropHint: "Drop a PNG, JPG or WebP file.",
   sampleFailed: "Couldn't load the sample image.",
+  captureFailed: "Couldn't take a screenshot.",
 } as const;
 
 type FileLike = { name: string; type: string; size?: number };
