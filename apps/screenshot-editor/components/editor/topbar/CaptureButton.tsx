@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useRef, useState, useSyncExternalStore } from "react";
 import { Button } from "@/components/ui/button";
 import { IMAGE_MESSAGES } from "@/lib/image/accept";
 import {
@@ -11,6 +11,7 @@ import {
 import { ingestFile } from "@/lib/image/ingest";
 import { useEditorStore } from "@/lib/store/editor";
 import { cn } from "@/lib/utils";
+import { ToolbarTooltip } from "../canvas/ToolbarTooltip";
 
 const subscribe = () => () => {};
 
@@ -39,6 +40,7 @@ export function CaptureButton({ compact = false }: { compact?: boolean }) {
     () => false,
   );
   const [capturing, setCapturing] = useState(false);
+  const wrapper = useRef<HTMLSpanElement>(null);
 
   const capture = async () => {
     if (capturing) return;
@@ -57,19 +59,23 @@ export function CaptureButton({ compact = false }: { compact?: boolean }) {
 
   if (!supported) return null;
   return (
-    <Button
-      size={compact ? "icon" : "bar-icon"}
-      onClick={() => void capture()}
-      disabled={busy || capturing}
-      className={cn(
-        "bg-(--obu-pink) text-white hover:bg-(--obu-pink)/85",
-        // As tall as Copy image beside it.
-        !compact && "size-7.5",
-      )}
-      aria-label="Take screenshot"
-      title="Take screenshot"
-    >
-      <CameraFilled />
-    </Button>
+    // The annotation toolbar's tooltip, which shows sooner than the browser's.
+    <span ref={wrapper} className="contents">
+      <Button
+        size={compact ? "icon" : "bar-icon"}
+        onClick={() => void capture()}
+        disabled={busy || capturing}
+        className={cn(
+          "bg-(--obu-pink) text-white hover:bg-(--obu-pink)/85",
+          // As tall as Copy image beside it.
+          !compact && "size-7.5",
+        )}
+        aria-label="Take screenshot"
+        data-tip="Take screenshot"
+      >
+        <CameraFilled />
+      </Button>
+      <ToolbarTooltip toolbar={wrapper} />
+    </span>
   );
 }

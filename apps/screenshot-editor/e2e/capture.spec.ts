@@ -6,7 +6,22 @@ import { expectEmptyState, stage, useAutoSize } from "./helpers/editor";
 // whether the stream was stopped.
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
-    const state = { stopped: false, cancel: false };
+    const state = {
+      stopped: false,
+      cancel: false,
+      focus: [] as string[],
+    };
+    // Records what the editor asks of the picker's focus switch.
+    const Controller = (
+      window as unknown as {
+        CaptureController?: {
+          prototype: { setFocusBehavior: (behavior: string) => void };
+        };
+      }
+    ).CaptureController;
+    if (Controller)
+      Controller.prototype.setFocusBehavior = (behavior) =>
+        state.focus.push(behavior);
     (window as unknown as { capture: typeof state }).capture = state;
     // Set on the prototype: setting it on navigator.mediaDevices from an init
     // script didn't take in WebKit.
@@ -92,4 +107,38 @@ test("the screenshot button sits between Copy image and Export", async ({
   const capture = labels.indexOf("Take screenshot");
   expect(labels[capture - 1]).toBe("Copy image");
   expect(labels[capture + 1]).toMatch(/Export/);
+});
+
+test("the editor stays in front after a tab is picked", async ({
+  page,
+  browserName,
+}) => {
+  test.skip(browserName !== "chromium", "Only Chrome has CaptureController");
+  await captureButton(page).click();
+  await expect(page.getByTestId("empty-state")).toHaveCount(0);
+  expect(
+    await page.evaluate(
+      () =>
+        (window as unknown as { capture: { focus: string[] } }).capture.focus,
+    ),
+  ).toEqual(["no-focus-change"]);
+});
+
+test("without ImageCapture the frame comes from a video", async ({ page }) => {
+  // As in Firefox and Safari.
+  await page.evaluate(() => {
+    delete (window as { ImageCapture?: unknown }).ImageCapture;
+  });
+  await captureButton(page).click();
+  await expect(page.getByTestId("empty-state")).toHaveCount(0);
+  await expect(page.getByTestId("notice")).toHaveCount(0);
+});
+
+test("the screenshot button names itself in a tooltip on hover", async ({
+  page,
+}) => {
+  await captureButton(page).hover();
+  await expect(page.getByTestId("toolbar-tooltip")).toHaveText(
+    "Take screenshot",
+  );
 });
