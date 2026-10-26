@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { createPortal } from "react-dom";
 
-// Tooltips for the annotation toolbar's buttons, named by their `data-tip`.
+// Tooltips for the annotation toolbar's buttons and the top bar's screenshot
+// button, named by their `data-tip`.
 // The browser's own (from `title`) wait a second or more, and don't show
 // while the toolbar grows under the pointer.
 

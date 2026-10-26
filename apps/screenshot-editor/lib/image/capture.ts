@@ -17,22 +17,20 @@ export class CaptureCancelled extends Error {
 // How long to wait for the first frame before giving up.
 const FRAME_TIMEOUT_MS = 5000;
 
-/** Resolves once the video shows a real frame (Chrome's first can be blank). */
-function waitForFrame(video: HTMLVideoElement): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const timer = window.setTimeout(
-      () => reject(new Error("No frame from the screen capture")),
-      FRAME_TIMEOUT_MS,
-    );
-    const done = () => {
-      window.clearTimeout(timer);
-      resolve();
-    };
-    // Safari before 15.4 has no requestVideoFrameCallback.
-    if (typeof video.requestVideoFrameCallback === "function")
-      video.requestVideoFrameCallback(() => done());
-    else video.addEventListener("loadeddata", done, { once: true });
-  });
+// Chrome's CaptureController and ImageCapture.grabFrame(), which TypeScript's
+// DOM types don't have yet.
+type FocusController = {
+  setFocusBehavior: (
+    behavior: "focus-captured-surface" | "no-focus-change",
+  ) => void;
+};
+type FrameGrabber = { grabFrame: () => Promise<ImageBitmap> };
+
+function createController(): FocusController | undefined {
+  const Controller = (
+    window as unknown as { CaptureController?: new () => FocusController }
+  ).CaptureController;
+  return Controller ? new Controller() : undefined;
 }
 
 /**
@@ -41,11 +39,13 @@ function waitForFrame(video: HTMLVideoElement): Promise<void> {
  * nothing is recorded. Must be called from a click.
  */
 export async function captureScreenFrame(): Promise<File> {
+  const controller = createController();
   let stream: MediaStream;
   try {
     stream = await navigator.mediaDevices.getDisplayMedia({
       video: true,
       audio: false,
+      controller,
       // Offer this tab too, and no switching or audio controls: it's one frame.
       selfBrowserSurface: "include",
       surfaceSwitching: "exclude",
@@ -56,23 +56,20 @@ export async function captureScreenFrame(): Promise<File> {
       throw new CaptureCancelled();
     throw error;
   }
-
-  const video = document.createElement("video");
+  // Chrome brings a shared tab or window to the front, which puts the editor
+  // in the background. Stay here instead: the screenshot opens in the editor.
+  // Only allowed straight after the picker closes, and only for a tab or a
+  // window, so a refusal is fine.
   try {
-    video.muted = true;
-    video.playsInline = true;
-    video.srcObject = stream;
-    const frame = waitForFrame(video);
-    await video.play();
-    await frame;
-    const { videoWidth: width, videoHeight: height } = video;
-    if (!width || !height) throw new Error("Empty screen capture");
-    const canvas = document.createElement("canvas");
-    canvas.width = width;
-    canvas.height = height;
-    canvas.getContext("2d")?.drawImage(video, 0, 0);
+    controller?.setFocusBehavior("no-focus-change");
+  } catch {
+    // A whole screen, or an older browser.
+  }
+
+  try {
+    const canvas = await grabFrame(stream);
     // Stop before encoding, so the browser's "sharing" bar goes at once.
-    stopStream(stream, video);
+    stopStream(stream);
     const blob = await new Promise<Blob | null>((resolve) =>
       canvas.toBlob(resolve, "image/png"),
     );
@@ -81,11 +78,82 @@ export async function captureScreenFrame(): Promise<File> {
     // A generic name, as for a paste, so the export gets a dated one.
     return new File([blob], "image.png", { type: "image/png" });
   } finally {
-    stopStream(stream, video);
+    stopStream(stream);
   }
 }
 
-function stopStream(stream: MediaStream, video: HTMLVideoElement) {
+/**
+ * The stream's current frame, on a canvas. Works while this tab is in the
+ * background, where frame callbacks don't run: ImageCapture where there is
+ * one (Chrome), else a video element's first decoded frame.
+ */
+async function grabFrame(stream: MediaStream): Promise<HTMLCanvasElement> {
+  const [track] = stream.getVideoTracks();
+  if (!track) throw new Error("No video in the screen capture");
+  const Capture = (
+    window as unknown as {
+      ImageCapture?: new (track: MediaStreamTrack) => FrameGrabber;
+    }
+  ).ImageCapture;
+  if (Capture) {
+    try {
+      const bitmap = await new Capture(track).grabFrame();
+      try {
+        return toCanvas(bitmap, bitmap.width, bitmap.height);
+      } finally {
+        bitmap.close();
+      }
+    } catch {
+      // Fall back to the video element below.
+    }
+  }
+  const video = document.createElement("video");
+  video.muted = true;
+  video.playsInline = true;
+  video.srcObject = stream;
+  try {
+    const frame = waitForData(video);
+    await video.play();
+    await frame;
+    return toCanvas(video, video.videoWidth, video.videoHeight);
+  } finally {
+    video.srcObject = null;
+  }
+}
+
+/** Resolves once the video has a frame to draw. Media events still fire in a background tab. */
+function waitForData(video: HTMLVideoElement): Promise<void> {
+  if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA)
+    return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const timer = window.setTimeout(
+      () => reject(new Error("No frame from the screen capture")),
+      FRAME_TIMEOUT_MS,
+    );
+    video.addEventListener(
+      "loadeddata",
+      () => {
+        window.clearTimeout(timer);
+        resolve();
+      },
+      { once: true },
+    );
+  });
+}
+
+function toCanvas(
+  source: CanvasImageSource,
+  width: number,
+  height: number,
+): HTMLCanvasElement {
+  if (!width || !height) throw new Error("Empty screen capture");
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  canvas.getContext("2d")?.drawImage(source, 0, 0);
+  return canvas;
+}
+
+function stopStream(stream: MediaStream) {
   for (const track of stream.getTracks()) track.stop();
-  video.srcObject = null;
 }
