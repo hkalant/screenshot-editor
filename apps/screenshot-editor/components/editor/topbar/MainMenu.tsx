@@ -81,7 +81,7 @@ export function MainMenu({ onReplace }: { onReplace: () => void }) {
           variant="ghost"
           size="bar-icon"
           aria-label="Menu"
-          title="Menu"
+          data-tip="Menu"
           data-tour="menu"
           className="data-[state=open]:bg-accent"
         >
@@ -213,7 +213,7 @@ export function MainMenu({ onReplace }: { onReplace: () => void }) {
               size="icon"
               className="-ml-1 size-7"
               aria-label="Back"
-              title="Back"
+              data-tip="Back"
               onClick={() => setView("menu")}
             >
               <ChevronLeft aria-hidden />

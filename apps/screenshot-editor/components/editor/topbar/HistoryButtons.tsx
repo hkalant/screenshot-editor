@@ -31,7 +31,7 @@ export function HistoryButtons() {
         onClick={undo}
         disabled={!canUndo}
         aria-label="Undo"
-        title={apple ? "Undo (⌘Z)" : "Undo (Ctrl+Z)"}
+        data-tip={apple ? "Undo (⌘Z)" : "Undo (Ctrl+Z)"}
       >
         <Undo2 aria-hidden />
       </Button>
@@ -41,7 +41,7 @@ export function HistoryButtons() {
         onClick={redo}
         disabled={!canRedo}
         aria-label="Redo"
-        title={apple ? "Redo (⇧⌘Z)" : "Redo (Ctrl+Y)"}
+        data-tip={apple ? "Redo (⇧⌘Z)" : "Redo (Ctrl+Y)"}
       >
         <Redo2 aria-hidden />
       </Button>

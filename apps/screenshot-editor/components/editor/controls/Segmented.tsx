@@ -42,7 +42,7 @@ export function Segmented<T extends string>({
             key={option.value}
             value={option.value}
             disabled={option.disabled}
-            title={option.title}
+            data-tip={option.title}
           >
             {option.label}
           </ToggleGroupItem>

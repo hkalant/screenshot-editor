@@ -29,7 +29,7 @@ export function ProjectItems({
           "disabled:pointer-events-none disabled:opacity-50",
         )}
         disabled={!hasImage || busy}
-        title="Download a file you can reopen to keep editing"
+        data-tip="Download a file you can reopen to keep editing"
         onClick={() => {
           onPick();
           void saveProject();

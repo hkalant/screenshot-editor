@@ -35,7 +35,7 @@ export function ZoomControls({
         size="icon"
         className="size-8"
         aria-label="Zoom out"
-        title="Zoom out"
+        data-tip="Zoom out"
         disabled={!canZoomOut}
         onClick={onZoomOut}
       >
@@ -54,7 +54,7 @@ export function ZoomControls({
         size="icon"
         className="size-8"
         aria-label="Zoom in"
-        title="Zoom in"
+        data-tip="Zoom in"
         disabled={!canZoomIn}
         onClick={onZoomIn}
       >
@@ -65,7 +65,7 @@ export function ZoomControls({
         size="icon"
         className="size-8"
         aria-label="Reset zoom"
-        title="Reset zoom"
+        data-tip="Reset zoom"
         disabled={!canReset}
         onClick={onReset}
       >

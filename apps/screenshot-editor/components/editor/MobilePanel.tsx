@@ -42,7 +42,7 @@ export function MobilePanel() {
           className="size-10"
           onClick={close}
           aria-label="Close panel"
-          title="Close panel"
+          data-tip="Close panel"
         >
           <X aria-hidden />
         </Button>

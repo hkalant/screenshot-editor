@@ -112,7 +112,7 @@ test("the toolbar's buttons name themselves in a tooltip on hover", async ({
   page,
 }) => {
   await upload(page, makeSolidPng(IMAGE.width, IMAGE.height, RED));
-  const tip = page.getByTestId("toolbar-tooltip");
+  const tip = page.getByTestId("tooltip");
   await tool(page, "Blur").hover();
   await expect(tip).toHaveText("Blur");
   // The next button's name shows straight away.

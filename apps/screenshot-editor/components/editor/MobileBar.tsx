@@ -35,7 +35,7 @@ export function MobileBar({ onReplace }: Props) {
           onClick={onReplace}
           disabled={loading}
           aria-label="Replace image"
-          title="Replace image"
+          data-tip="Replace image"
         >
           <ImageUp aria-hidden />
         </Button>

@@ -277,7 +277,7 @@ export function ShotHandle({ layout, scale, width, height }: Props) {
         ref={button}
         type="button"
         aria-label="Move screenshot"
-        title="Drag to move the screenshot"
+        data-tip="Drag to move the screenshot"
         onPointerDown={(event) => {
           if (event.button !== 0) return;
           event.preventDefault();

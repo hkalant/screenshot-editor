@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useSyncExternalStore } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { Button } from "@/components/ui/button";
 import { IMAGE_MESSAGES } from "@/lib/image/accept";
 import {
@@ -10,8 +10,6 @@ import {
 } from "@/lib/image/capture";
 import { ingestFile } from "@/lib/image/ingest";
 import { useEditorStore } from "@/lib/store/editor";
-import { cn } from "@/lib/utils";
-import { ToolbarTooltip } from "../canvas/ToolbarTooltip";
 
 const subscribe = () => () => {};
 
@@ -40,7 +38,6 @@ export function CaptureButton({ compact = false }: { compact?: boolean }) {
     () => false,
   );
   const [capturing, setCapturing] = useState(false);
-  const wrapper = useRef<HTMLSpanElement>(null);
 
   const capture = async () => {
     if (capturing) return;
@@ -59,23 +56,19 @@ export function CaptureButton({ compact = false }: { compact?: boolean }) {
 
   if (!supported) return null;
   return (
-    // The annotation toolbar's tooltip, which shows sooner than the browser's.
-    <span ref={wrapper} className="contents">
-      <Button
-        size={compact ? "icon" : "bar-icon"}
-        onClick={() => void capture()}
-        disabled={busy || capturing}
-        className={cn(
-          "bg-(--obu-pink) text-white hover:bg-(--obu-pink)/85",
-          // As tall as Copy image beside it.
-          !compact && "size-7.5",
-        )}
-        aria-label="Take screenshot"
-        data-tip="Take screenshot"
-      >
-        <CameraFilled />
-      </Button>
-      <ToolbarTooltip toolbar={wrapper} />
-    </span>
+    <Button
+      size={compact ? "icon" : "bar"}
+      onClick={() => void capture()}
+      disabled={busy || capturing}
+      className="bg-(--obu-pink) text-white hover:bg-(--obu-pink)/85"
+      aria-label="Capture screen"
+      data-tip="Take screenshot"
+    >
+      <CameraFilled />
+      {/* The icon alone where the bar is narrow, as for Copy image. */}
+      {!compact && (
+        <span className="hidden @min-[52rem]/bar:inline">Capture screen</span>
+      )}
+    </Button>
   );
 }

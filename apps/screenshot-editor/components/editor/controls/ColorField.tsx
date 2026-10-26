@@ -54,7 +54,7 @@ export function ColorField({
       >
         <PopoverTrigger
           aria-label={`${label}: ${value}`}
-          title={label}
+          data-tip={label}
           className="flex h-8 items-center gap-2 rounded-md border bg-background/70 px-1.5 pr-2.5 text-xs text-muted-foreground tabular-nums outline-none hover:bg-accent focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid"
         >
           <span

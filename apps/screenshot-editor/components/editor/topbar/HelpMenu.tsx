@@ -107,7 +107,7 @@ export function HelpMenu() {
           variant="ghost"
           size="icon"
           aria-label="More"
-          title="More"
+          data-tip="More"
           className="data-[state=open]:bg-accent"
         >
           <Ellipsis aria-hidden />

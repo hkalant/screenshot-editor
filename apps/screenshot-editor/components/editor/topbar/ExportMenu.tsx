@@ -186,7 +186,7 @@ function OriginalSection() {
           variant="outline"
           size="sm"
           className="w-full rounded-md"
-          title="The export and the original, as two files"
+          data-tip="The export and the original, as two files"
           disabled={!canExport || exporting}
           onClick={() => void runExportBoth()}
         >
@@ -246,7 +246,7 @@ export function ExportMenu({ compact = false }: { compact?: boolean }) {
     return (
       <Popover>
         <PopoverTrigger asChild>
-          <Button size="icon" aria-label="Export" title="Export">
+          <Button size="icon" aria-label="Export" data-tip="Export">
             <Download aria-hidden />
           </Button>
         </PopoverTrigger>
@@ -272,7 +272,7 @@ export function ExportMenu({ compact = false }: { compact?: boolean }) {
           <Button
             size="bar"
             aria-label="Export options"
-            title="Export options"
+            data-tip="Export options"
             className="rounded-l-none border-l border-primary-foreground/20 px-2"
           >
             <ChevronDown aria-hidden />

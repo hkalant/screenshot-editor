@@ -61,7 +61,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 const captureButton = (page: import("@playwright/test").Page) =>
-  page.getByRole("banner").getByRole("button", { name: "Take screenshot" });
+  page.getByRole("banner").getByRole("button", { name: "Capture screen" });
 
 test("taking a screenshot opens it in the editor and stops the capture", async ({
   page,
@@ -104,7 +104,7 @@ test("the screenshot button sits between Copy image and Export", async ({
         (button) => button.getAttribute("aria-label") ?? button.textContent,
       ),
     );
-  const capture = labels.indexOf("Take screenshot");
+  const capture = labels.indexOf("Capture screen");
   expect(labels[capture - 1]).toBe("Copy image");
   expect(labels[capture + 1]).toMatch(/Export/);
 });
@@ -138,7 +138,5 @@ test("the screenshot button names itself in a tooltip on hover", async ({
   page,
 }) => {
   await captureButton(page).hover();
-  await expect(page.getByTestId("toolbar-tooltip")).toHaveText(
-    "Take screenshot",
-  );
+  await expect(page.getByTestId("tooltip")).toHaveText("Take screenshot");
 });

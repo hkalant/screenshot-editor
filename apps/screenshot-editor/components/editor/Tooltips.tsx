@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState, type RefObject } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
-// Tooltips for the annotation toolbar's buttons and the top bar's screenshot
-// button, named by their `data-tip`.
-// The browser's own (from `title`) wait a second or more, and don't show
-// while the toolbar grows under the pointer.
+// The editor's tooltips: any element with a `data-tip` shows it on hover or
+// keyboard focus. Used instead of `title`, whose tooltips wait a second or
+// more, look different in every browser, and don't show while the annotation
+// toolbar grows under the pointer.
 
 /** How long the pointer rests on a button before its tooltip shows. */
 const DELAY = 300;
@@ -27,19 +27,14 @@ function tipFor(button: HTMLElement): Tip {
   };
 }
 
-/** Shows the tooltip of the button under the pointer, or with the keyboard focus, in `toolbar`. */
-export function ToolbarTooltip({
-  toolbar,
-}: {
-  toolbar: RefObject<HTMLElement | null>;
-}) {
+/** Shows the tooltip of the element under the pointer, or with the keyboard focus. Mounted once. */
+export function Tooltips() {
   const [tip, setTip] = useState<Tip | null>(null);
   const timer = useRef<number | undefined>(undefined);
   const box = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
-    const root = toolbar.current;
-    if (!root) return;
+    const root = document;
     let shown = false;
     const buttonIn = (target: EventTarget | null) =>
       target instanceof Element
@@ -89,7 +84,8 @@ export function ToolbarTooltip({
     // A press acts on the button: its name has done its job.
     root.addEventListener("pointerdown", hide);
     root.addEventListener("keydown", onKey);
-    root.addEventListener("scroll", hide);
+    // Scroll doesn't bubble: catch any scrolling element's.
+    root.addEventListener("scroll", hide, true);
     return () => {
       window.clearTimeout(timer.current);
       root.removeEventListener("pointerover", onOver);
@@ -98,9 +94,9 @@ export function ToolbarTooltip({
       root.removeEventListener("focusout", hide);
       root.removeEventListener("pointerdown", hide);
       root.removeEventListener("keydown", onKey);
-      root.removeEventListener("scroll", hide);
+      root.removeEventListener("scroll", hide, true);
     };
-  }, [toolbar]);
+  }, []);
 
   // Kept inside the window once its width is known.
   useEffect(() => {
@@ -118,9 +114,9 @@ export function ToolbarTooltip({
   return createPortal(
     <span
       ref={box}
-      // The buttons are named for assistive technology already.
+      // The elements are named for assistive technology already.
       aria-hidden
-      data-testid="toolbar-tooltip"
+      data-testid="tooltip"
       className="pointer-events-none fixed z-50 w-max max-w-64 -translate-x-1/2 rounded-md bg-foreground px-2.5 py-1.5 text-center text-xs font-medium text-background shadow-md"
       style={{
         left: tip.x,

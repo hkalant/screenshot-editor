@@ -150,7 +150,7 @@ export function AltTextSection() {
             variant="outline"
             size="sm"
             className="rounded-md"
-            title="Back to the suggestion"
+            data-tip="Back to the suggestion"
             aria-label="Back to the suggestion"
             onClick={() => setWritten(originalImageId(image.id), null)}
           >

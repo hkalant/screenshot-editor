@@ -47,7 +47,7 @@ export function VideoDialog() {
                 variant="ghost"
                 size="icon"
                 aria-label="Close video"
-                title="Close video"
+                data-tip="Close video"
               >
                 <X aria-hidden />
               </Button>

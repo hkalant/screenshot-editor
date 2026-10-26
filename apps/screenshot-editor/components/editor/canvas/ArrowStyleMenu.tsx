@@ -164,7 +164,7 @@ export function ArrowStyleMenu({ width, height }: Props) {
           role="radio"
           aria-checked={arrow.style === style}
           aria-label={styleLabel(style)}
-          title={styleLabel(style)}
+          data-tip={styleLabel(style)}
           onClick={(event) => {
             // Keep the keys on the canvas.
             event.currentTarget
