@@ -44,7 +44,6 @@ import { computeLayout, insetBox as framedInsetBox } from "@/lib/design/layout";
 import {
   BLUR,
   BORDER_WIDTH,
-  MAX_ALT_PURPOSE,
   MAX_ALT_TEXT,
   MAX_FRAME_TEXT,
   PADDING,
@@ -282,8 +281,6 @@ export type EditorState = {
    * undo step.
    */
   setAltText: (text: string | null) => void;
-  /** Sets the answer to "What should people notice?". Typing merges into one undo step. */
-  setAltPurpose: (purpose: string) => void;
 
   /** Replaces the design (an autosave restore). Clears the history. */
   loadDesign: (design: Design, images: LoadedImage[]) => void;
@@ -459,16 +456,9 @@ const PASTE_OFFSET = 0.02;
 const withoutAnnotations = (design: Design): Design =>
   design.annotations.length === 0 &&
   design.nextStep === 1 &&
-  design.altText === null &&
-  design.altPurpose === ""
+  design.altText === null
     ? design
-    : {
-        ...design,
-        annotations: [],
-        nextStep: 1,
-        altText: null,
-        altPurpose: "",
-      };
+    : { ...design, annotations: [], nextStep: 1, altText: null };
 
 function updateAnnotation(
   design: Design,
@@ -1785,15 +1775,6 @@ export const useEditorStore = create<EditorState>()((set, get) => {
               : { text: text.slice(0, MAX_ALT_TEXT), basis: altBasis(design) },
         }),
         "alt-text",
-      ),
-
-    setAltPurpose: (purpose) =>
-      commit(
-        (design) =>
-          design.altPurpose === purpose
-            ? null
-            : { ...design, altPurpose: purpose.slice(0, MAX_ALT_PURPOSE) },
-        "alt-purpose",
       ),
 
     loadDesign: (design, images) =>

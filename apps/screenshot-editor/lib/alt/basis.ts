@@ -5,8 +5,7 @@ import { frameSubject } from "./describe";
 // What the suggested alt text is written from: the annotations and the frame
 // (the device, or the page or window its text names). Written alt text keeps
 // the basis it was written over, so the editor can say when these have
-// changed since. What people should notice isn't part of it: that only shapes
-// the suggestion, and is set aside while the user writes their own.
+// changed since.
 
 /** A short fingerprint (FNV-1a, 32 bits) of `text`. Not for security. */
 function fingerprint(text: string): string {

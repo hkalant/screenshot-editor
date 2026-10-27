@@ -70,6 +70,10 @@ test("the export options suggest alt text from the annotations", async ({
     page.getByText(/^Suggested from the screenshot’s text/),
   ).toBeVisible({ timeout: 60_000 });
   await expect(field(page)).toHaveValue(/^A screen titled ‘ANML7006/);
+  // Every suggestion ends by pointing to the text below the image.
+  await expect(field(page)).toHaveValue(
+    /’\. Text alternative is provided below the image\.$/,
+  );
   await page.keyboard.press("Escape");
 
   // A step on the screenshot: the suggestion names it, never "screenshot of".
@@ -116,7 +120,7 @@ test("the export options suggest alt text from the annotations", async ({
   );
 });
 
-test("the suggestion names the page and says what people should notice", async ({
+test("the suggestion names the page from the frame's address", async ({
   page,
 }) => {
   test.slow();
@@ -131,22 +135,6 @@ test("the suggestion names the page and says what people should notice", async (
   await expect(field(page)).toHaveValue(
     /^A page at moodle\.ac\.uk\. Step 1 is /,
   );
-  const purpose = page.getByRole("textbox", {
-    name: "What should people notice? (optional)",
-  });
-  await purpose.fill("where to start the quiz");
-  await expect(field(page)).toHaveValue(
-    /^A page at moodle\.ac\.uk\. Where to start the quiz\. Step 1 is /,
-  );
-
-  // Kept with the design, and set aside while the user writes their own.
-  await page.keyboard.press("Escape");
-  await openOptions(page);
-  await expect(purpose).toHaveValue("where to start the quiz");
-  await field(page).fill("The quiz link.");
-  await expect(purpose).toHaveCount(0);
-  await page.getByRole("button", { name: "Back to the suggestion" }).click();
-  await expect(purpose).toHaveValue("where to start the quiz");
 });
 
 test("written alt text says when the annotations have changed since", async ({
@@ -178,7 +166,9 @@ test("written alt text says when the annotations have changed since", async ({
   await addStep(page, 3, 0.5);
   await openOptions(page);
   await page.getByRole("button", { name: "Use the new suggestion" }).click();
-  await expect(field(page)).toHaveValue(/^Step 1 .* Step 2 .* Step 3 /);
+  await expect(field(page)).toHaveValue(
+    /^Step 1 .* Step 2 .* Step 3 .*\. Text alternative is provided below the image\.$/,
+  );
   await expect(
     page.getByRole("button", { name: "Back to the suggestion" }),
   ).toHaveCount(0);
@@ -234,6 +224,9 @@ test.describe("when the text reader can't load", () => {
     await expect(
       page.getByText(/^Add steps, boxes or arrows for a suggestion/),
     ).toBeVisible({ timeout: 60_000 });
+    await expect(field(page)).toHaveValue(
+      "Text alternative is provided below the image.",
+    );
     await expect(
       page.getByRole("button", { name: "Read the text again" }),
     ).toHaveCount(0);

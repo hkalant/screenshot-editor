@@ -377,14 +377,6 @@ function opening(frame: FrameText | null, title: string | null): string {
   return title ? `A screen titled ${title}.` : "";
 }
 
-/** The user's answer to "What should people notice?", as a sentence. */
-function purposeSentence(purpose: string): string {
-  const text = purpose.trim().replace(/\s+/g, " ");
-  if (!text) return "";
-  const sentence = capitalised(text);
-  return /[.!?…]$/.test(sentence) ? sentence : `${sentence}.`;
-}
-
 /** ", of a page at moodle.ac.uk,": what a second screenshot's frame says it is. */
 function secondSubject(shot: ScreenshotAnnotation): string {
   const subject = frameSubject({
@@ -402,19 +394,21 @@ const DEVICE_NAMES: Record<DeviceKind, string> = {
   laptop: "a laptop",
 };
 
-/**
- * What the suggestion is written from besides the annotations: the frame
- * around the screenshot, and the user's answer to "What should people
- * notice?".
- */
-export type AltContext = { frame?: FrameText | null; purpose?: string };
+/** What the suggestion is written from besides the annotations. */
+export type AltContext = { frame?: FrameText | null };
+
+/** Every suggested alt text ends with this: the full text is given beside the image. */
+export const TEXT_BELOW = "Text alternative is provided below the image.";
+
+/** The suggestion with `TEXT_BELOW` after it, or `TEXT_BELOW` alone. */
+export const withTextBelow = (suggestion: string) =>
+  [suggestion, TEXT_BELOW].filter(Boolean).join(" ");
 
 /**
  * The suggested alt text. It opens with what the screenshot is (the page or
- * window its frame names, and the title found in it), then what people
- * should notice, as the user put it. Then the steps, in number order, and
- * the other annotations from the top down, each naming the text it marks and
- * the list or bar that text is in. A device frame comes first ("On a
+ * window its frame names, and the title found in it), then the steps, in
+ * number order, and the other annotations from the top down, each naming the
+ * text it marks and the list or bar that text is in. A device frame comes first ("On a
  * phone: …"), as that is often why it was chosen. `lines` is the
  * screenshot's text, or empty when it couldn't be read. Text that can't be
  * seen (under blur boxes, solid shapes and second screenshots) is never
@@ -424,7 +418,7 @@ export function describeAnnotations(
   annotations: readonly Annotation[],
   aspect: number,
   lines: readonly FoundLine[],
-  { frame = null, purpose = "" }: AltContext = {},
+  { frame = null }: AltContext = {},
 ): string {
   const device = frame && isDeviceKind(frame.kind) ? frame.kind : null;
   // Private text stays private.
@@ -478,10 +472,9 @@ export function describeAnnotations(
   if (blurred.length > 1) rest.push(`${blurred.length} areas are blurred.`);
   else rest.push(...blurred);
 
-  // What the screenshot is and why, then what's marked in it.
+  // What the screenshot is, then what's marked in it.
   const text = [
     opening(device ? null : frame, titleOf(visible)),
-    purposeSentence(purpose),
     ...steps,
     ...rest,
   ]
