@@ -4,7 +4,11 @@ import { Check, Copy, RefreshCw, RotateCcw } from "lucide-react";
 import { useEffect, useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { isAltCurrent } from "@/lib/alt/basis";
-import { describeAnnotations, type FoundLine } from "@/lib/alt/describe";
+import {
+  describeAnnotations,
+  type FoundLine,
+  withTextBelow,
+} from "@/lib/alt/describe";
 import { readText } from "@/lib/alt/ocr";
 import { imageAspect } from "@/lib/design/annotations";
 import { MAX_ALT_TEXT } from "@/lib/design/limits";
@@ -74,7 +78,7 @@ export function AltTextSection() {
     lines,
     { frame: design.layers[0].frame },
   );
-  const text = written?.text ?? suggestion;
+  const text = written?.text ?? withTextBelow(suggestion);
   const stale = written !== null && !isAltCurrent(design, written.basis);
   const marked = annotations.length > 0;
 

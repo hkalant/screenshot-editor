@@ -397,6 +397,13 @@ const DEVICE_NAMES: Record<DeviceKind, string> = {
 /** What the suggestion is written from besides the annotations. */
 export type AltContext = { frame?: FrameText | null };
 
+/** Every suggested alt text ends with this: the full text is given beside the image. */
+export const TEXT_BELOW = "Text alternative is provided below the image.";
+
+/** The suggestion with `TEXT_BELOW` after it, or `TEXT_BELOW` alone. */
+export const withTextBelow = (suggestion: string) =>
+  [suggestion, TEXT_BELOW].filter(Boolean).join(" ");
+
 /**
  * The suggested alt text. It opens with what the screenshot is (the page or
  * window its frame names, and the title found in it), then the steps, in

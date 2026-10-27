@@ -5,6 +5,8 @@ import {
   type FoundLine,
   type FrameText,
   frameSubject,
+  TEXT_BELOW,
+  withTextBelow,
 } from "./describe";
 
 // A screenshot 1 wide and 0.5 tall, with two lines of text.
@@ -58,6 +60,16 @@ describe("frameSubject", () => {
     );
     expect(frameSubject(frame("windows", "").frame)).toBeNull();
     expect(frameSubject(frame("none", "Mail", "a.com").frame)).toBeNull();
+  });
+});
+
+describe("withTextBelow", () => {
+  it("ends every suggestion with the pointer to the text below", () => {
+    expect(TEXT_BELOW).toBe("Text alternative is provided below the image.");
+    expect(withTextBelow("Step 1 marks ‘Assessment’.")).toBe(
+      "Step 1 marks ‘Assessment’. Text alternative is provided below the image.",
+    );
+    expect(withTextBelow("")).toBe(TEXT_BELOW);
   });
 });
 
