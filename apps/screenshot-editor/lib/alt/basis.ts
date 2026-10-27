@@ -1,9 +1,12 @@
 import { isDeviceKind } from "@/lib/design/devices";
 import type { Design } from "@/lib/design/schema";
+import { frameSubject } from "./describe";
 
-// What the suggested alt text is written from: the annotations and the device
-// the screenshot is shown on. Written alt text keeps the basis it was written
-// over, so the editor can say when the annotations have changed since.
+// What the suggested alt text is written from: the annotations and the frame
+// (the device, or the page or window its text names). Written alt text keeps
+// the basis it was written over, so the editor can say when these have
+// changed since. What people should notice isn't part of it: that only shapes
+// the suggestion, and is set aside while the user writes their own.
 
 /** A short fingerprint (FNV-1a, 32 bits) of `text`. Not for security. */
 function fingerprint(text: string): string {
@@ -17,10 +20,13 @@ function fingerprint(text: string): string {
 
 /** The basis of the design's suggested alt text. */
 export function altBasis(design: Design): string {
-  const { kind } = design.layers[0].frame;
-  return fingerprint(
-    JSON.stringify([design.annotations, isDeviceKind(kind) ? kind : null]),
-  );
+  const { frame } = design.layers[0];
+  const device = isDeviceKind(frame.kind) ? frame.kind : null;
+  const parts: unknown[] = [design.annotations, device];
+  // Only when named, so alt text written before frames counted stays current.
+  const subject = device ? null : frameSubject(frame);
+  if (subject) parts.push(subject);
+  return fingerprint(JSON.stringify(parts));
 }
 
 /** Whether alt text written over `basis` was written for the design as it is now. */

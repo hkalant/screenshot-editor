@@ -32,6 +32,34 @@ describe("altBasis", () => {
     expect(isAltCurrent(withFrame(design, "phone"), basis)).toBe(false);
   });
 
+  it("changes when the frame's title or address does", () => {
+    const design = withStep(createDefaultDesign(), 0.2);
+    const basis = altBasis(design);
+    const framed = (
+      kind: "macos" | "browser",
+      title: string,
+      url: string,
+    ): Design => ({
+      ...design,
+      layers: [
+        {
+          ...design.layers[0],
+          frame: { ...design.layers[0].frame, kind, title, url },
+        },
+      ],
+    });
+    expect(isAltCurrent(framed("macos", "Mail", ""), basis)).toBe(false);
+    expect(isAltCurrent(framed("browser", "", "moodle.ac.uk"), basis)).toBe(
+      false,
+    );
+    // An address the frame doesn't show says nothing.
+    expect(isAltCurrent(framed("macos", "", "moodle.ac.uk"), basis)).toBe(true);
+    // Nor does what people should notice: it only shapes the suggestion.
+    expect(isAltCurrent({ ...design, altPurpose: "The menu." }, basis)).toBe(
+      true,
+    );
+  });
+
   it("ignores what the suggestion doesn't say: window frames, styles", () => {
     const design = withStep(createDefaultDesign(), 0.2);
     const basis = altBasis(design);

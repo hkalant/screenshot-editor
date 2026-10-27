@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import type { Page } from "@playwright/test";
 import {
+  chooseFrame,
   confirmFileName,
   expectEmptyState,
   openStyleSections,
@@ -66,7 +67,7 @@ test("the export options suggest alt text from the annotations", async ({
   // Nothing marked yet: the page's title says what it shows.
   await openOptions(page);
   await expect(
-    page.getByText(/^Suggested from the screenshot’s title/),
+    page.getByText(/^Suggested from the screenshot’s text/),
   ).toBeVisible({ timeout: 60_000 });
   await expect(field(page)).toHaveValue(/^A screen titled ‘ANML7006/);
   await page.keyboard.press("Escape");
@@ -115,6 +116,39 @@ test("the export options suggest alt text from the annotations", async ({
   );
 });
 
+test("the suggestion names the page and says what people should notice", async ({
+  page,
+}) => {
+  test.slow();
+  await upload(page, makeSolidPng(1200, 750, RED), "Plain.png");
+  await chooseFrame(page, "macOS browser");
+  await page
+    .getByRole("textbox", { name: "Address", exact: true })
+    .fill("https://www.moodle.ac.uk/course/view.php?id=4");
+  await addStep(page, 1, 0.3);
+
+  await openOptions(page);
+  await expect(field(page)).toHaveValue(
+    /^A page at moodle\.ac\.uk\. Step 1 is /,
+  );
+  const purpose = page.getByRole("textbox", {
+    name: "What should people notice? (optional)",
+  });
+  await purpose.fill("where to start the quiz");
+  await expect(field(page)).toHaveValue(
+    /^A page at moodle\.ac\.uk\. Where to start the quiz\. Step 1 is /,
+  );
+
+  // Kept with the design, and set aside while the user writes their own.
+  await page.keyboard.press("Escape");
+  await openOptions(page);
+  await expect(purpose).toHaveValue("where to start the quiz");
+  await field(page).fill("The quiz link.");
+  await expect(purpose).toHaveCount(0);
+  await page.getByRole("button", { name: "Back to the suggestion" }).click();
+  await expect(purpose).toHaveValue("where to start the quiz");
+});
+
 test("written alt text says when the annotations have changed since", async ({
   page,
 }) => {
@@ -131,7 +165,9 @@ test("written alt text says when the annotations have changed since", async ({
   await openOptions(page);
   await expect(field(page)).toHaveValue("Where to start.");
   await expect(
-    page.getByText(/^The annotations have changed since you wrote this\./),
+    page.getByText(
+      /^The annotations or frame have changed since you wrote this\./,
+    ),
   ).toBeVisible();
   await page.getByRole("button", { name: "Keep mine" }).click();
   await expect(page.getByText(/^Your own wording\./)).toBeVisible();

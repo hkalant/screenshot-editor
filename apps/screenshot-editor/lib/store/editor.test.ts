@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { altBasis, isAltCurrent } from "@/lib/alt/basis";
 import { computeLayout } from "@/lib/design/layout";
-import { MAX_ALT_TEXT } from "@/lib/design/limits";
+import { MAX_ALT_PURPOSE, MAX_ALT_TEXT } from "@/lib/design/limits";
 import { referencedImageIds } from "@/lib/design/refs";
 import { createDefaultDesign, defaultShotStyle } from "@/lib/design/defaults";
 import { getGradientPreset } from "@/lib/design/gradients";
@@ -446,6 +446,22 @@ describe("editor store: alt text", () => {
     later();
     state().clearImage();
     expect(written()).toBeNull();
+  });
+
+  it("keeps what people should notice, capped, as one undo step", () => {
+    expect(state().design.altPurpose).toBe("");
+    state().setAltPurpose("W");
+    state().setAltPurpose("Where to submit");
+    expect(state().design.altPurpose).toBe("Where to submit");
+    state().undo();
+    expect(state().design.altPurpose).toBe("");
+    later();
+    state().setAltPurpose("a".repeat(MAX_ALT_PURPOSE + 5));
+    expect(state().design.altPurpose).toHaveLength(MAX_ALT_PURPOSE);
+    // It's about this screenshot: a new one starts without it.
+    later();
+    state().setImage(fakeImage("other", 1000, 500));
+    expect(state().design.altPurpose).toBe("");
   });
 });
 

@@ -51,5 +51,6 @@ export function createDefaultDesign(): Design {
     annotations: [],
     nextStep: 1,
     altText: null,
+    altPurpose: "",
   };
 }
