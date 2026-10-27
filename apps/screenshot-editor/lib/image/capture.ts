@@ -36,9 +36,10 @@ function createController(): FocusController | undefined {
 /**
  * Opens the browser's tab, window or screen picker and takes one still frame
  * of what is picked. The stream stops as soon as the frame is taken, so
- * nothing is recorded. Must be called from a click.
+ * nothing is recorded. Must be called from a click. `onPicked` runs once
+ * something is picked, before the frame is taken.
  */
-export async function captureScreenFrame(): Promise<File> {
+export async function captureScreenFrame(onPicked?: () => void): Promise<File> {
   const controller = createController();
   let stream: MediaStream;
   try {
@@ -65,6 +66,7 @@ export async function captureScreenFrame(): Promise<File> {
   } catch {
     // A whole screen, or an older browser.
   }
+  onPicked?.();
 
   try {
     const canvas = await grabFrame(stream);

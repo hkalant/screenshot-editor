@@ -17,7 +17,14 @@ import {
   Trash2,
   Upload,
 } from "lucide-react";
-import { useRef, useState, type ComponentProps, type ReactNode } from "react";
+import {
+  useRef,
+  useState,
+  type ComponentProps,
+  type KeyboardEvent,
+  type MouseEventHandler,
+  type ReactNode,
+} from "react";
 import {
   ANNOTATION_COLOR_NAMES,
   ANNOTATION_COLORS,
@@ -60,18 +67,19 @@ import { Slider } from "@/components/ui/slider";
 const buttonClass =
   "flex size-8 shrink-0 items-center justify-center rounded-sm text-foreground outline-none transition-colors hover:bg-accent focus-visible:outline-3 focus-visible:outline-solid focus-visible:outline-offset-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-40 data-[state=open]:bg-accent aria-pressed:bg-(--tool-active) aria-pressed:shadow-[inset_0_0_0_1px_var(--tool-active-edge)] [&_svg]:size-4";
 
-/** Takes a popover trigger's props too, so it can open a menu. */
-function ToolButton({
-  label,
-  hint,
-  pressed,
-  ...props
-}: {
+type ToolButtonProps = {
   label: string;
   /** More in the tooltip than the name. */
   hint?: string;
   pressed?: boolean;
-} & ComponentProps<"button">) {
+} & Omit<ComponentProps<"button">, "onClick"> &
+  // A click handler, unless it opens a menu: the popover trigger adds one.
+  (
+    | { onClick: MouseEventHandler<HTMLButtonElement> }
+    | { onClick?: undefined; "aria-haspopup": "menu" }
+  );
+
+function ToolButton({ label, hint, pressed, ...props }: ToolButtonProps) {
   return (
     <button
       {...props}
@@ -82,6 +90,36 @@ function ToolButton({
       className={buttonClass}
     />
   );
+}
+
+const MENU_ITEM = '[role^="menuitem"]:not(:disabled)';
+
+/** On opening, the checked item (or else the first) has the focus, as in any menu. */
+function focusMenuItem(event: Event) {
+  event.preventDefault();
+  const menu = event.currentTarget as HTMLElement;
+  (
+    menu.querySelector<HTMLElement>(`${MENU_ITEM}[aria-checked="true"]`) ??
+    menu.querySelector<HTMLElement>(MENU_ITEM)
+  )?.focus();
+}
+
+/** The arrow keys, Home and End move between a menu's items. */
+function moveInMenu(event: KeyboardEvent<HTMLElement>) {
+  const items = [
+    ...event.currentTarget.querySelectorAll<HTMLElement>(MENU_ITEM),
+  ];
+  const last = items.length - 1;
+  const at = items.indexOf(document.activeElement as HTMLElement);
+  const next = {
+    ArrowDown: at < last ? at + 1 : 0,
+    ArrowUp: at > 0 ? at - 1 : last,
+    Home: 0,
+    End: last,
+  }[event.key];
+  if (next === undefined || last < 0) return;
+  event.preventDefault();
+  items[next].focus();
 }
 
 const menuItemClass =
@@ -228,6 +266,8 @@ function AddScreenshotButton() {
             className="w-auto p-2.5"
             role="menu"
             aria-label={label}
+            onOpenAutoFocus={focusMenuItem}
+            onKeyDown={moveInMenu}
           >
             <button
               type="button"
@@ -395,6 +435,8 @@ function ToolMenu<T extends AnnotationTool>({
         className="w-auto p-2.5"
         role="menu"
         aria-label={menuLabel}
+        onOpenAutoFocus={focusMenuItem}
+        onKeyDown={moveInMenu}
       >
         {items.map((item) => (
           <button
