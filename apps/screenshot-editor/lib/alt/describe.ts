@@ -287,9 +287,9 @@ const lettersIn = (phrase: Phrase) =>
   );
 
 /**
- * For a screenshot with nothing marked: its heading, the first phrase of a
- * few words set clearly larger than the rest. Empty when nothing stands out,
- * as on most app screens, where a guess would mislead.
+ * The screenshot's title: the first phrase of a few words set clearly larger
+ * than the rest. Empty when nothing stands out, as on most app screens, where
+ * a guess would mislead.
  */
 function headingOf(phrases: Phrase[]): string {
   if (!phrases.length) return "";
@@ -303,7 +303,7 @@ function headingOf(phrases: Phrase[]): string {
   const least = Math.max(body * HEADING_RATIO, largest * HEADING_SLACK);
   // Phrases are in reading order, so this is the top one.
   const heading = candidates.find((phrase) => sizeOf(phrase) >= least);
-  return heading ? `A screen headed ${quote(heading.words)}.` : "";
+  return heading ? `A screen titled ${quote(heading.words)}.` : "";
 }
 
 /** "a phone": the device a frame shows the screenshot on. */
@@ -317,8 +317,8 @@ const DEVICE_NAMES: Record<DeviceKind, string> = {
  * The suggested alt text: steps first, in number order, then the other
  * annotations from the top down, after the device the screenshot is shown
  * on, if any ("On a phone: …"), as that is often why the frame was chosen.
- * Window frames are decoration and go unsaid. With nothing marked, the
- * screenshot's heading says what it shows. `lines` is the screenshot's text,
+ * Window frames are decoration and go unsaid. A title found in the
+ * screenshot opens it, before the annotations. `lines` is the screenshot's text,
  * or empty when it couldn't be read. Text that can't be seen (under blur
  * boxes, solid shapes and second screenshots) is never quoted.
  */
@@ -376,7 +376,10 @@ export function describeAnnotations(
   if (blurred.length > 1) rest.push(`${blurred.length} areas are blurred.`);
   else rest.push(...blurred);
 
-  const text = [...steps, ...rest].join(" ") || headingOf(visible);
+  // The title says what the screenshot is; the annotations, what's in it.
+  const text = [headingOf(visible), ...steps, ...rest]
+    .filter(Boolean)
+    .join(" ");
   if (!device) return text;
   const on = DEVICE_NAMES[device];
   if (!text) return `Shown on ${on}.`;
