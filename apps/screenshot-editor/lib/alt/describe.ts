@@ -4,17 +4,20 @@ import {
   type Box,
   type Point,
 } from "@/lib/design/annotations";
-import type { DeviceKind } from "@/lib/design/devices";
+import { isDeviceKind, type DeviceKind } from "@/lib/design/devices";
+import { FRAMES_WITH_TITLE, FRAMES_WITH_URL } from "@/lib/design/frames";
 import { DEFAULT_MAGNIFY_ZOOM, magnifyArea } from "@/lib/design/magnify";
 import {
   LINE_ENDS,
   type Annotation,
   type AnnotationColor,
   type ArrowAnnotation,
+  type FrameKind,
   type LineEnd,
   type ScreenshotAnnotation,
   type ShapeAnnotation,
 } from "@/lib/design/schema";
+import { layoutGroups } from "./layout";
 
 // A suggested alt text for the export, written from the annotations: what
 // each step, box and arrow marks. It never says "screenshot of": screen
@@ -60,8 +63,14 @@ const quote = (words: FoundWord[]) => {
   return `‘${text}${words.length > MAX_WORDS ? "…" : ""}’`;
 };
 
-/** A run of words close together on a line: a label, a heading, a link. */
-type Phrase = FoundLine;
+/**
+ * A run of words close together on a line: a label, a heading, a link. In a
+ * list or a bar, `group` says where: "in the list on the left".
+ */
+type Phrase = FoundLine & { group?: string };
+
+/** " in the list on the left", or nothing for a phrase in no list or bar. */
+const inGroup = (group?: string) => (group ? ` ${group}` : "");
 
 const boxAround = (words: FoundWord[]): Box => {
   const left = Math.min(...words.map((word) => word.box.x));
@@ -76,7 +85,7 @@ const boxAround = (words: FoundWord[]): Box => {
  * space: OCR runs side-by-side columns into one line. Stray symbols (|, >)
  * are dropped.
  */
-function toPhrases(lines: readonly FoundLine[]): Phrase[] {
+export function toPhrases(lines: readonly FoundLine[]): Phrase[] {
   const phrases: Phrase[] = [];
   for (const line of lines) {
     const words = line.words
@@ -109,12 +118,18 @@ function phrasesIn(box: Box, phrases: Phrase[]): Phrase[] {
     const words = phrase.words.filter((word) =>
       inside(centreOf(word.box), box),
     );
-    return words.length ? [{ words, box: boxAround(words) }] : [];
+    return words.length
+      ? [{ words, box: boxAround(words), group: phrase.group }]
+      : [];
   });
 }
 
-/** The words of the phrase nearest `point`, if one is near enough. */
-function wordsNear(point: Point, phrases: Phrase[], near: number) {
+/** The words of the phrase nearest `point`, if one is near enough, and its group. */
+function wordsNear(
+  point: Point,
+  phrases: Phrase[],
+  near: number,
+): { words: FoundWord[]; group?: string } {
   let best: Phrase | null = null;
   let bestDistance = near;
   for (const phrase of phrases) {
@@ -124,9 +139,9 @@ function wordsNear(point: Point, phrases: Phrase[], near: number) {
       bestDistance = distance;
     }
   }
-  if (!best) return [];
-  const { words } = best;
-  if (words.length <= MAX_WORDS) return words;
+  if (!best) return { words: [] };
+  const { words, group } = best;
+  if (words.length <= MAX_WORDS) return { words, group };
   // A long phrase: the words around the nearest one.
   let nearest = 0;
   words.forEach((word, index) => {
@@ -137,7 +152,7 @@ function wordsNear(point: Point, phrases: Phrase[], near: number) {
     0,
     Math.min(nearest - 2, words.length - MAX_WORDS + 1),
   );
-  return words.slice(start, start + MAX_WORDS - 1);
+  return { words: words.slice(start, start + MAX_WORDS - 1), group };
 }
 
 /**
@@ -148,7 +163,9 @@ function textIn(box: Box, phrases: Phrase[]) {
   const inner = phrasesIn(box, phrases);
   const first = inner[0] && quote(inner[0].words);
   if (!first) return null;
-  return { first, section: inner.length > 1 };
+  const section = inner.length > 1;
+  // One item of a list or a bar says which.
+  return { first, section, where: section ? "" : inGroup(inner[0].group) };
 }
 
 /** "the top left", "the right" and so on: where on the screenshot. */
@@ -196,7 +213,7 @@ function describeShape(
       const area = magnifyArea(shape, zoom, aspect, shape.from);
       const text = textIn(area, phrases);
       return text
-        ? `A magnifier enlarges ${text.first}.`
+        ? `A magnifier enlarges ${text.first}${text.where}.`
         : `A magnifier enlarges an area ${wherePhrase(centreOf(area), aspect)}.`;
     }
     case "highlight": {
@@ -204,7 +221,7 @@ function describeShape(
       return text
         ? text.section
           ? `The ${text.first} section is highlighted in ${colour}.`
-          : `${text.first} is highlighted in ${colour}.`
+          : `${text.first}${text.where} is highlighted in ${colour}.`
         : `An area ${at} is highlighted in ${colour}.`;
     }
     default: {
@@ -214,7 +231,7 @@ function describeShape(
         return `A solid ${colour} ${noun} covers an area ${at}.`;
       const text = textIn(box, phrases);
       return text
-        ? `A ${colour} ${noun} surrounds ${text.section ? `the ${text.first} section` : text.first}.`
+        ? `A ${colour} ${noun} surrounds ${text.section ? `the ${text.first} section` : `${text.first}${text.where}`}.`
         : `A ${colour} ${noun} marks an area ${at}.`;
     }
   }
@@ -231,9 +248,10 @@ function describeArrow(
     const middle = { x: arrow.x + arrow.dx / 2, y: arrow.y + arrow.dy / 2 };
     return `A ${colour} line is drawn ${wherePhrase(middle, aspect)}.`;
   }
-  const text = quote(wordsNear(tip, phrases, NEAR));
+  const found = wordsNear(tip, phrases, NEAR);
+  const text = quote(found.words);
   return text
-    ? `A ${colour} arrow points to ${text}.`
+    ? `A ${colour} arrow points to ${text}${inGroup(found.group)}.`
     : `A ${colour} arrow points to ${placeOf(tip, aspect)}.`;
 }
 
@@ -291,19 +309,90 @@ const lettersIn = (phrase: Phrase) =>
  * than the rest. Empty when nothing stands out, as on most app screens, where
  * a guess would mislead.
  */
-function headingOf(phrases: Phrase[]): string {
-  if (!phrases.length) return "";
+function titleOf(phrases: Phrase[]): string | null {
+  if (!phrases.length) return null;
   const body = median(phrases.map(sizeOf));
   const candidates = phrases.filter(
     (phrase) =>
       phrase.words.length >= 2 && lettersIn(phrase) >= 6 && quote(phrase.words),
   );
-  if (!candidates.length) return "";
+  if (!candidates.length) return null;
   const largest = Math.max(...candidates.map(sizeOf));
   const least = Math.max(body * HEADING_RATIO, largest * HEADING_SLACK);
   // Phrases are in reading order, so this is the top one.
   const heading = candidates.find((phrase) => sizeOf(phrase) >= least);
-  return heading ? `A screen titled ${quote(heading.words)}.` : "";
+  return heading ? quote(heading.words) : null;
+}
+
+/** The frame around the screenshot, with the text it shows. */
+export type FrameText = { kind: FrameKind; title: string; url: string };
+
+/** "moodle.brookes.ac.uk", from what an address bar shows. */
+function siteOf(url: string): string {
+  const text = url.trim();
+  if (!text) return "";
+  try {
+    const address = /^[a-z][a-z0-9+.-]*:\/\//i.test(text)
+      ? text
+      : `https://${text}`;
+    return new URL(address).hostname.replace(/^www\./, "") || text;
+  } catch {
+    return text;
+  }
+}
+
+/**
+ * What a frame's own text says the screenshot is, as the user typed it:
+ * "a page at moodle.brookes.ac.uk", "the ‘Mail’ window". Null when the frame
+ * shows no text.
+ */
+export function frameSubject(frame: FrameText): string | null {
+  if (FRAMES_WITH_URL.includes(frame.kind)) {
+    const site = siteOf(frame.url);
+    return site ? `a page at ${site}` : null;
+  }
+  const title = frame.title.trim();
+  if (FRAMES_WITH_TITLE.includes(frame.kind) && title)
+    return `the ‘${title}’ window`;
+  return null;
+}
+
+const capitalised = (text: string) =>
+  text.charAt(0).toUpperCase() + text.slice(1);
+
+/**
+ * The first sentence, on what the screenshot is: from its frame's text and
+ * the title found in it. "A page at moodle.ac.uk, titled ‘Week 1’."
+ */
+function opening(frame: FrameText | null, title: string | null): string {
+  const subject = frame && frameSubject(frame);
+  // A window title that says the same as the screenshot's title, once.
+  const same =
+    title &&
+    frame &&
+    title.slice(1, -1).toLowerCase() === frame.title.trim().toLowerCase();
+  if (subject && title && !same)
+    return `${capitalised(subject)}, titled ${title}.`;
+  if (subject) return `${capitalised(subject)}.`;
+  return title ? `A screen titled ${title}.` : "";
+}
+
+/** The user's answer to "What should people notice?", as a sentence. */
+function purposeSentence(purpose: string): string {
+  const text = purpose.trim().replace(/\s+/g, " ");
+  if (!text) return "";
+  const sentence = capitalised(text);
+  return /[.!?…]$/.test(sentence) ? sentence : `${sentence}.`;
+}
+
+/** ", of a page at moodle.ac.uk,": what a second screenshot's frame says it is. */
+function secondSubject(shot: ScreenshotAnnotation): string {
+  const subject = frameSubject({
+    kind: shot.frame,
+    title: shot.title,
+    url: shot.url,
+  });
+  return subject ? `, of ${subject},` : "";
 }
 
 /** "a phone": the device a frame shows the screenshot on. */
@@ -314,20 +403,30 @@ const DEVICE_NAMES: Record<DeviceKind, string> = {
 };
 
 /**
- * The suggested alt text: steps first, in number order, then the other
- * annotations from the top down, after the device the screenshot is shown
- * on, if any ("On a phone: …"), as that is often why the frame was chosen.
- * Window frames are decoration and go unsaid. A title found in the
- * screenshot opens it, before the annotations. `lines` is the screenshot's text,
- * or empty when it couldn't be read. Text that can't be seen (under blur
- * boxes, solid shapes and second screenshots) is never quoted.
+ * What the suggestion is written from besides the annotations: the frame
+ * around the screenshot, and the user's answer to "What should people
+ * notice?".
+ */
+export type AltContext = { frame?: FrameText | null; purpose?: string };
+
+/**
+ * The suggested alt text. It opens with what the screenshot is (the page or
+ * window its frame names, and the title found in it), then what people
+ * should notice, as the user put it. Then the steps, in number order, and
+ * the other annotations from the top down, each naming the text it marks and
+ * the list or bar that text is in. A device frame comes first ("On a
+ * phone: …"), as that is often why it was chosen. `lines` is the
+ * screenshot's text, or empty when it couldn't be read. Text that can't be
+ * seen (under blur boxes, solid shapes and second screenshots) is never
+ * quoted.
  */
 export function describeAnnotations(
   annotations: readonly Annotation[],
   aspect: number,
   lines: readonly FoundLine[],
-  device: DeviceKind | null = null,
+  { frame = null, purpose = "" }: AltContext = {},
 ): string {
+  const device = frame && isDeviceKind(frame.kind) ? frame.kind : null;
   // Private text stays private.
   const hiding = annotations.filter(hidesText);
   const visible = toPhrases(
@@ -338,15 +437,18 @@ export function describeAnnotations(
       ),
     })),
   );
+  const groups = layoutGroups(visible, aspect);
+  for (const phrase of visible) phrase.group = groups.get(phrase);
 
   const steps = annotations
     .filter((annotation) => annotation.kind === "step")
     .sort((a, b) => a.number - b.number)
     .map((step) => {
       const near = Math.max(NEAR, 2.5 * STEP_RADIUS * step.size);
-      const text = quote(wordsNear(step, visible, near));
+      const found = wordsNear(step, visible, near);
+      const text = quote(found.words);
       return text
-        ? `Step ${step.number} marks ${text}.`
+        ? `Step ${step.number} marks ${text}${inGroup(found.group)}.`
         : `Step ${step.number} is ${wherePhrase(step, aspect)}.`;
     });
 
@@ -358,7 +460,7 @@ export function describeAnnotations(
         annotation.kind === "shape"
           ? describeShape(annotation, visible, aspect)
           : annotation.kind === "screenshot"
-            ? `A second screenshot is shown ${wherePhrase(
+            ? `A second screenshot${secondSubject(annotation)} is shown ${wherePhrase(
                 {
                   x: annotation.x + annotation.width / 2,
                   y: annotation.y + annotation.height / 2,
@@ -376,8 +478,13 @@ export function describeAnnotations(
   if (blurred.length > 1) rest.push(`${blurred.length} areas are blurred.`);
   else rest.push(...blurred);
 
-  // The title says what the screenshot is; the annotations, what's in it.
-  const text = [headingOf(visible), ...steps, ...rest]
+  // What the screenshot is and why, then what's marked in it.
+  const text = [
+    opening(device ? null : frame, titleOf(visible)),
+    purposeSentence(purpose),
+    ...steps,
+    ...rest,
+  ]
     .filter(Boolean)
     .join(" ");
   if (!device) return text;

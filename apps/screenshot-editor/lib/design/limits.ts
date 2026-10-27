@@ -30,6 +30,8 @@ export const MAX_FRAME_TEXT = 120;
 
 /** Alt text the user writes for the export. */
 export const MAX_ALT_TEXT = 2000;
+/** The user's answer to "What should people notice?". */
+export const MAX_ALT_PURPOSE = 200;
 
 export const MAX_FILE_BYTES = 50 * 1024 * 1024;
 

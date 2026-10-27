@@ -7,8 +7,7 @@ import { isAltCurrent } from "@/lib/alt/basis";
 import { describeAnnotations, type FoundLine } from "@/lib/alt/describe";
 import { readText } from "@/lib/alt/ocr";
 import { imageAspect } from "@/lib/design/annotations";
-import { isDeviceKind } from "@/lib/design/devices";
-import { MAX_ALT_TEXT } from "@/lib/design/limits";
+import { MAX_ALT_PURPOSE, MAX_ALT_TEXT } from "@/lib/design/limits";
 import { selectActiveImage, useEditorStore } from "@/lib/store/editor";
 
 /** Said under the alt text whatever its state: the suggestion is a start. */
@@ -34,6 +33,7 @@ export function AltTextSection() {
   const image = useEditorStore(selectActiveImage);
   const design = useEditorStore((state) => state.design);
   const setAltText = useEditorStore((state) => state.setAltText);
+  const setAltPurpose = useEditorStore((state) => state.setAltPurpose);
   const [reading, setReading] = useState<Reading & { id?: string }>({
     state: "reading",
   });
@@ -42,6 +42,7 @@ export function AltTextSection() {
   const [copied, setCopied] = useState<"copied" | "failed" | null>(null);
   const fieldId = useId();
   const noteId = useId();
+  const purposeId = useId();
 
   // Read the screenshot's text once per screenshot (the reader keeps it), and
   // again after a failed read when asked.
@@ -64,8 +65,7 @@ export function AltTextSection() {
   }, [copied]);
 
   if (!image) return null;
-  const { annotations, altText: written } = design;
-  const frameKind = design.layers[0].frame.kind;
+  const { annotations, altText: written, altPurpose } = design;
   const lines =
     reading.id === image.id && reading.state === "done" ? reading.lines : [];
   const stillReading = reading.id !== image.id || reading.state === "reading";
@@ -74,14 +74,14 @@ export function AltTextSection() {
     annotations,
     imageAspect(image),
     lines,
-    isDeviceKind(frameKind) ? frameKind : null,
+    { frame: design.layers[0].frame, purpose: altPurpose },
   );
   const text = written?.text ?? suggestion;
   const stale = written !== null && !isAltCurrent(design, written.basis);
   const marked = annotations.length > 0;
 
   const note = stale
-    ? "The annotations have changed since you wrote this. Check it still fits."
+    ? "The annotations or frame have changed since you wrote this. Check it still fits."
     : written
       ? "Your own wording."
       : stillReading
@@ -92,12 +92,34 @@ export function AltTextSection() {
             : "The screenshot’s text couldn’t be read. Add steps, boxes or arrows for a suggestion, or write your own."
           : !marked
             ? suggestion
-              ? "Suggested from the screenshot’s title. Add steps, boxes or arrows for a fuller suggestion, or write your own."
+              ? "Suggested from the screenshot’s text and frame. Add steps, boxes or arrows for a fuller suggestion, or write your own."
               : "Add steps, boxes or arrows for a suggestion, or write your own."
             : "Suggested from your annotations. Check it says what matters, and edit it.";
 
   return (
     <div className="space-y-2 border-t pt-4">
+      {/* Only the user knows why the screenshot is there: one question for it.
+          It shapes the suggestion, so it's set aside while they write their own. */}
+      {!written && (
+        <>
+          <label htmlFor={purposeId} className="block text-sm font-medium">
+            What should people notice?{" "}
+            <span className="font-normal text-muted-foreground">
+              (optional)
+            </span>
+          </label>
+          <input
+            id={purposeId}
+            type="text"
+            value={altPurpose}
+            maxLength={MAX_ALT_PURPOSE}
+            spellCheck
+            placeholder="For example: the Submit button is at the bottom."
+            onChange={(event) => setAltPurpose(event.target.value)}
+            className="block w-full rounded-md border border-input bg-background/70 px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid"
+          />
+        </>
+      )}
       <label htmlFor={fieldId} className="block text-sm font-medium">
         Alt text
       </label>
