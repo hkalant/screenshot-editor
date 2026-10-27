@@ -2,7 +2,6 @@ import { z } from "zod";
 import {
   BLUR,
   BORDER_WIDTH,
-  MAX_ALT_PURPOSE,
   MAX_ALT_TEXT,
   MAX_FRAME_TEXT,
   PADDING,
@@ -328,8 +327,6 @@ export const designSchema = z.object({
   nextStep: z.number().int().min(1).max(MAX_STEP_NUMBER).default(1),
   /** Null while the suggestion is used. Designs saved before it was kept get none. */
   altText: writtenAltSchema.nullable().default(null),
-  /** What people should notice, in the user's words: part of the suggestion. */
-  altPurpose: z.string().max(MAX_ALT_PURPOSE).default(""),
 });
 
 /** The milestone 1 design, kept so older saved designs can be migrated. */

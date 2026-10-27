@@ -116,7 +116,7 @@ test("the export options suggest alt text from the annotations", async ({
   );
 });
 
-test("the suggestion names the page and says what people should notice", async ({
+test("the suggestion names the page from the frame's address", async ({
   page,
 }) => {
   test.slow();
@@ -131,22 +131,6 @@ test("the suggestion names the page and says what people should notice", async (
   await expect(field(page)).toHaveValue(
     /^A page at moodle\.ac\.uk\. Step 1 is /,
   );
-  const purpose = page.getByRole("textbox", {
-    name: "What should people notice? (optional)",
-  });
-  await purpose.fill("where to start the quiz");
-  await expect(field(page)).toHaveValue(
-    /^A page at moodle\.ac\.uk\. Where to start the quiz\. Step 1 is /,
-  );
-
-  // Kept with the design, and set aside while the user writes their own.
-  await page.keyboard.press("Escape");
-  await openOptions(page);
-  await expect(purpose).toHaveValue("where to start the quiz");
-  await field(page).fill("The quiz link.");
-  await expect(purpose).toHaveCount(0);
-  await page.getByRole("button", { name: "Back to the suggestion" }).click();
-  await expect(purpose).toHaveValue("where to start the quiz");
 });
 
 test("written alt text says when the annotations have changed since", async ({

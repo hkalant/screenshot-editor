@@ -381,21 +381,6 @@ describe("describeAnnotations", () => {
     ).toBe("The ‘course settings’ window.");
   });
 
-  it("says what people should notice, in the user's words", () => {
-    expect(
-      describeAnnotations([step(1, 0.07, 0.06)], ASPECT, LINES, {
-        purpose: "  where   the marks are ",
-      }),
-    ).toBe("Where the marks are. Step 1 marks ‘Assessment’.");
-    expect(
-      describeAnnotations([], ASPECT, [], {
-        ...frame("browser", "", "moodle.ac.uk"),
-        purpose: "Submit is at the bottom!",
-      }),
-    ).toBe("A page at moodle.ac.uk. Submit is at the bottom!");
-    expect(describeAnnotations([], ASPECT, [], { purpose: "  " })).toBe("");
-  });
-
   it("names the frame of a second screenshot", () => {
     const text = describeAnnotations(
       [

@@ -54,10 +54,6 @@ describe("altBasis", () => {
     );
     // An address the frame doesn't show says nothing.
     expect(isAltCurrent(framed("macos", "", "moodle.ac.uk"), basis)).toBe(true);
-    // Nor does what people should notice: it only shapes the suggestion.
-    expect(isAltCurrent({ ...design, altPurpose: "The menu." }, basis)).toBe(
-      true,
-    );
   });
 
   it("ignores what the suggestion doesn't say: window frames, styles", () => {
