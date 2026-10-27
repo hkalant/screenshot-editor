@@ -478,11 +478,12 @@ test("a rounded magnifier keeps its round corners when resized", async ({
   await nextFrame(page);
 
   // Just inside the top-left corner of its box, outside the rounded corner:
-  // the screenshot shows through, not the magnifier's white backing.
+  // the screenshot (or the edge of the grey border, in some browsers) shows
+  // through, not the magnifier's white backing.
   const [corner] = await samplePixels(page, (await exportImage(page)).data, [
     [(PADDING + 0.2 * big.width) * 2 + 3, (PADDING + 0.2 * big.height) * 2 + 3],
   ]);
-  expect(corner[1], `corner pixel ${corner}`).toBeLessThan(100);
+  expect(corner[1], `corner pixel ${corner}`).toBeLessThan(200);
 });
 
 test("steps and shapes can go on the background, off the screenshot", async ({
