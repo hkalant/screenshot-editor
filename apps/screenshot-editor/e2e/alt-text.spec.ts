@@ -63,12 +63,12 @@ test("the export options suggest alt text from the annotations", async ({
     .first()
     .click();
 
-  // Nothing marked yet: the page's heading says what it shows.
+  // Nothing marked yet: the page's title says what it shows.
   await openOptions(page);
   await expect(
-    page.getByText(/^Suggested from the screenshot’s heading/),
+    page.getByText(/^Suggested from the screenshot’s title/),
   ).toBeVisible({ timeout: 60_000 });
-  await expect(field(page)).toHaveValue(/^A screen headed ‘ANML7006/);
+  await expect(field(page)).toHaveValue(/^A screen titled ‘ANML7006/);
   await page.keyboard.press("Escape");
 
   // A step on the screenshot: the suggestion names it, never "screenshot of".
@@ -77,7 +77,9 @@ test("the export options suggest alt text from the annotations", async ({
   await expect(page.getByText(/^Suggested from your annotations/)).toBeVisible({
     timeout: 60_000,
   });
-  await expect(field(page)).toHaveValue(/^Step 1 /);
+  await expect(field(page)).toHaveValue(
+    /^A screen titled ‘ANML7006.*’\. Step 1 /,
+  );
   await expect(field(page)).not.toHaveValue(/screenshot/i);
 
   // Written over, it stays the user's until they go back to the suggestion.
@@ -93,7 +95,9 @@ test("the export options suggest alt text from the annotations", async ({
     "The course menu, with Assessment selected.",
   );
   await page.getByRole("button", { name: "Back to the suggestion" }).click();
-  await expect(field(page)).toHaveValue(/^Step 1 /);
+  await expect(field(page)).toHaveValue(
+    /^A screen titled ‘ANML7006.*’\. Step 1 /,
+  );
   await expect(
     page.getByRole("button", { name: "Copy alt text" }),
   ).toBeEnabled();
@@ -106,7 +110,9 @@ test("the export options suggest alt text from the annotations", async ({
     .getByRole("radio", { name: "Laptop", exact: true })
     .click();
   await openOptions(page);
-  await expect(field(page)).toHaveValue(/^On a laptop: step 1 /);
+  await expect(field(page)).toHaveValue(
+    /^On a laptop: a screen titled ‘ANML7006.*’\. Step 1 /,
+  );
 });
 
 test("written alt text says when the annotations have changed since", async ({

@@ -34,7 +34,7 @@ describe("describeAnnotations", () => {
     expect(describeAnnotations([], ASPECT, [])).toBe("");
   });
 
-  it("names a plain screenshot by a heading set clearly larger", () => {
+  it("opens with a title set clearly larger, then the annotations", () => {
     const heading: FoundLine = {
       words: [
         { text: "Course", box: { x: 0.3, y: 0.15, width: 0.12, height: 0.04 } },
@@ -46,14 +46,18 @@ describe("describeAnnotations", () => {
       box: { x: 0.3, y: 0.15, width: 0.29, height: 0.04 },
     };
     expect(describeAnnotations([], ASPECT, [...LINES, heading])).toBe(
-      "A screen headed ‘Course settings’.",
+      "A screen titled ‘Course settings’.",
     );
     expect(describeAnnotations([], ASPECT, [...LINES, heading], "phone")).toBe(
-      "On a phone: a screen headed ‘Course settings’.",
+      "On a phone: a screen titled ‘Course settings’.",
     );
+    // Annotations follow the title rather than replace it.
+    expect(
+      describeAnnotations([step(1, 0.07, 0.06)], ASPECT, [...LINES, heading]),
+    ).toBe("A screen titled ‘Course settings’. Step 1 marks ‘Assessment’.");
   });
 
-  it("guesses no heading when nothing stands out", () => {
+  it("guesses no title when nothing stands out", () => {
     // Text all much the same size, as on most app screens.
     expect(describeAnnotations([], ASPECT, LINES)).toBe("");
     // One large word is a label or a button more often than a heading.
@@ -110,7 +114,7 @@ describe("describeAnnotations", () => {
       expect(text).not.toMatch(/Student|number|12345/);
       expect(text).toContain("covers an area");
     }
-    // Hidden text is no heading either.
+    // Hidden text is no title either.
     expect(
       describeAnnotations(
         [{ ...cover("rect"), x: 0.05, y: 0.02, width: 0.3, height: 0.08 }],

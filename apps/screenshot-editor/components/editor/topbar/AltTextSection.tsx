@@ -24,8 +24,8 @@ type Reading =
 const COPY_FEEDBACK_MS = 1500;
 
 /**
- * A suggested alt text for the export, from what the annotations mark (or,
- * with none, the screenshot's heading): the screenshot's text is read on this
+ * A suggested alt text for the export, from the screenshot's title and what
+ * the annotations mark: the screenshot's text is read on this
  * machine to name it. Editable, with a copy button. What the user writes is
  * kept in the design, so it's saved with it, and flagged when the annotations
  * change after it was written.
@@ -92,7 +92,7 @@ export function AltTextSection() {
             : "The screenshot’s text couldn’t be read. Add steps, boxes or arrows for a suggestion, or write your own."
           : !marked
             ? suggestion
-              ? "Suggested from the screenshot’s heading. Add steps, boxes or arrows for a fuller suggestion, or write your own."
+              ? "Suggested from the screenshot’s title. Add steps, boxes or arrows for a fuller suggestion, or write your own."
               : "Add steps, boxes or arrows for a suggestion, or write your own."
             : "Suggested from your annotations. Check it says what matters, and edit it.";
 
