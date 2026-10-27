@@ -237,6 +237,75 @@ function describeArrow(
     : `A ${colour} arrow points to ${placeOf(tip, aspect)}.`;
 }
 
+/**
+ * Blurred, covered by a solid shape or by a second screenshot: what's under
+ * it can't be seen, so it's never quoted. A solid circle hides its whole box,
+ * to be safe.
+ */
+const hidesText = (
+  annotation: Annotation,
+): annotation is ShapeAnnotation | ScreenshotAnnotation =>
+  annotation.kind === "screenshot" ||
+  (annotation.kind === "shape" &&
+    (annotation.shape === "blur" ||
+      (annotation.filled &&
+        (annotation.shape === "rect" ||
+          annotation.shape === "rounded" ||
+          annotation.shape === "circle"))));
+
+/** A heading is at least this many times the size of most of the text. */
+const HEADING_RATIO = 1.5;
+/** Text this much smaller than the largest heading still counts as one. */
+const HEADING_SLACK = 0.85;
+
+const median = (values: number[]) => {
+  const sorted = [...values].sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2
+    ? sorted[middle]
+    : (sorted[middle - 1] + sorted[middle]) / 2;
+};
+
+/**
+ * How big a phrase's text is. OCR boxes can run tall (into a border, an
+ * icon), so a word's height is capped by its width per letter.
+ */
+const sizeOf = (phrase: Phrase) =>
+  median(
+    phrase.words.map((word) =>
+      Math.min(
+        word.box.height,
+        (2 * word.box.width) / Math.max(1, word.text.length),
+      ),
+    ),
+  );
+
+const lettersIn = (phrase: Phrase) =>
+  phrase.words.reduce(
+    (count, word) => count + (word.text.match(/\p{L}/gu)?.length ?? 0),
+    0,
+  );
+
+/**
+ * For a screenshot with nothing marked: its heading, the first phrase of a
+ * few words set clearly larger than the rest. Empty when nothing stands out,
+ * as on most app screens, where a guess would mislead.
+ */
+function headingOf(phrases: Phrase[]): string {
+  if (!phrases.length) return "";
+  const body = median(phrases.map(sizeOf));
+  const candidates = phrases.filter(
+    (phrase) =>
+      phrase.words.length >= 2 && lettersIn(phrase) >= 6 && quote(phrase.words),
+  );
+  if (!candidates.length) return "";
+  const largest = Math.max(...candidates.map(sizeOf));
+  const least = Math.max(body * HEADING_RATIO, largest * HEADING_SLACK);
+  // Phrases are in reading order, so this is the top one.
+  const heading = candidates.find((phrase) => sizeOf(phrase) >= least);
+  return heading ? `A screen headed ${quote(heading.words)}.` : "";
+}
+
 /** "a phone": the device a frame shows the screenshot on. */
 const DEVICE_NAMES: Record<DeviceKind, string> = {
   phone: "a phone",
@@ -248,9 +317,10 @@ const DEVICE_NAMES: Record<DeviceKind, string> = {
  * The suggested alt text: steps first, in number order, then the other
  * annotations from the top down, after the device the screenshot is shown
  * on, if any ("On a phone: …"), as that is often why the frame was chosen.
- * Window frames are decoration and go unsaid. `lines` is the screenshot's
- * text, or empty when it couldn't be read. Text under blur boxes is never
- * quoted.
+ * Window frames are decoration and go unsaid. With nothing marked, the
+ * screenshot's heading says what it shows. `lines` is the screenshot's text,
+ * or empty when it couldn't be read. Text that can't be seen (under blur
+ * boxes, solid shapes and second screenshots) is never quoted.
  */
 export function describeAnnotations(
   annotations: readonly Annotation[],
@@ -258,18 +328,13 @@ export function describeAnnotations(
   lines: readonly FoundLine[],
   device: DeviceKind | null = null,
 ): string {
-  // Blurred, or covered by a second screenshot.
-  const blurs = annotations.filter(
-    (annotation): annotation is ShapeAnnotation | ScreenshotAnnotation =>
-      (annotation.kind === "shape" && annotation.shape === "blur") ||
-      annotation.kind === "screenshot",
-  );
   // Private text stays private.
+  const hiding = annotations.filter(hidesText);
   const visible = toPhrases(
     lines.map((line) => ({
       ...line,
       words: line.words.filter(
-        (word) => !blurs.some((blur) => inside(centreOf(word.box), blur)),
+        (word) => !hiding.some((cover) => inside(centreOf(word.box), cover)),
       ),
     })),
   );
@@ -311,7 +376,7 @@ export function describeAnnotations(
   if (blurred.length > 1) rest.push(`${blurred.length} areas are blurred.`);
   else rest.push(...blurred);
 
-  const text = [...steps, ...rest].join(" ");
+  const text = [...steps, ...rest].join(" ") || headingOf(visible);
   if (!device) return text;
   const on = DEVICE_NAMES[device];
   if (!text) return `Shown on ${on}.`;

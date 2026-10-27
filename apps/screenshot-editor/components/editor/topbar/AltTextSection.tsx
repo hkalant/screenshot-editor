@@ -1,15 +1,15 @@
 "use client";
 
-import { Check, Copy, RotateCcw } from "lucide-react";
+import { Check, Copy, RefreshCw, RotateCcw } from "lucide-react";
 import { useEffect, useId, useState } from "react";
-import { create } from "zustand";
 import { Button } from "@/components/ui/button";
+import { isAltCurrent } from "@/lib/alt/basis";
 import { describeAnnotations, type FoundLine } from "@/lib/alt/describe";
 import { readText } from "@/lib/alt/ocr";
 import { imageAspect } from "@/lib/design/annotations";
 import { isDeviceKind } from "@/lib/design/devices";
+import { MAX_ALT_TEXT } from "@/lib/design/limits";
 import { selectActiveImage, useEditorStore } from "@/lib/store/editor";
-import { originalImageId } from "@/lib/image/crop";
 
 /** Said under the alt text whatever its state: the suggestion is a start. */
 const GUIDELINES =
@@ -20,54 +20,33 @@ type Reading =
   | { state: "done"; lines: FoundLine[] }
   | { state: "failed" };
 
-/**
- * The alt text the user has written over the suggestion, by screenshot, so
- * it's still there when the menu opens again. Not saved: it goes with the
- * exported image, wherever that's used.
- */
-const useWrittenAlt = create<{
-  byImage: Record<string, string>;
-  set: (imageId: string, text: string | null) => void;
-}>()((set) => ({
-  byImage: {},
-  set: (imageId, text) =>
-    set(({ byImage }) => {
-      const next = { ...byImage };
-      if (text === null) delete next[imageId];
-      else next[imageId] = text;
-      return { byImage: next };
-    }),
-}));
+/** How long "Copied" or "Couldn't copy" shows on the button. */
+const COPY_FEEDBACK_MS = 1500;
 
 /**
- * A suggested alt text for the export, from what the annotations mark: the
- * screenshot's text is read on this machine to name it. Editable, with a
- * copy button.
+ * A suggested alt text for the export, from what the annotations mark (or,
+ * with none, the screenshot's heading): the screenshot's text is read on this
+ * machine to name it. Editable, with a copy button. What the user writes is
+ * kept in the design, so it's saved with it, and flagged when the annotations
+ * change after it was written.
  */
 export function AltTextSection() {
   const image = useEditorStore(selectActiveImage);
-  const annotations = useEditorStore((state) => state.design.annotations);
-  const frameKind = useEditorStore(
-    (state) => state.design.layers[0].frame.kind,
-  );
-  // What's written stays through a crop.
-  const writtenFor = image ? originalImageId(image.id) : null;
-  const written = useWrittenAlt((state) =>
-    writtenFor ? state.byImage[writtenFor] : undefined,
-  );
-  const setWritten = useWrittenAlt((state) => state.set);
+  const design = useEditorStore((state) => state.design);
+  const setAltText = useEditorStore((state) => state.setAltText);
   const [reading, setReading] = useState<Reading & { id?: string }>({
     state: "reading",
   });
-  const [copied, setCopied] = useState(false);
+  // Goes up with each "Try again", to read the screenshot afresh.
+  const [attempt, setAttempt] = useState(0);
+  const [copied, setCopied] = useState<"copied" | "failed" | null>(null);
   const fieldId = useId();
   const noteId = useId();
 
-  // Read the screenshot's text once per screenshot, when there's something
-  // to describe.
-  const needsText = annotations.length > 0;
+  // Read the screenshot's text once per screenshot (the reader keeps it), and
+  // again after a failed read when asked.
   useEffect(() => {
-    if (!image || !needsText) return;
+    if (!image) return;
     let current = true;
     readText(image).then(
       (lines) => current && setReading({ state: "done", lines, id: image.id }),
@@ -76,38 +55,46 @@ export function AltTextSection() {
     return () => {
       current = false;
     };
-  }, [image, needsText]);
+  }, [image, attempt]);
 
   useEffect(() => {
     if (!copied) return;
-    const timer = window.setTimeout(() => setCopied(false), 1500);
+    const timer = window.setTimeout(() => setCopied(null), COPY_FEEDBACK_MS);
     return () => window.clearTimeout(timer);
   }, [copied]);
 
   if (!image) return null;
+  const { annotations, altText: written } = design;
+  const frameKind = design.layers[0].frame.kind;
   const lines =
     reading.id === image.id && reading.state === "done" ? reading.lines : [];
-  const stillReading =
-    needsText && (reading.id !== image.id || reading.state === "reading");
+  const stillReading = reading.id !== image.id || reading.state === "reading";
+  const failed = !stillReading && reading.state === "failed";
   const suggestion = describeAnnotations(
     annotations,
     imageAspect(image),
     lines,
     isDeviceKind(frameKind) ? frameKind : null,
   );
-  const text = written ?? suggestion;
+  const text = written?.text ?? suggestion;
+  const stale = written !== null && !isAltCurrent(design, written.basis);
+  const marked = annotations.length > 0;
 
-  const note = written
-    ? "Your own wording."
-    : !needsText
-      ? suggestion
-        ? "Add steps, boxes or arrows for a fuller suggestion, or write your own."
-        : "Add steps, boxes or arrows for a suggestion, or write your own."
+  const note = stale
+    ? "The annotations have changed since you wrote this. Check it still fits."
+    : written
+      ? "Your own wording."
       : stillReading
         ? "Reading the screenshot’s text…"
-        : reading.state === "failed"
-          ? "The screenshot’s text couldn’t be read, so this says where things are."
-          : "Suggested from your annotations. Check it says what matters, and edit it.";
+        : failed
+          ? marked
+            ? "The screenshot’s text couldn’t be read, so this says where things are."
+            : "The screenshot’s text couldn’t be read. Add steps, boxes or arrows for a suggestion, or write your own."
+          : !marked
+            ? suggestion
+              ? "Suggested from the screenshot’s heading. Add steps, boxes or arrows for a fuller suggestion, or write your own."
+              : "Add steps, boxes or arrows for a suggestion, or write your own."
+            : "Suggested from your annotations. Check it says what matters, and edit it.";
 
   return (
     <div className="space-y-2 border-t pt-4">
@@ -118,17 +105,54 @@ export function AltTextSection() {
         id={fieldId}
         value={text}
         rows={4}
+        maxLength={MAX_ALT_TEXT}
         spellCheck
         aria-describedby={noteId}
         placeholder="Describe what the image shows."
-        onChange={(event) =>
-          setWritten(originalImageId(image.id), event.target.value)
-        }
+        onChange={(event) => setAltText(event.target.value)}
         className="block w-full resize-y rounded-md border border-input bg-background/70 px-3 py-2 text-sm leading-snug outline-none placeholder:text-muted-foreground focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid"
       />
       <p id={noteId} className="text-xs text-muted-foreground" role="status">
         {note} {GUIDELINES}
       </p>
+      {(stale || (failed && !written)) && (
+        <div className="flex flex-wrap gap-2">
+          {stale && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-md"
+                onClick={() => setAltText(null)}
+              >
+                Use the new suggestion
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-md"
+                onClick={() => setAltText(written.text)}
+              >
+                Keep mine
+              </Button>
+            </>
+          )}
+          {failed && !written && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="rounded-md"
+              onClick={() => {
+                setReading({ state: "reading", id: image.id });
+                setAttempt((count) => count + 1);
+              }}
+            >
+              <RefreshCw aria-hidden />
+              Read the text again
+            </Button>
+          )}
+        </div>
+      )}
       <div className="flex gap-2">
         <Button
           variant="outline"
@@ -136,23 +160,32 @@ export function AltTextSection() {
           className="flex-1 rounded-md"
           disabled={!text.trim()}
           onClick={() => {
-            void navigator.clipboard?.writeText(text).then(
-              () => setCopied(true),
-              () => undefined,
+            const clipboard = navigator.clipboard;
+            if (!clipboard) {
+              setCopied("failed");
+              return;
+            }
+            void clipboard.writeText(text).then(
+              () => setCopied("copied"),
+              () => setCopied("failed"),
             );
           }}
         >
-          {copied ? <Check aria-hidden /> : <Copy aria-hidden />}
-          {copied ? "Copied" : "Copy alt text"}
+          {copied === "copied" ? <Check aria-hidden /> : <Copy aria-hidden />}
+          {copied === "copied"
+            ? "Copied"
+            : copied === "failed"
+              ? "Couldn’t copy. Select the text instead."
+              : "Copy alt text"}
         </Button>
-        {written !== undefined && (
+        {written && (
           <Button
             variant="outline"
             size="sm"
             className="rounded-md"
             data-tip="Back to the suggestion"
             aria-label="Back to the suggestion"
-            onClick={() => setWritten(originalImageId(image.id), null)}
+            onClick={() => setAltText(null)}
           >
             <RotateCcw aria-hidden />
           </Button>

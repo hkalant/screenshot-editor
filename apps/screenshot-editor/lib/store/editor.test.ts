@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { altBasis, isAltCurrent } from "@/lib/alt/basis";
 import { computeLayout } from "@/lib/design/layout";
+import { MAX_ALT_TEXT } from "@/lib/design/limits";
 import { referencedImageIds } from "@/lib/design/refs";
 import { createDefaultDesign, defaultShotStyle } from "@/lib/design/defaults";
 import { getGradientPreset } from "@/lib/design/gradients";
@@ -386,6 +388,64 @@ describe("editor store: history", () => {
     state().loadDesign(saved, [image]);
     expect(state().past).toEqual([]);
     expect(selectActiveImage(state())).toBe(image);
+  });
+});
+
+describe("editor store: alt text", () => {
+  const written = () => state().design.altText;
+
+  beforeEach(() => {
+    state().setImage(fakeImage("shot", 1000, 500));
+    later();
+  });
+
+  it("keeps written alt text with the annotations it was written for", () => {
+    state().addStep({ x: 0.2, y: 0.1 });
+    later();
+    state().setAltText("The course menu.");
+    expect(written()).toEqual({
+      text: "The course menu.",
+      basis: altBasis(state().design),
+    });
+    // Moving the step: the text stays, but no longer matches.
+    const [step] = state().design.annotations;
+    later();
+    state().moveAnnotation(step.id, { x: 0.25, y: 0.1 });
+    expect(written()?.text).toBe("The course menu.");
+    expect(isAltCurrent(state().design, written()!.basis)).toBe(false);
+    // Keeping it marks it as written for the annotations as they are.
+    state().setAltText("The course menu.");
+    expect(isAltCurrent(state().design, written()!.basis)).toBe(true);
+  });
+
+  it("merges typing into one undo step and goes back to the suggestion", () => {
+    state().setAltText("T");
+    state().setAltText("Th");
+    state().setAltText("The menu");
+    expect(written()?.text).toBe("The menu");
+    state().undo();
+    expect(written()).toBeNull();
+    state().redo();
+    later();
+    state().setAltText(null);
+    expect(written()).toBeNull();
+  });
+
+  it("caps its length", () => {
+    state().setAltText("a".repeat(MAX_ALT_TEXT + 50));
+    expect(written()?.text).toHaveLength(MAX_ALT_TEXT);
+  });
+
+  it("is dropped with the annotations when the screenshot changes", () => {
+    state().setAltText("The old screenshot.");
+    later();
+    state().setImage(fakeImage("other", 1000, 500));
+    expect(written()).toBeNull();
+    state().undo();
+    expect(written()?.text).toBe("The old screenshot.");
+    later();
+    state().clearImage();
+    expect(written()).toBeNull();
   });
 });
 

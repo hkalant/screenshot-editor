@@ -50,6 +50,20 @@ const loadImage = async (blob: Blob, name: string, { id }: { id: string }) => ({
 });
 
 describe("saveSnapshot", () => {
+  it("keeps the alt text the user wrote through a restore", async () => {
+    const { storage } = memoryStorage();
+    const altText = { text: "The course menu.", basis: "0badf00d" };
+    await saveSnapshot(
+      storage,
+      { ...designWith("a"), altText },
+      {
+        a: fakeImage("a"),
+      },
+    );
+    const restored = await restoreSnapshot(storage, loadImage);
+    expect(restored?.design.altText).toEqual(altText);
+  });
+
   it("writes the images once, then the design, and deletes unused images", async () => {
     const { map, storage } = memoryStorage();
     const images: Record<string, LoadedImage> = {
