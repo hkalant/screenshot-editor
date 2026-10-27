@@ -28,6 +28,9 @@ export const BLUR = { min: 0, max: 40, step: 1 } as const;
 /** Window title and address bar text. */
 export const MAX_FRAME_TEXT = 120;
 
+/** Alt text the user writes for the export. */
+export const MAX_ALT_TEXT = 2000;
+
 export const MAX_FILE_BYTES = 50 * 1024 * 1024;
 
 /** Larger images are rejected before they are decoded, to protect memory. */

@@ -78,6 +78,26 @@ describe("project files", () => {
     ]);
   });
 
+  it("keeps the alt text the user wrote", async () => {
+    const altText = { text: "The course menu.", basis: "0badf00d" };
+    const text = await serializeProject(
+      { ...designWith("shot"), altText },
+      { shot: fakeImage("shot") },
+    );
+    const { design } = await parseProject(text, loader().load);
+    expect(design.altText).toEqual(altText);
+  });
+
+  it("opens a project saved before alt text was kept", async () => {
+    const old: Partial<Design> = designWith(null);
+    delete old.altText;
+    const { design } = await parseProject(
+      fileWith({ design: old }),
+      loader().load,
+    );
+    expect(design.altText).toBeNull();
+  });
+
   it("opens a project with no screenshot", async () => {
     const { load } = loader();
     const { design, images } = await parseProject(fileWith({}), load);

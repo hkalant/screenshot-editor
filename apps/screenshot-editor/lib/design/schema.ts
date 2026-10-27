@@ -2,6 +2,7 @@ import { z } from "zod";
 import {
   BLUR,
   BORDER_WIDTH,
+  MAX_ALT_TEXT,
   MAX_FRAME_TEXT,
   PADDING,
   RADIUS,
@@ -303,6 +304,16 @@ export const annotationSchema = z.discriminatedUnion("kind", [
   screenshotAnnotationSchema,
 ]);
 
+/**
+ * Alt text the user wrote over the suggestion, with the basis of the
+ * suggestion at the time (see altBasis), to tell when the annotations it
+ * describes have changed since.
+ */
+export const writtenAltSchema = z.object({
+  text: z.string().max(MAX_ALT_TEXT),
+  basis: z.string().max(64),
+});
+
 export const designSchema = z.object({
   version: z.literal(2),
   canvas: canvasSpecSchema,
@@ -314,6 +325,8 @@ export const designSchema = z.object({
   annotations: z.array(annotationSchema).max(500).default([]),
   /** The number the next step gets. */
   nextStep: z.number().int().min(1).max(MAX_STEP_NUMBER).default(1),
+  /** Null while the suggestion is used. Designs saved before it was kept get none. */
+  altText: writtenAltSchema.nullable().default(null),
 });
 
 /** The milestone 1 design, kept so older saved designs can be migrated. */
@@ -359,5 +372,6 @@ export const isLineEnd = (style: string): style is LineEnd =>
 export type ArrowAnnotation = z.infer<typeof arrowAnnotationSchema>;
 export type ScreenshotAnnotation = z.infer<typeof screenshotAnnotationSchema>;
 export type Annotation = z.infer<typeof annotationSchema>;
+export type WrittenAlt = z.infer<typeof writtenAltSchema>;
 export type Design = z.infer<typeof designSchema>;
 export type DesignV1 = z.infer<typeof designV1Schema>;

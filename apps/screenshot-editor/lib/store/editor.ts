@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { altBasis } from "@/lib/alt/basis";
 import {
   canvasArea,
   clampStepSize,
@@ -43,6 +44,7 @@ import { computeLayout, insetBox as framedInsetBox } from "@/lib/design/layout";
 import {
   BLUR,
   BORDER_WIDTH,
+  MAX_ALT_TEXT,
   MAX_FRAME_TEXT,
   PADDING,
   RADIUS,
@@ -273,6 +275,12 @@ export type EditorState = {
   pasteAnnotation: (annotation: Annotation) => string | null;
   /** The next step is numbered 1 again. */
   resetStepCount: () => void;
+  /**
+   * Keeps `text` as the export's alt text, written for the annotations as
+   * they are now; null goes back to the suggestion. Typing merges into one
+   * undo step.
+   */
+  setAltText: (text: string | null) => void;
 
   /** Replaces the design (an autosave restore). Clears the history. */
   loadDesign: (design: Design, images: LoadedImage[]) => void;
@@ -444,11 +452,13 @@ function replacedScreenshot(
 /** How far a pasted copy sits from its original, across and down, in image widths. */
 const PASTE_OFFSET = 0.02;
 
-/** A new screenshot starts without the old one's annotations. */
+/** A new screenshot starts without the old one's annotations or alt text. */
 const withoutAnnotations = (design: Design): Design =>
-  design.annotations.length === 0 && design.nextStep === 1
+  design.annotations.length === 0 &&
+  design.nextStep === 1 &&
+  design.altText === null
     ? design
-    : { ...design, annotations: [], nextStep: 1 };
+    : { ...design, annotations: [], nextStep: 1, altText: null };
 
 function updateAnnotation(
   design: Design,
@@ -1753,6 +1763,18 @@ export const useEditorStore = create<EditorState>()((set, get) => {
     resetStepCount: () =>
       commit((design) =>
         design.nextStep === 1 ? null : { ...design, nextStep: 1 },
+      ),
+
+    setAltText: (text) =>
+      commit(
+        (design) => ({
+          ...design,
+          altText:
+            text === null
+              ? null
+              : { text: text.slice(0, MAX_ALT_TEXT), basis: altBasis(design) },
+        }),
+        "alt-text",
       ),
 
     loadDesign: (design, images) =>

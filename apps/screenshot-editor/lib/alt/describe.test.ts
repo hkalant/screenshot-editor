@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { Annotation } from "@/lib/design/schema";
+import type { Annotation, ShapeAnnotation } from "@/lib/design/schema";
 import { describeAnnotations, type FoundLine } from "./describe";
 
 // A screenshot 1 wide and 0.5 tall, with two lines of text.
@@ -30,8 +30,116 @@ const step = (number: number, x: number, y: number): Annotation => ({
 });
 
 describe("describeAnnotations", () => {
-  it("is empty without annotations", () => {
+  it("is empty without annotations or text", () => {
+    expect(describeAnnotations([], ASPECT, [])).toBe("");
+  });
+
+  it("names a plain screenshot by a heading set clearly larger", () => {
+    const heading: FoundLine = {
+      words: [
+        { text: "Course", box: { x: 0.3, y: 0.15, width: 0.12, height: 0.04 } },
+        {
+          text: "settings",
+          box: { x: 0.43, y: 0.15, width: 0.16, height: 0.04 },
+        },
+      ],
+      box: { x: 0.3, y: 0.15, width: 0.29, height: 0.04 },
+    };
+    expect(describeAnnotations([], ASPECT, [...LINES, heading])).toBe(
+      "A screen headed ‘Course settings’.",
+    );
+    expect(describeAnnotations([], ASPECT, [...LINES, heading], "phone")).toBe(
+      "On a phone: a screen headed ‘Course settings’.",
+    );
+  });
+
+  it("guesses no heading when nothing stands out", () => {
+    // Text all much the same size, as on most app screens.
     expect(describeAnnotations([], ASPECT, LINES)).toBe("");
+    // One large word is a label or a button more often than a heading.
+    const word: FoundLine = {
+      words: [
+        {
+          text: "Assessment",
+          box: { x: 0.3, y: 0.1, width: 0.3, height: 0.06 },
+        },
+      ],
+      box: { x: 0.3, y: 0.1, width: 0.3, height: 0.06 },
+    };
+    expect(describeAnnotations([], ASPECT, [...LINES, word])).toBe("");
+    // A box that OCR ran tall (into a border) is sized by its letters.
+    const tall: FoundLine = {
+      words: [
+        { text: "Week", box: { x: 0.3, y: 0.1, width: 0.04, height: 0.1 } },
+        { text: "three", box: { x: 0.35, y: 0.1, width: 0.05, height: 0.1 } },
+      ],
+      box: { x: 0.3, y: 0.1, width: 0.1, height: 0.1 },
+    };
+    expect(describeAnnotations([], ASPECT, [...LINES, tall])).toBe("");
+  });
+
+  it("never quotes text under a solid box or circle", () => {
+    const cover = (shape: "rect" | "rounded" | "circle"): ShapeAnnotation => ({
+      id: shape,
+      kind: "shape",
+      shape,
+      x: 0.55,
+      y: 0.28,
+      width: 0.25,
+      height: 0.06,
+      color: "#424a52",
+      filled: true,
+    });
+    const arrow: Annotation = {
+      id: "a",
+      kind: "arrow",
+      x: 0.2,
+      y: 0.45,
+      dx: 0.4,
+      dy: -0.14,
+      color: "#424a52",
+      style: "solid",
+      bend: 0,
+    };
+    for (const shape of ["rect", "rounded", "circle"] as const) {
+      const text = describeAnnotations(
+        [cover(shape), arrow, step(1, 0.58, 0.29)],
+        ASPECT,
+        LINES,
+      );
+      expect(text).not.toMatch(/Student|number|12345/);
+      expect(text).toContain("covers an area");
+    }
+    // Hidden text is no heading either.
+    expect(
+      describeAnnotations(
+        [{ ...cover("rect"), x: 0.05, y: 0.02, width: 0.3, height: 0.08 }],
+        ASPECT,
+        LINES,
+      ),
+    ).not.toContain("Assessment");
+  });
+
+  it("still quotes text under an outlined box", () => {
+    expect(
+      describeAnnotations(
+        [
+          {
+            id: "b",
+            kind: "shape",
+            shape: "rect",
+            x: 0.55,
+            y: 0.28,
+            width: 0.25,
+            height: 0.06,
+            color: "#424a52",
+            filled: false,
+          },
+        ],
+        ASPECT,
+        LINES,
+      ),
+    ).toBe("A charcoal box surrounds ‘Student number 12345’.");
   });
 
   it("names what each step is next to, in number order", () => {
@@ -185,7 +293,7 @@ describe("describeAnnotations", () => {
     expect(
       describeAnnotations([step(1, 0.07, 0.06)], ASPECT, LINES, "phone"),
     ).toBe("On a phone: step 1 marks ‘Assessment’.");
-    expect(describeAnnotations([], ASPECT, LINES, "laptop")).toBe(
+    expect(describeAnnotations([], ASPECT, [], "laptop")).toBe(
       "Shown on a laptop.",
     );
     // Window frames go unsaid: no device.
