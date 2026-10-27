@@ -287,3 +287,24 @@ test("while a picker is open, both capture buttons are greyed out", async ({
   await expect(captureButton(page)).toBeEnabled();
   await expect(annotateTool(page, "Replace second screenshot")).toBeEnabled();
 });
+
+test("the second screenshot menu works from the keyboard", async ({ page }) => {
+  await upload(page, makeSolidPng(400, 300, [0, 128, 255, 255]));
+  await annotateTool(page, "Add second screenshot").focus();
+  await page.keyboard.press("Enter");
+  const uploadItem = page.getByRole("menuitem", { name: "Upload screenshot" });
+  const captureItem = page.getByRole("menuitem", { name: "Capture screen" });
+  // Focus goes to the first item, and the arrows move between them.
+  await expect(uploadItem).toBeFocused();
+  await page.keyboard.press("ArrowDown");
+  await expect(captureItem).toBeFocused();
+  await page.keyboard.press("ArrowDown");
+  await expect(uploadItem).toBeFocused();
+  await page.keyboard.press("End");
+  await expect(captureItem).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(
+    page.getByRole("button", { name: "Delete second screenshot" }),
+  ).toBeVisible();
+  expect(await captures(page)).toBe(1);
+});

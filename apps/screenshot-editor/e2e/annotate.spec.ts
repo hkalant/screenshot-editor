@@ -1082,3 +1082,37 @@ test("the toolbar stays enlarged while one of its menus is open", async ({
   await expect(page.getByRole("menu", { name: "Shapes" })).toBeHidden();
   await expect.poll(scale).not.toBe("1.04");
 });
+
+test("the shape menu opens on the current shape, and the arrows move through it", async ({
+  page,
+}) => {
+  await upload(page, makeSolidPng(400, 300, [0, 128, 255, 255]));
+  const bar = page.getByRole("toolbar", { name: "Annotate" });
+  await bar.getByRole("button", { name: "Choose shape" }).focus();
+  await page.keyboard.press("Enter");
+  const menu = page.getByRole("menu", { name: "Shapes" });
+  await expect(
+    menu.getByRole("menuitemradio", { name: "Rectangle", exact: true }),
+  ).toBeFocused();
+  await page.keyboard.press("ArrowUp");
+  await expect(
+    menu.getByRole("menuitemradio", { name: "Highlight", exact: true }),
+  ).toBeFocused();
+  await page.keyboard.press("Home");
+  await expect(
+    menu.getByRole("menuitemradio", { name: "Rectangle", exact: true }),
+  ).toBeFocused();
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("Enter");
+  await expect(
+    bar.getByRole("button", { name: "Circle", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+
+  // Opened again, the focus starts on the shape picked.
+  await bar.getByRole("button", { name: "Choose shape" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(
+    menu.getByRole("menuitemradio", { name: "Circle", exact: true }),
+  ).toBeFocused();
+});

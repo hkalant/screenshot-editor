@@ -116,8 +116,11 @@ export async function ingestScreenCapture(
   setCapturing(true);
   let file: File;
   try {
-    file = await captureScreenFrame();
+    // Loading from the moment something is picked: taking and encoding the
+    // frame can take a few seconds, and an export then would miss it.
+    file = await captureScreenFrame(() => setBusy(target, true));
   } catch (error) {
+    setBusy(target, false);
     if (!(error instanceof CaptureCancelled))
       useEditorStore.getState().showError(IMAGE_MESSAGES.captureFailed);
     return;
