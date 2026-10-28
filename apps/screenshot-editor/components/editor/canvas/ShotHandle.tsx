@@ -24,7 +24,7 @@ const FAR = 72;
 // A short curve clear of the top-left corner, which is INSET from the
 // bottom-right of a CORNER-sized box: centred on the diagonal and bending
 // around the corner.
-const CURVE = "M 5.8 23.7 A 30 30 0 0 1 23.7 5.8";
+const CURVE = "M 9.35 22.35 A 12 12 0 0 1 22.35 9.35";
 // The corner tooltip: how long the pointer rests before it shows, and half
 // its width, to keep it inside the stage.
 const TIP_DELAY = 300;
