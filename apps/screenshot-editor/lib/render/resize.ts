@@ -20,10 +20,10 @@ export type ShotResize = {
 };
 
 /**
- * The shot resized by dragging `corner` to `pointer` (canvas px), with the
- * opposite corner staying put and the shape kept. `box` is the shot at
- * `scale`. It grows up to half as big again as fitting inside the padding,
- * so past the canvas's edges, which crop it.
+ * The shot resized by dragging `corner` to `pointer` (canvas px), about its
+ * centre, as if Shift were held: the centre stays put and the shape is kept.
+ * `box` is the shot at `scale`. It grows up to half as big again as fitting
+ * inside the padding, so past the canvas's edges, which crop it.
  */
 export function resizeFromCorner(
   box: Rect,
@@ -32,24 +32,21 @@ export function resizeFromCorner(
   pointer: Point,
   canvas: Size,
 ): ShotResize {
-  // The shot's size at scale 1, and the corner that stays put.
+  // The shot's size at scale 1, and the centre that stays put.
   const base = { width: box.width / scale, height: box.height / scale };
-  const anchor = {
-    x: corner.x > 0 ? box.x : box.x + box.width,
-    y: corner.y > 0 ? box.y : box.y + box.height,
+  const centre = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  // How far along the half-diagonal the pointer is, so either direction
+  // counts.
+  const diagonal = {
+    x: (corner.x * base.width) / 2,
+    y: (corner.y * base.height) / 2,
   };
-  // How far along the diagonal the pointer is, so either direction counts.
-  const diagonal = { x: corner.x * base.width, y: corner.y * base.height };
   const along =
-    ((pointer.x - anchor.x) * diagonal.x +
-      (pointer.y - anchor.y) * diagonal.y) /
+    ((pointer.x - centre.x) * diagonal.x +
+      (pointer.y - centre.y) * diagonal.y) /
     (diagonal.x ** 2 + diagonal.y ** 2);
-  const next = clamp(along, SHOT_SCALE.min, SHOT_SCALE.max);
   return {
-    scale: next,
-    position: {
-      x: (anchor.x + (corner.x * base.width * next) / 2) / canvas.width,
-      y: (anchor.y + (corner.y * base.height * next) / 2) / canvas.height,
-    },
+    scale: clamp(along, SHOT_SCALE.min, SHOT_SCALE.max),
+    position: { x: centre.x / canvas.width, y: centre.y / canvas.height },
   };
 }

@@ -14,9 +14,16 @@ import { useGuides } from "./nodes/Guides";
 const SIZE = 32;
 const GAP = 8;
 // The corner handles' size: inside the gap, so reaching one keeps them up.
-const CORNER = 12;
+const CORNER = 16;
+// The curve at each corner fades in as the pointer comes within FAR of the
+// corner, and is fully drawn within NEAR.
+const NEAR = 12;
+const FAR = 72;
 // The corner tooltip: how long the pointer rests before it shows, and half
 // its width, to keep it inside the stage.
+// Drawn just outside the top-left corner, which is at the middle of a
+// CORNER-sized box: along both edges, rounding the corner between them.
+const CURVE = "M 3 32 V 15 A 12 12 0 0 1 15 3 H 32";
 const TIP_DELAY = 300;
 const TIP_HALF = 112;
 const RESIZE_TIP =
@@ -93,11 +100,60 @@ function useHovered(
 }
 
 /**
+ * How close a mouse over the element's parent is to each of `points`, from 0
+ * (FAR or more away) to 1 (within NEAR). All 1 until a mouse moves there, so
+ * the corners show on touchscreens.
+ */
+function useNearness(
+  element: RefObject<HTMLElement | null>,
+  points: Point[],
+  enabled: boolean,
+): number[] {
+  const [near, setNear] = useState<number[]>(() => points.map(() => 1));
+  const pointsRef = useRef(points);
+  useEffect(() => {
+    pointsRef.current = points;
+  });
+
+  useEffect(() => {
+    const parent = element.current?.parentElement;
+    if (!parent || !enabled) return;
+    const onMove = (event: PointerEvent) => {
+      if (event.pointerType === "touch") return;
+      const rect = parent.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+      // Rounded, so small moves far from a corner don't re-render.
+      const next = pointsRef.current.map((point) => {
+        const distance = Math.hypot(point.x - x, point.y - y);
+        const amount = clamp((FAR - distance) / (FAR - NEAR), 0, 1);
+        return Math.round(amount * 20) / 20;
+      });
+      setNear((now) =>
+        now.length === next.length && now.every((n, i) => n === next[i])
+          ? now
+          : next,
+      );
+    };
+    const onLeave = () => setNear((now) => now.map(() => 0));
+    parent.addEventListener("pointermove", onMove);
+    parent.addEventListener("pointerleave", onLeave);
+    return () => {
+      parent.removeEventListener("pointermove", onMove);
+      parent.removeEventListener("pointerleave", onLeave);
+    };
+  }, [element, enabled]);
+
+  return near;
+}
+
+/**
  * A handle just below the screenshot that moves it whatever annotation tool
  * is on (drawing tools take presses on the screenshot itself), and one at
  * each corner that resizes it. With a mouse they show only while the
  * pointer is over the screenshot or the move handle, so they don't get in
- * the way of annotating near the screenshot's edge.
+ * the way of annotating near the screenshot's edge, and each corner's curve
+ * fades in only as the pointer comes close to it.
  */
 export function ShotHandle({ layout, scale, width, height }: Props) {
   const setPosition = useEditorStore((state) => state.setPosition);
@@ -110,6 +166,8 @@ export function ShotHandle({ layout, scale, width, height }: Props) {
     null,
   );
   const [dragging, setDragging] = useState(false);
+  // The corner being dragged, or focused from the keyboard: drawn in full.
+  const [active, setActive] = useState<Corner | null>(null);
   const button = useRef<HTMLButtonElement>(null);
   // The corner whose tooltip shows, if any.
   const [tip, setTip] = useState<Corner | null>(null);
@@ -155,6 +213,15 @@ export function ShotHandle({ layout, scale, width, height }: Props) {
     ],
     layout.draggable,
   );
+  const cornerPoints = CORNERS.map((corner) => ({
+    x: (corner.x > 0 ? shot.x + shot.width : shot.x) * scale,
+    y: (corner.y > 0 ? shot.y + shot.height : shot.y) * scale,
+  }));
+  const nearness = useNearness(
+    button,
+    cornerPoints,
+    layout.draggable && shot.rotation === 0,
+  );
   if (!layout.draggable) return null;
   const shown = hovered || dragging;
 
@@ -163,6 +230,7 @@ export function ShotHandle({ layout, scale, width, height }: Props) {
     drag.current = null;
     resize.current = null;
     setDragging(false);
+    setActive(null);
     useGuides.setState(NO_GUIDES);
     sealHistory();
   };
@@ -182,9 +250,10 @@ export function ShotHandle({ layout, scale, width, height }: Props) {
 
   const corners = shot.rotation === 0 && (
     <>
-      {CORNERS.map((corner) => {
-        const x = (corner.x > 0 ? shot.x + shot.width : shot.x) * scale;
-        const y = (corner.y > 0 ? shot.y + shot.height : shot.y) * scale;
+      {CORNERS.map((corner, index) => {
+        const { x, y } = cornerPoints[index];
+        const isActive = active?.x === corner.x && active?.y === corner.y;
+        const opacity = isActive ? 1 : dragging ? 0 : nearness[index];
         return (
           <button
             key={corner.name}
@@ -195,8 +264,15 @@ export function ShotHandle({ layout, scale, width, height }: Props) {
               if (event.pointerType !== "touch") showTip(corner, TIP_DELAY);
             }}
             onPointerLeave={() => showTip(null)}
-            onFocus={() => showTip(corner)}
-            onBlur={() => showTip(null)}
+            onFocus={(event) => {
+              showTip(corner);
+              if (event.currentTarget.matches(":focus-visible"))
+                setActive(corner);
+            }}
+            onBlur={() => {
+              showTip(null);
+              if (!resize.current) setActive(null);
+            }}
             onPointerDown={(event) => {
               if (event.button !== 0) return;
               event.preventDefault();
@@ -213,6 +289,7 @@ export function ShotHandle({ layout, scale, width, height }: Props) {
                 scale: shotScale,
               };
               setDragging(true);
+              setActive(corner);
               // The whole resize is one undo step.
               beginGesture();
             }}
@@ -239,7 +316,7 @@ export function ShotHandle({ layout, scale, width, height }: Props) {
             // Back to the size and place it started at.
             onDoubleClick={() => resizeShot(SHOT_SCALE.default, 0.5, 0.5)}
             className={cn(
-              "absolute touch-none rounded-full border-[1.5px] border-[#0a84ff] bg-white shadow-sm transition-[opacity,visibility] duration-150 outline-none focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid motion-reduce:transition-none",
+              "absolute touch-none rounded-full transition-[opacity,visibility] duration-150 outline-none focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid motion-reduce:transition-none",
               corner.x === corner.y
                 ? "cursor-nwse-resize"
                 : "cursor-nesw-resize",
@@ -251,7 +328,34 @@ export function ShotHandle({ layout, scale, width, height }: Props) {
               width: CORNER,
               height: CORNER,
             }}
-          />
+          >
+            <svg
+              aria-hidden
+              data-testid="resize-curve"
+              viewBox={`0 0 ${CORNER} ${CORNER}`}
+              className="pointer-events-none absolute inset-0 size-full overflow-visible transition-opacity duration-100 motion-reduce:transition-none"
+              style={{
+                opacity,
+                // Drawn for the top-left corner, and mirrored for the others.
+                transform: `scale(${-corner.x}, ${-corner.y})`,
+              }}
+            >
+              <path
+                d={CURVE}
+                fill="none"
+                stroke="white"
+                strokeWidth={5}
+                strokeLinecap="round"
+              />
+              <path
+                d={CURVE}
+                fill="none"
+                stroke="#0a84ff"
+                strokeWidth={3}
+                strokeLinecap="round"
+              />
+            </svg>
+          </button>
         );
       })}
       <span id={tipId} className="sr-only">
