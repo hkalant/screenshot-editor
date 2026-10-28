@@ -82,6 +82,7 @@ import type { LoadedImage } from "@/lib/image/load";
 import { blurredPatch } from "@/lib/render/blurPatch";
 import { FRAME_FONT_FAMILY } from "@/lib/render/frame";
 import { useEditorStore } from "@/lib/store/editor";
+import { clamp } from "@/lib/utils";
 import { useFrameFont } from "./Chrome";
 import { DeviceNode } from "./Device";
 import { FramedShot, shadowProps } from "./FramedShot";
@@ -226,12 +227,15 @@ function StepNode({
 }
 
 const cornerRadius = (
-  shape: Pick<ShapeAnnotation, "shape" | "rounded">,
+  shape: Pick<ShapeAnnotation, "shape" | "rounded" | "lens">,
   width: number,
   height: number,
   weight: number,
 ) =>
-  shape.shape === "rounded" || (shape.shape === "highlight" && shape.rounded)
+  shape.shape === "rounded" ||
+  (shape.shape === "highlight" && shape.rounded) ||
+  (shape.shape === "magnify" &&
+    (shape.lens ?? DEFAULT_MAGNIFY_LENS) === "rounded")
     ? Math.min(SHAPE_CORNER * weight, width / 2, height / 2)
     : 0;
 
@@ -376,22 +380,27 @@ function ScreenshotBody({
   );
 }
 
+/** A screenshot's pixels and where they are, in image widths. */
+type Picture = {
+  source: LoadedImage;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
 /**
- * The picture a blur box blurs: the second screenshot its centre is over,
- * if any, else the main one. Its box is then in that picture's widths.
+ * The pictures blur boxes and magnifiers can work on: the second
+ * screenshot's (inside its frame), then the main one's.
  */
-function useBlurSource(
-  shape: ShapeAnnotation,
+function usePictures(
   annotations: readonly Annotation[],
   main: LoadedImage,
   unit: number,
-) {
+): Picture[] {
   const images = useEditorStore((state) => state.images);
   const shot = useEditorStore((state) => state.design.layers[0]);
-  const centre = {
-    x: shape.x + shape.width / 2,
-    y: shape.y + shape.height / 2,
-  };
+  const pictures: Picture[] = [];
   for (const annotation of [...annotations].reverse()) {
     if (annotation.kind !== "screenshot") continue;
     const original = images[annotation.imageId];
@@ -403,54 +412,110 @@ function useBlurSource(
       annotation.width * unit,
       shot.radius,
     );
-    // The picture inside the frame, in image widths.
-    const x = annotation.x + box.image.x / unit;
-    const y = annotation.y + box.image.y / unit;
-    const width = box.image.width / unit;
-    const height = box.image.height / unit;
-    if (
-      centre.x < x ||
-      centre.y < y ||
-      centre.x > x + width ||
-      centre.y > y + height
-    )
-      continue;
-    return {
+    pictures.push({
       source: image,
-      shape: {
-        ...shape,
-        x: (shape.x - x) / width,
-        y: (shape.y - y) / width,
-        width: shape.width / width,
-        height: shape.height / width,
-      },
-      aspect: height / width,
-      unit: unit * width,
-    };
+      x: annotation.x + box.image.x / unit,
+      y: annotation.y + box.image.y / unit,
+      width: box.image.width / unit,
+      height: box.image.height / unit,
+    });
   }
-  return {
+  pictures.push({
     source: main,
-    shape,
-    aspect: main.height / main.width,
-    unit,
+    x: 0,
+    y: 0,
+    width: 1,
+    height: main.height / main.width,
+  });
+  return pictures;
+}
+
+/** The picture `point` is over: a second screenshot, else the main one. */
+function pictureAt(pictures: readonly Picture[], point: Point): Picture {
+  return (
+    pictures
+      .slice(0, -1)
+      .find(
+        (picture) =>
+          point.x >= picture.x &&
+          point.y >= picture.y &&
+          point.x <= picture.x + picture.width &&
+          point.y <= picture.y + picture.height,
+      ) ?? pictures[pictures.length - 1]
+  );
+}
+
+/** A point in image widths, in a picture's own widths. */
+const toPicture = (point: Point, picture: Picture): Point => ({
+  x: (point.x - picture.x) / picture.width,
+  y: (point.y - picture.y) / picture.width,
+});
+
+/**
+ * A shape in the widths of the picture it works on: for a blur box the one
+ * its centre is over, for a magnifier the one under what it enlarges.
+ */
+function onPicture(
+  shape: ShapeAnnotation,
+  pictures: readonly Picture[],
+  unit: number,
+) {
+  const centre = {
+    x: shape.x + shape.width / 2,
+    y: shape.y + shape.height / 2,
+  };
+  const picture = pictureAt(pictures, shape.from ?? centre);
+  return {
+    picture,
+    source: picture.source,
+    shape: {
+      ...shape,
+      ...toPicture(shape, picture),
+      width: shape.width / picture.width,
+      height: shape.height / picture.width,
+      ...(shape.from && { from: toPicture(shape.from, picture) }),
+    },
+    aspect: picture.height / picture.width,
+    unit: unit * picture.width,
+  };
+}
+
+/**
+ * The part of the screenshots an inset magnifier enlarges, in image widths:
+ * on whichever picture its `from` is over.
+ */
+function insetArea(shape: ShapeAnnotation, pictures: readonly Picture[]) {
+  const on = onPicture(shape, pictures, 1);
+  const area = magnifyArea(
+    on.shape,
+    shape.zoom ?? DEFAULT_MAGNIFY_ZOOM,
+    on.aspect,
+    on.shape.from,
+  );
+  return {
+    picture: on.picture,
+    area: {
+      x: on.picture.x + area.x * on.picture.width,
+      y: on.picture.y + area.y * on.picture.width,
+      width: area.width * on.picture.width,
+      height: area.height * on.picture.width,
+    },
   };
 }
 
 /** A blur box over whichever screenshot is under it. */
 function BlurOver({
   shape,
-  annotations,
-  source,
+  pictures,
   unit,
   zoom,
 }: {
   shape: ShapeAnnotation;
-  annotations: readonly Annotation[];
-  source: LoadedImage;
+  pictures: readonly Picture[];
   unit: number;
   zoom: number;
 }) {
-  const over = useBlurSource(shape, annotations, source, unit);
+  const over = onPicture(shape, pictures, unit);
   return (
     <BlurBody
       shape={over.shape}
@@ -597,6 +662,30 @@ function LensOutline({
   );
 }
 
+/** A magnifier over whichever screenshot is under what it enlarges. */
+function MagnifyOver({
+  shape,
+  pictures,
+  unit,
+  weight,
+}: {
+  shape: ShapeAnnotation;
+  pictures: readonly Picture[];
+  unit: number;
+  weight: number;
+}) {
+  const over = onPicture(shape, pictures, unit);
+  return (
+    <MagnifyBody
+      shape={over.shape}
+      source={over.source}
+      aspect={over.aspect}
+      unit={over.unit}
+      weight={weight}
+    />
+  );
+}
+
 /**
  * A magnifier: part of the screenshot, enlarged, in a grey frame with a
  * soft shadow. Its first child is the box itself (pressable all over), which
@@ -630,7 +719,8 @@ function MagnifyBody({
     source.source instanceof HTMLImageElement
       ? source.source.naturalWidth
       : source.source.width;
-  const corner = Math.min(SHAPE_CORNER * weight, width / 2, height / 2);
+  // The same corner a resize gives the box (see placeShape).
+  const corner = cornerRadius(shape, width, height, weight);
   const border = Math.min(MAGNIFY_BORDER * weight, width / 8, height / 8);
   return (
     <>
@@ -680,25 +770,20 @@ function MagnifyBody({
  */
 function InsetSource({
   shape,
-  aspect,
+  pictures,
   unit,
   weight,
   zoom,
   ...groupProps
 }: {
   shape: ShapeAnnotation;
-  aspect: number;
+  pictures: readonly Picture[];
   unit: number;
   weight: number;
   zoom: number;
 } & Konva.ContainerConfig) {
   const lens = shape.lens ?? DEFAULT_MAGNIFY_LENS;
-  const area = magnifyArea(
-    shape,
-    shape.zoom ?? DEFAULT_MAGNIFY_ZOOM,
-    aspect,
-    shape.from,
-  );
+  const { area } = insetArea(shape, pictures);
   const line = insetConnector(area, shape, lens);
   const width = area.width * unit;
   const height = area.height * unit;
@@ -820,7 +905,7 @@ function shapeSize(group: Konva.Group) {
 function placeShape(
   group: Konva.Group,
   box: Box,
-  shape: Pick<ShapeAnnotation, "shape" | "rounded">,
+  shape: Pick<ShapeAnnotation, "shape" | "rounded" | "lens">,
   weight: number,
 ) {
   group.setAttrs({ x: box.x, y: box.y, scaleX: 1, scaleY: 1 });
@@ -1372,11 +1457,14 @@ export function AnnotationsNode({
     },
   });
 
-  // Second screenshots go under everything drawn on them.
-  const drawOrder = [
-    ...annotations.filter((annotation) => annotation.kind === "screenshot"),
-    ...annotations.filter((annotation) => annotation.kind !== "screenshot"),
-  ];
+  // Second screenshots go under everything drawn on them, insets' outlines
+  // included.
+  const screenshots = annotations.filter(
+    (annotation) => annotation.kind === "screenshot",
+  );
+  const drawnOn = annotations.filter(
+    (annotation) => annotation.kind !== "screenshot",
+  );
 
   // A second screenshot is resized from its corners, keeping its shape; the
   // stretch becomes its width when the resize ends.
@@ -1422,8 +1510,8 @@ export function AnnotationsNode({
     selected?.kind === "screenshot" ||
     (selectedShape !== null && isSquareShape(selectedShape));
 
+  const pictures = usePictures(annotations, source, unit);
   // An inset's outline round the area it enlarges is dragged on its own.
-  const aspect = image.height / image.width;
   const sourceProps = (shape: ShapeAnnotation) => ({
     draggable: true,
     onPointerDown: (event: KonvaEventObject<PointerEvent>) => {
@@ -1439,15 +1527,29 @@ export function AnnotationsNode({
     onDragMove: (event: KonvaEventObject<DragEvent>) => {
       event.cancelBubble = true;
       const node = event.target;
-      // Its size doesn't depend on where it is.
-      const { width, height } = magnifyArea(
-        shape,
-        shape.zoom ?? DEFAULT_MAGNIFY_ZOOM,
-        aspect,
+      // Kept on the screenshot its centre is over, at that one's size.
+      const { area } = insetArea(shape, pictures);
+      const { area: over, picture } = insetArea(
+        {
+          ...shape,
+          from: {
+            x: node.x() / unit + area.width / 2,
+            y: node.y() / unit + area.height / 2,
+          },
+        },
+        pictures,
       );
-      // Kept on the screenshot.
-      const x = Math.min(1 - width, Math.max(0, node.x() / unit));
-      const y = Math.min(aspect - height, Math.max(0, node.y() / unit));
+      const { width, height } = over;
+      const x = clamp(
+        node.x() / unit,
+        picture.x,
+        picture.x + picture.width - width,
+      );
+      const y = clamp(
+        node.y() / unit,
+        picture.y,
+        picture.y + picture.height - height,
+      );
       node.position({ x: x * unit, y: y * unit });
       useEditorStore.getState().moveMagnifySource(shape.id, {
         x: x + width / 2,
@@ -1467,8 +1569,91 @@ export function AnnotationsNode({
     },
   });
 
+  const drawAnnotation = (annotation: Annotation) =>
+    annotation.kind === "screenshot" ? (
+      <Group
+        key={annotation.id}
+        ref={register(annotation.id)}
+        name={`${ANNOTATION_NAME} ${SCREENSHOT_NAME}`}
+        x={annotation.x * unit}
+        y={annotation.y * unit}
+        {...screenshotTransformProps(annotation)}
+        // Moved with the select tool; drawn on with the others.
+        {...(selecting ? dragProps(annotation) : {})}
+      >
+        <ScreenshotBody annotation={annotation} unit={unit} />
+      </Group>
+    ) : annotation.kind === "arrow" ? (
+      <Group
+        key={annotation.id}
+        ref={register(annotation.id)}
+        name={ANNOTATION_NAME}
+        x={annotation.x * unit}
+        y={annotation.y * unit}
+        {...dragProps(annotation)}
+        {...arrowHoverProps(annotation)}
+      >
+        <ArrowBody
+          delta={{ x: annotation.dx * unit, y: annotation.dy * unit }}
+          style={annotation.style}
+          bend={annotation.bend}
+          color={annotation.color}
+          weight={weight}
+          zoom={zoom}
+        />
+      </Group>
+    ) : annotation.kind === "step" ? (
+      <Group
+        key={`${annotation.id}-${fontReady ? "font" : "fallback"}`}
+        ref={register(annotation.id)}
+        name={ANNOTATION_NAME}
+        x={annotation.x * unit}
+        y={annotation.y * unit}
+        {...stepTransformProps(annotation)}
+        {...dragProps(annotation)}
+      >
+        <StepNode step={annotation} weight={weight} zoom={zoom} />
+      </Group>
+    ) : (
+      <Group
+        key={annotation.id}
+        ref={register(annotation.id)}
+        name={ANNOTATION_NAME}
+        x={annotation.x * unit}
+        y={annotation.y * unit}
+        {...transformProps(annotation)}
+        {...dragProps(annotation)}
+      >
+        {annotation.shape === "blur" ? (
+          <BlurOver
+            shape={annotation}
+            pictures={pictures}
+            unit={unit}
+            zoom={zoom}
+          />
+        ) : annotation.shape === "magnify" ? (
+          <MagnifyOver
+            shape={annotation}
+            pictures={pictures}
+            unit={unit}
+            weight={weight}
+          />
+        ) : (
+          <ShapeBody
+            shape={annotation}
+            width={annotation.width * unit}
+            height={annotation.height * unit}
+            weight={weight}
+            zoom={zoom}
+            borderOnly={!selecting}
+          />
+        )}
+      </Group>
+    );
+
   return (
     <Group ref={rootRef} name={ANNOTATIONS_ROOT} x={image.x} y={image.y}>
+      {screenshots.map(drawAnnotation)}
       {annotations.map(
         (annotation) =>
           annotation.kind === "shape" &&
@@ -1477,7 +1662,7 @@ export function AnnotationsNode({
             <InsetSource
               key={`${annotation.id}-from`}
               shape={annotation}
-              aspect={aspect}
+              pictures={pictures}
               unit={unit}
               weight={weight}
               zoom={zoom}
@@ -1485,90 +1670,7 @@ export function AnnotationsNode({
             />
           ),
       )}
-      {drawOrder.map((annotation) =>
-        annotation.kind === "screenshot" ? (
-          <Group
-            key={annotation.id}
-            ref={register(annotation.id)}
-            name={`${ANNOTATION_NAME} ${SCREENSHOT_NAME}`}
-            x={annotation.x * unit}
-            y={annotation.y * unit}
-            {...screenshotTransformProps(annotation)}
-            // Moved with the select tool; drawn on with the others.
-            {...(selecting ? dragProps(annotation) : {})}
-          >
-            <ScreenshotBody annotation={annotation} unit={unit} />
-          </Group>
-        ) : annotation.kind === "arrow" ? (
-          <Group
-            key={annotation.id}
-            ref={register(annotation.id)}
-            name={ANNOTATION_NAME}
-            x={annotation.x * unit}
-            y={annotation.y * unit}
-            {...dragProps(annotation)}
-            {...arrowHoverProps(annotation)}
-          >
-            <ArrowBody
-              delta={{ x: annotation.dx * unit, y: annotation.dy * unit }}
-              style={annotation.style}
-              bend={annotation.bend}
-              color={annotation.color}
-              weight={weight}
-              zoom={zoom}
-            />
-          </Group>
-        ) : annotation.kind === "step" ? (
-          <Group
-            key={`${annotation.id}-${fontReady ? "font" : "fallback"}`}
-            ref={register(annotation.id)}
-            name={ANNOTATION_NAME}
-            x={annotation.x * unit}
-            y={annotation.y * unit}
-            {...stepTransformProps(annotation)}
-            {...dragProps(annotation)}
-          >
-            <StepNode step={annotation} weight={weight} zoom={zoom} />
-          </Group>
-        ) : (
-          <Group
-            key={annotation.id}
-            ref={register(annotation.id)}
-            name={ANNOTATION_NAME}
-            x={annotation.x * unit}
-            y={annotation.y * unit}
-            {...transformProps(annotation)}
-            {...dragProps(annotation)}
-          >
-            {annotation.shape === "blur" ? (
-              <BlurOver
-                shape={annotation}
-                annotations={annotations}
-                source={source}
-                unit={unit}
-                zoom={zoom}
-              />
-            ) : annotation.shape === "magnify" ? (
-              <MagnifyBody
-                shape={annotation}
-                source={source}
-                aspect={image.height / image.width}
-                unit={unit}
-                weight={weight}
-              />
-            ) : (
-              <ShapeBody
-                shape={annotation}
-                width={annotation.width * unit}
-                height={annotation.height * unit}
-                weight={weight}
-                zoom={zoom}
-                borderOnly={!selecting}
-              />
-            )}
-          </Group>
-        ),
-      )}
+      {drawnOn.map(drawAnnotation)}
       {alignGuides && selected?.kind === "screenshot" && (
         // Across both screenshots, a little beyond them.
         <Group name={EXPORT_HIDDEN} listening={false}>

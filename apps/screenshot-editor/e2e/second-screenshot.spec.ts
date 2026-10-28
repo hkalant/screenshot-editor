@@ -204,6 +204,23 @@ test("a blur box over a second screenshot blurs that screenshot", async ({
   expect(Math.abs(inside[0] - inside[1])).toBeLessThan(20);
 });
 
+test("a magnifier over a second screenshot enlarges that screenshot", async ({
+  page,
+}) => {
+  await upload(page, makeSolidPng(IMAGE.width, IMAGE.height, RED));
+  await addSecond(page, makeSolidPng(400, 300, [...GREEN]));
+  await tool(page, "Magnifier").click();
+  const from = await onImage(page, 0.65, 0.1);
+  const to = await onImage(page, 1.1, 0.5);
+  await page.mouse.move(from.x, from.y);
+  await page.mouse.down();
+  await page.mouse.move(to.x, to.y, { steps: 6 });
+  await page.mouse.up();
+  // Green from the second screenshot, not red from the main one.
+  const [inside] = await pixelsOnImage(page, [[0.875, 0.3]]);
+  expectColor(inside, "#00c800", 20);
+});
+
 test("with a second screenshot, the menu replaces all screenshots, and a hint says what it is", async ({
   page,
 }) => {

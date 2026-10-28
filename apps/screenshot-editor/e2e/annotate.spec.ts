@@ -440,6 +440,52 @@ test("an outline keeps its border width when zoomed out and resized", async ({
   expect(oldEdge.some(isYellow)).toBe(false);
 });
 
+test("a rounded magnifier keeps its round corners when resized", async ({
+  page,
+}) => {
+  // Big enough that the corner is well clear of the border and shadow.
+  const big = { width: 1600, height: 1000 };
+  await upload(page, makeSolidPng(big.width, big.height, RED));
+  const box = await stage(page).boundingBox();
+  if (!box) throw new Error("No stage");
+  const scale = box.width / (big.width + 2 * PADDING);
+  const at = (fx: number, fy: number) => ({
+    x: box.x + (PADDING + fx * big.width) * scale,
+    y: box.y + (PADDING + fy * big.height) * scale,
+  });
+  const pull = async (
+    from: { x: number; y: number },
+    to: { x: number; y: number },
+  ) => {
+    await page.mouse.move(from.x, from.y);
+    await page.mouse.down();
+    await page.mouse.move(to.x, to.y, { steps: 6 });
+    await page.mouse.up();
+  };
+
+  await tool(page, "Magnifier").click();
+  await pull(at(0.2, 0.2), at(0.5, 0.5));
+  await nextFrame(page);
+  // Select it and pull its bottom-right corner out, once the handles are drawn.
+  const inside = at(0.35, 0.35);
+  await page.mouse.click(inside.x, inside.y);
+  await expect(
+    page.getByRole("button", { name: "Delete magnifier" }),
+  ).toBeVisible();
+  await nextFrame(page);
+  await pull(at(0.5, 0.5), at(0.6, 0.6));
+  await page.keyboard.press("Escape");
+  await nextFrame(page);
+
+  // Just inside the top-left corner of its box, outside the rounded corner:
+  // the screenshot (or the edge of the grey border, in some browsers) shows
+  // through, not the magnifier's white backing.
+  const [corner] = await samplePixels(page, (await exportImage(page)).data, [
+    [(PADDING + 0.2 * big.width) * 2 + 3, (PADDING + 0.2 * big.height) * 2 + 3],
+  ]);
+  expect(corner[1], `corner pixel ${corner}`).toBeLessThan(200);
+});
+
 test("steps and shapes can go on the background, off the screenshot", async ({
   page,
 }) => {
