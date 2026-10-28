@@ -17,6 +17,7 @@ This is milestone 2 of the plan in [`docs/screenshot-editor-plan.md`](../../docs
 - **Undo and redo**, and **autosave**: the last design and its images are kept in this browser (IndexedDB) and restored on the next visit.
 - **Phones and tablets:** a mobile layout with the settings in a panel under the canvas.
 - **Light and dark** interface, following the system setting unless you pick one.
+- **Changelog:** the last item in the menu opens a list of what has changed, newest release first. To add a release, put a new entry at the top of `CHANGELOG` in [`lib/changelog.ts`](lib/changelog.ts): a title, a date, an optional line about it, and its changes.
 
 ### Keyboard shortcuts
 

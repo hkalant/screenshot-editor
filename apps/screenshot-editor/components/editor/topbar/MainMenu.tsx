@@ -8,6 +8,7 @@ import {
   ImagePlus,
   ImageUp,
   Menu,
+  ScrollText,
 } from "lucide-react";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { useChangelogStore } from "@/lib/changelog";
 import { runCopy } from "@/lib/export/controller";
 import { canCopyImages } from "@/lib/export/exportImage";
 import { useTheme } from "@/lib/hooks/useTheme";
@@ -39,8 +41,8 @@ type View = "menu" | "shortcuts";
 
 /**
  * The menu at the start of the top bar, for everything secondary: projects,
- * copying, adding and replacing the screenshot, the keyboard shortcuts, the tour, the tutorials
- * and the theme.
+ * copying, adding and replacing the screenshot, the keyboard shortcuts, the tour, the tutorials,
+ * the theme and the changelog.
  */
 export function MainMenu({ onReplace }: { onReplace: () => void }) {
   const { preference, setPreference } = useTheme();
@@ -199,6 +201,19 @@ export function MainMenu({ onReplace }: { onReplace: () => void }) {
             <span className="ml-auto text-xs text-muted-foreground">
               {THEME_LABELS[preference]}
             </span>
+          </button>
+          <button
+            type="button"
+            className={itemClass}
+            onClick={() => {
+              setOpen(false);
+              useChangelogStore.getState().setOpen(true);
+            }}
+          >
+            <span className="flex w-5 justify-center text-muted-foreground">
+              <ScrollText className="size-4" aria-hidden />
+            </span>
+            Changelog
           </button>
         </PopoverContent>
       ) : (

@@ -31,6 +31,7 @@ import { ToolRail } from "./ToolRail";
 import { Tooltips } from "./Tooltips";
 import { TopBar } from "./TopBar";
 import { Tour } from "./tour/Tour";
+import { ChangelogDialog } from "./ChangelogDialog";
 import { SaveNameDialog } from "./SaveNameDialog";
 import { VideoDialog } from "./VideoDialog";
 
@@ -146,6 +147,7 @@ export default function Editor() {
       <Tooltips />
       <Tour enabled={desktop && !phone} />
       <VideoDialog />
+      <ChangelogDialog />
       <SaveNameDialog />
     </div>
   );
