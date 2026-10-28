@@ -16,6 +16,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { useChangelogStore } from "@/lib/changelog";
 import { runCopy } from "@/lib/export/controller";
 import { canCopyImages } from "@/lib/export/exportImage";
 import { useTheme } from "@/lib/hooks/useTheme";
@@ -35,12 +36,30 @@ import { KeyboardIcon, MenuShortcut, ShortcutList } from "./ShortcutList";
 
 const subscribe = () => () => {};
 
+// A list whose newest entry is a sparkle: what's new.
+const WhatsNewIcon = () => (
+  <svg
+    viewBox="0 0 24 24"
+    aria-hidden="true"
+    className="size-4 fill-none stroke-current stroke-2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M6 3c.4 1.7 1.3 2.6 3 3c-1.7.4-2.6 1.3-3 3c-.4-1.7-1.3-2.6-3-3c1.7-.4 2.6-1.3 3-3z" />
+    <path d="M13 6h8" />
+    <path d="M6 13h.01" />
+    <path d="M11 13h10" />
+    <path d="M6 20h.01" />
+    <path d="M11 20h10" />
+  </svg>
+);
+
 type View = "menu" | "shortcuts";
 
 /**
  * The menu at the start of the top bar, for everything secondary: projects,
- * copying, adding and replacing the screenshot, the keyboard shortcuts, the tour, the tutorials
- * and the theme.
+ * copying, adding and replacing the screenshot, the keyboard shortcuts, the tour, the tutorials,
+ * the theme and what's new.
  */
 export function MainMenu({ onReplace }: { onReplace: () => void }) {
   const { preference, setPreference } = useTheme();
@@ -199,6 +218,19 @@ export function MainMenu({ onReplace }: { onReplace: () => void }) {
             <span className="ml-auto text-xs text-muted-foreground">
               {THEME_LABELS[preference]}
             </span>
+          </button>
+          <button
+            type="button"
+            className={itemClass}
+            onClick={() => {
+              setOpen(false);
+              useChangelogStore.getState().setOpen(true);
+            }}
+          >
+            <span className="flex w-5 justify-center text-muted-foreground">
+              <WhatsNewIcon />
+            </span>
+            What&apos;s new
           </button>
         </PopoverContent>
       ) : (
