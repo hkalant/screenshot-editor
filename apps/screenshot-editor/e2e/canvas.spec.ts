@@ -49,6 +49,27 @@ function savedDesign(page: Page) {
   );
 }
 
+/** The keys in the autosave store, read straight from IndexedDB. */
+function savedKeys(page: Page) {
+  return page.evaluate(
+    () =>
+      new Promise<string[]>((resolve) => {
+        const open = indexedDB.open("screenshot-editor");
+        open.onerror = () => resolve([]);
+        open.onsuccess = () => {
+          const db = open.result;
+          if (!db.objectStoreNames.contains("autosave")) return resolve([]);
+          const request = db
+            .transaction("autosave")
+            .objectStore("autosave")
+            .getAllKeys();
+          request.onsuccess = () => resolve(request.result.map(String));
+          request.onerror = () => resolve([]);
+        };
+      }),
+  );
+}
+
 /** Width and height of any image the page can decode. */
 function imageSize(page: Page, file: Buffer) {
   return page.evaluate(async (base64) => {
@@ -225,6 +246,49 @@ test("the design is restored after a reload", async ({ page }) => {
   const { data } = await exportImage(page);
   const [center] = await samplePixels(page, data, [[1200, 750]]);
   expect(isRed(center)).toBe(true);
+});
+
+test("clearing the autosaved work deletes it and starts blank", async ({
+  page,
+}) => {
+  await upload(page, makeSolidPng(1200, 750, RED));
+  await expect
+    .poll(async () =>
+      (await savedKeys(page)).some((key) => key.startsWith("image:")),
+    )
+    .toBe(true);
+
+  await page.getByRole("button", { name: "Menu" }).click();
+  const item = page.getByRole("button", { name: "Clear autosaved work…" });
+  await expect(item).toHaveAccessibleDescription(
+    "Delete autosaves and start over.",
+  );
+  await item.click();
+  const dialog = page.getByTestId("clear-autosave-dialog");
+  await expect(
+    dialog.getByRole("button", { name: "Save project" }),
+  ).toBeEnabled();
+  // Cancelling keeps everything.
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+  await expect(stage(page)).toBeVisible();
+
+  await page.getByRole("button", { name: "Menu" }).click();
+  await page.getByRole("button", { name: "Clear autosaved work…" }).click();
+  await dialog.getByRole("button", { name: "Clear autosaved work" }).click();
+  await expectEmptyState(page);
+  await expect(
+    page.getByText("Autosaved work cleared from this browser."),
+  ).toBeVisible();
+  // Nothing to undo back to: the history went too.
+  await expect(page.getByRole("button", { name: "Undo" })).toBeDisabled();
+  await expect
+    .poll(async () =>
+      (await savedKeys(page)).some((key) => key.startsWith("image:")),
+    )
+    .toBe(false);
+
+  await page.reload();
+  await expectEmptyState(page);
 });
 
 test("an edit made just before a reload is kept", async ({ page }) => {
