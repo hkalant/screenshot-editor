@@ -5,7 +5,7 @@ import { Dialog } from "radix-ui";
 import { Button } from "@/components/ui/button";
 import { CHANGELOG, useChangelogStore } from "@/lib/changelog";
 
-/** The changelog, newest release first, over the editor. */
+/** What's new: the changelog, newest release first, over the editor. */
 export function ChangelogDialog() {
   const open = useChangelogStore((state) => state.open);
   const setOpen = useChangelogStore((state) => state.setOpen);
@@ -21,14 +21,14 @@ export function ChangelogDialog() {
         >
           <div className="flex items-center gap-2 py-3 pr-3 pl-6">
             <Dialog.Title className="flex-1 text-lg font-semibold">
-              Changelog
+              What&apos;s new
             </Dialog.Title>
             <Dialog.Close asChild>
               <Button
                 variant="ghost"
                 size="icon"
-                aria-label="Close changelog"
-                data-tip="Close changelog"
+                aria-label="Close what's new"
+                data-tip="Close what's new"
               >
                 <X aria-hidden />
               </Button>

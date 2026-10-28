@@ -59,18 +59,16 @@ test("the theme can be switched and is remembered", async ({ page }) => {
   await expect(html).toHaveClass(/\bdark\b/);
 });
 
-test("the changelog opens from the menu, below Switch theme", async ({
-  page,
-}) => {
+test("what's new opens from the menu, below Switch theme", async ({ page }) => {
   await page.goto("./");
   await expectEmptyState(page);
   await page.getByRole("button", { name: "Menu" }).click();
   const items = page.getByRole("dialog", { name: "Menu" }).getByRole("button");
-  await expect(items.last()).toHaveAccessibleName("Changelog");
+  await expect(items.last()).toHaveAccessibleName("What's new");
   await expect(items.nth(-2)).toHaveAccessibleName(/^Switch theme/);
   await items.last().click();
 
-  const dialog = page.getByRole("dialog", { name: "Changelog" });
+  const dialog = page.getByRole("dialog", { name: "What's new" });
   await expect(dialog).toBeVisible();
   await expect(
     dialog.getByRole("heading", { name: "Initial Release - 2 November 2026" }),
