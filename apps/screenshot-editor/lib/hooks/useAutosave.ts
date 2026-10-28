@@ -1,6 +1,7 @@
 "use client";
 
 import { useLayoutEffect } from "react";
+import { createDefaultDesign } from "@/lib/design/defaults";
 import { loadImageFromBlob } from "@/lib/image/load";
 import {
   DESIGN_KEY,
@@ -17,6 +18,7 @@ import {
   writePreference,
 } from "@/lib/persist/preferences";
 import {
+  clearValues,
   deleteValue,
   listKeys,
   readValue,
@@ -127,6 +129,21 @@ function restoreOnce(): Promise<number> {
     return untouched && !restoredFromCopy ? store.getState().revision : -1;
   })();
   return restoration;
+}
+
+/**
+ * Clears the autosaved work: the editor starts over with a blank design and
+ * no undo history, and the design and images this browser keeps are deleted.
+ * The blank design is then saved as usual, and that save deletes any image a
+ * save already under way writes after the clear. Preferences such as the
+ * theme stay. False if the stored work could not be deleted.
+ */
+export async function clearAutosavedWork(): Promise<boolean> {
+  const state = useEditorStore.getState();
+  state.loadDesign(createDefaultDesign(), []);
+  state.pruneImages();
+  removePreference(PENDING_KEY);
+  return clearValues();
 }
 
 /**

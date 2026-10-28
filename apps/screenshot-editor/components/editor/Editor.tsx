@@ -32,6 +32,7 @@ import { Tooltips } from "./Tooltips";
 import { TopBar } from "./TopBar";
 import { Tour } from "./tour/Tour";
 import { ChangelogDialog } from "./ChangelogDialog";
+import { ClearAutosaveDialog } from "./ClearAutosaveDialog";
 import { SaveNameDialog } from "./SaveNameDialog";
 import { VideoDialog } from "./VideoDialog";
 
@@ -127,6 +128,7 @@ export default function Editor() {
             >
               <CanvasViewport onUpload={openFilePicker} onSample={loadSample} />
               {isDragging && <DropOverlay />}
+              {desktop && <Notice inCanvas />}
               <input
                 ref={fileInputRef}
                 type="file"
@@ -143,12 +145,13 @@ export default function Editor() {
         </div>
       </div>
       {!desktop && <MobileTabs />}
-      <Notice />
+      {!desktop && <Notice inCanvas={false} />}
       <Tooltips />
       <Tour enabled={desktop && !phone} />
       <VideoDialog />
       <ChangelogDialog />
       <SaveNameDialog />
+      <ClearAutosaveDialog />
     </div>
   );
 }

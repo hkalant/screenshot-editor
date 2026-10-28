@@ -1,4 +1,5 @@
 import {
+  clear,
   createStore,
   del,
   get,
@@ -59,6 +60,18 @@ export async function deleteValue(key: string): Promise<boolean> {
   if (!db) return false;
   try {
     await del(key, db);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Deletes everything in the autosave store. True when there is no store: nothing is kept. */
+export async function clearValues(): Promise<boolean> {
+  const db = getStore();
+  if (!db) return true;
+  try {
+    await clear(db);
     return true;
   } catch {
     return false;

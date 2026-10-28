@@ -8,8 +8,10 @@ import {
   ImagePlus,
   ImageUp,
   Menu,
+  Trash2,
 } from "lucide-react";
 import { useEffect, useState, useSyncExternalStore } from "react";
+import { useClearAutosaveStore } from "@/components/editor/ClearAutosaveDialog";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -58,8 +60,8 @@ type View = "menu" | "shortcuts";
 
 /**
  * The menu at the start of the top bar, for everything secondary: projects,
- * copying, adding and replacing the screenshot, the keyboard shortcuts, the tour, the tutorials,
- * the theme and what's new.
+ * copying, adding and replacing the screenshot, clearing the autosaved work,
+ * the keyboard shortcuts, the tour, the tutorials, the theme and what's new.
  */
 export function MainMenu({ onReplace }: { onReplace: () => void }) {
   const { preference, setPreference } = useTheme();
@@ -176,6 +178,31 @@ export function MainMenu({ onReplace }: { onReplace: () => void }) {
               : hasSecond
                 ? "Also clears the second screenshot and all annotations. Or paste or drop a new one onto the page."
                 : "Or paste or drop a new one onto the page."}
+          </p>
+          <div className="my-1 h-px bg-border" aria-hidden />
+          <button
+            type="button"
+            className={cn(
+              itemClass,
+              "disabled:pointer-events-none disabled:opacity-50",
+            )}
+            disabled={busy}
+            aria-describedby="clear-autosave-hint"
+            onClick={() => {
+              setOpen(false);
+              useClearAutosaveStore.getState().setOpen(true);
+            }}
+          >
+            <span className="flex w-5 justify-center text-muted-foreground">
+              <Trash2 className="size-4" aria-hidden />
+            </span>
+            Clear autosaved work…
+          </button>
+          <p
+            id="clear-autosave-hint"
+            className="pr-2.5 pb-1 pl-10.5 text-xs text-muted-foreground"
+          >
+            Delete autosaves and start over.
           </p>
           <div className="my-1 h-px bg-border" aria-hidden />
           <button

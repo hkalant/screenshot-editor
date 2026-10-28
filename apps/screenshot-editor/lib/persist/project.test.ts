@@ -98,6 +98,47 @@ describe("project files", () => {
     expect(design.altText).toBeNull();
   });
 
+  it("keeps the second screenshot's image", async () => {
+    const image = (id: string, byte: number) => ({
+      ...fakeImage(id),
+      name: `${id}.png`,
+      blob: new Blob([new Uint8Array([byte])], { type: "image/png" }),
+    });
+    const base = designWith("shot");
+    const design: Design = {
+      ...base,
+      annotations: [
+        ...base.annotations,
+        {
+          id: "s1",
+          kind: "screenshot",
+          imageId: "second",
+          x: 0.5,
+          y: 0.5,
+          width: 0.3,
+          height: 0.2,
+          crop: null,
+          frame: "none",
+          title: "",
+          url: "",
+        },
+      ],
+    };
+    const text = await serializeProject(design, {
+      shot: image("shot", 1),
+      second: image("second", 2),
+    });
+    const { load, loaded } = loader();
+    const { design: opened, images } = await parseProject(text, load);
+
+    expect(images.map((item) => item.id)).toEqual(["new-1", "new-2"]);
+    expect(loaded.map((item) => item.name)).toEqual(["shot.png", "second.png"]);
+    const second = opened.annotations.find(
+      (annotation) => annotation.kind === "screenshot",
+    );
+    expect(second?.kind === "screenshot" && second.imageId).toBe("new-2");
+  });
+
   it("opens a project with no screenshot", async () => {
     const { load } = loader();
     const { design, images } = await parseProject(fileWith({}), load);

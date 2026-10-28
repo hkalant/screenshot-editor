@@ -121,6 +121,11 @@ function withImageIds(design: Design, ids: Map<string, string>): Design {
   let next: Design = {
     ...design,
     layers: [{ ...shot, imageId: shot.imageId ? swap(shot.imageId) : null }],
+    annotations: design.annotations.map((annotation) =>
+      annotation.kind === "screenshot"
+        ? { ...annotation, imageId: swap(annotation.imageId) }
+        : annotation,
+    ),
   };
   const { background } = next;
   if (background.kind === "image" && background.source.type === "upload")
