@@ -893,12 +893,19 @@ function ArrowBody({
   );
 }
 
-/** The size of a shape annotation's node, in canvas px. */
+/**
+ * The size of a shape annotation's node, in canvas px, unstretched. It is
+ * what the transformer measures and stretches, so it takes in every child:
+ * a magnifier's picture or a blur's patch that hasn't caught up with a
+ * resize yet as well as the box.
+ */
 function shapeSize(group: Konva.Group) {
-  const body = group.getChildren()[0];
-  if (body instanceof Konva.Ellipse)
-    return { width: 2 * body.radiusX(), height: 2 * body.radiusY() };
-  return { width: body?.width() ?? 0, height: body?.height() ?? 0 };
+  const { width, height } = group.getClientRect({
+    skipTransform: true,
+    skipShadow: true,
+    skipStroke: true,
+  });
+  return { width, height };
 }
 
 /** Puts a shape annotation's node at a box in canvas px, unstretched. */
@@ -1279,17 +1286,21 @@ export function AnnotationsNode({
     onTransform: (event: KonvaEventObject<Event>) => {
       const node = event.currentTarget as Konva.Group;
       const size = shapeSize(node);
-      placeShape(
-        node,
-        {
-          x: node.x(),
-          y: node.y(),
-          width: size.width * node.scaleX(),
-          height: size.height * node.scaleY(),
-        },
-        shape,
-        weight,
-      );
+      const box = {
+        x: node.x(),
+        y: node.y(),
+        width: size.width * node.scaleX(),
+        height: size.height * node.scaleY(),
+      };
+      placeShape(node, box, shape, weight);
+      // A magnifier's picture and frame follow as it happens, not only the box.
+      if (shape.shape === "magnify")
+        useEditorStore.getState().resizeShape(shape.id, {
+          x: box.x / unit,
+          y: box.y / unit,
+          width: box.width / unit,
+          height: box.height / unit,
+        });
     },
     onTransformEnd: (event: KonvaEventObject<Event>) => {
       const node = event.currentTarget as Konva.Group;

@@ -486,6 +486,50 @@ test("a rounded magnifier keeps its round corners when resized", async ({
   expect(corner[1], `corner pixel ${corner}`).toBeLessThan(200);
 });
 
+test("a magnifier made smaller ends where it is let go", async ({ page }) => {
+  const big = { width: 1600, height: 1000 };
+  await upload(page, makeSolidPng(big.width, big.height, RED));
+  const box = await stage(page).boundingBox();
+  if (!box) throw new Error("No stage");
+  const scale = box.width / (big.width + 2 * PADDING);
+  const at = (fx: number, fy: number) => ({
+    x: box.x + (PADDING + fx * big.width) * scale,
+    y: box.y + (PADDING + fy * big.height) * scale,
+  });
+  const pull = async (
+    from: { x: number; y: number },
+    to: { x: number; y: number },
+  ) => {
+    await page.mouse.move(from.x, from.y);
+    await page.mouse.down();
+    await page.mouse.move(to.x, to.y, { steps: 6 });
+    await page.mouse.up();
+  };
+
+  await tool(page, "Magnifier").click();
+  await pull(at(0.2, 0.2), at(0.5, 0.5));
+  await nextFrame(page);
+  const inside = at(0.35, 0.35);
+  await page.mouse.click(inside.x, inside.y);
+  await expect(
+    page.getByRole("button", { name: "Delete magnifier" }),
+  ).toBeVisible();
+  await nextFrame(page);
+  // Pull its bottom-right corner in, from 0.5 to 0.4.
+  await pull(at(0.5, 0.5), at(0.4, 0.4));
+  await page.keyboard.press("Escape");
+  await nextFrame(page);
+
+  // Its grey border runs down near 0.4 across, not far short of it.
+  const exported = (await exportImage(page)).data;
+  const across = Array.from({ length: 21 }, (_, index): [number, number] => [
+    (PADDING + 0.4 * big.width) * 2 - 30 + index * 3,
+    (PADDING + 0.3 * big.height) * 2,
+  ]);
+  const pixels = await samplePixels(page, exported, across);
+  expect(pixels.some(([, g]) => g > 80)).toBe(true);
+});
+
 test("steps and shapes can go on the background, off the screenshot", async ({
   page,
 }) => {
