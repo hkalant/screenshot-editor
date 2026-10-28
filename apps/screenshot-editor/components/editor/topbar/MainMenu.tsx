@@ -59,9 +59,10 @@ const WhatsNewIcon = () => (
 type View = "menu" | "shortcuts";
 
 /**
- * The menu at the start of the top bar, for everything secondary: projects,
- * copying, adding and replacing the screenshot, clearing the autosaved work,
- * the keyboard shortcuts, the tour, the tutorials, the theme and what's new.
+ * The menu at the start of the top bar, for everything secondary, in the
+ * order people need it: adding or replacing the screenshot; projects and
+ * copying; help (the tour, the tutorials, the keyboard shortcuts and what's
+ * new); the theme; and, last and out of the way, clearing the autosaved work.
  */
 export function MainMenu({ onReplace }: { onReplace: () => void }) {
   const { preference, setPreference } = useTheme();
@@ -111,41 +112,12 @@ export function MainMenu({ onReplace }: { onReplace: () => void }) {
       </PopoverTrigger>
       {view === "menu" ? (
         <PopoverContent align="start" className="w-80 p-2.5" aria-label="Menu">
-          <ProjectItems
-            onPick={() => setOpen(false)}
-            shortcuts={
-              apple
-                ? { save: "⇧⌘S", open: "⇧⌘O" }
-                : { save: "Ctrl+Shift+S", open: "Ctrl+Shift+O" }
-            }
-          />
-          {canCopy && (
-            <button
-              type="button"
-              className={cn(
-                itemClass,
-                "mt-0.5 disabled:pointer-events-none disabled:opacity-50",
-              )}
-              disabled={!hasImage || busy}
-              onClick={() => {
-                setOpen(false);
-                // Straight from the click: the clipboard write must start in the gesture.
-                runCopy();
-              }}
-            >
-              <span className="flex w-5 justify-center text-muted-foreground">
-                <Copy className="size-4" aria-hidden />
-              </span>
-              Copy image
-              <MenuShortcut keys={apple ? "⌘C" : "Ctrl+C"} />
-            </button>
-          )}
           {/* Replace once there is a screenshot; until then, Add. */}
           <button
             type="button"
             className={cn(
               itemClass,
-              "mt-0.5 disabled:pointer-events-none disabled:opacity-50",
+              "disabled:pointer-events-none disabled:opacity-50",
             )}
             disabled={loading}
             aria-describedby="replace-hint"
@@ -180,6 +152,90 @@ export function MainMenu({ onReplace }: { onReplace: () => void }) {
                 : "Or paste or drop a new one onto the page."}
           </p>
           <div className="my-1 h-px bg-border" aria-hidden />
+          <ProjectItems
+            onPick={() => setOpen(false)}
+            shortcuts={
+              apple
+                ? { save: "⇧⌘S", open: "⇧⌘O" }
+                : { save: "Ctrl+Shift+S", open: "Ctrl+Shift+O" }
+            }
+          />
+          {canCopy && (
+            <button
+              type="button"
+              className={cn(
+                itemClass,
+                "mt-0.5 disabled:pointer-events-none disabled:opacity-50",
+              )}
+              disabled={!hasImage || busy}
+              onClick={() => {
+                setOpen(false);
+                // Straight from the click: the clipboard write must start in the gesture.
+                runCopy();
+              }}
+            >
+              <span className="flex w-5 justify-center text-muted-foreground">
+                <Copy className="size-4" aria-hidden />
+              </span>
+              Copy image
+              <MenuShortcut keys={apple ? "⌘C" : "Ctrl+C"} />
+            </button>
+          )}
+          <div className="my-1 h-px bg-border" aria-hidden />
+          <button
+            type="button"
+            className={itemClass}
+            onClick={() => {
+              setOpen(false);
+              useTourStore.getState().open();
+            }}
+          >
+            <span className="flex w-5 justify-center text-muted-foreground">
+              <Compass className="size-4" aria-hidden />
+            </span>
+            Take the tour
+          </button>
+          <TutorialLinks onPick={() => setOpen(false)} />
+          <button
+            type="button"
+            className={itemClass}
+            onClick={() => setView("shortcuts")}
+          >
+            <span className="flex w-5 justify-center text-muted-foreground">
+              <KeyboardIcon />
+            </span>
+            Keyboard shortcuts
+            <MenuShortcut keys={apple ? "⌘/" : "Ctrl+/"} />
+          </button>
+          <button
+            type="button"
+            className={itemClass}
+            onClick={() => {
+              setOpen(false);
+              useChangelogStore.getState().setOpen(true);
+            }}
+          >
+            <span className="flex w-5 justify-center text-muted-foreground">
+              <WhatsNewIcon />
+            </span>
+            What&apos;s new
+          </button>
+          <div className="my-1 h-px bg-border" aria-hidden />
+          {/* Stays open, so the theme can be cycled through in place. */}
+          <button
+            type="button"
+            className={itemClass}
+            onClick={() => setPreference(nextThemePreference(preference))}
+          >
+            <span className="flex w-5 justify-center text-muted-foreground">
+              <Contrast className="size-4" aria-hidden />
+            </span>
+            Switch theme
+            <span className="ml-auto text-xs text-muted-foreground">
+              {THEME_LABELS[preference]}
+            </span>
+          </button>
+          <div className="my-1 h-px bg-border" aria-hidden />
           <button
             type="button"
             className={cn(
@@ -204,61 +260,6 @@ export function MainMenu({ onReplace }: { onReplace: () => void }) {
           >
             Delete autosaves and start over.
           </p>
-          <div className="my-1 h-px bg-border" aria-hidden />
-          <button
-            type="button"
-            className={itemClass}
-            onClick={() => setView("shortcuts")}
-          >
-            <span className="flex w-5 justify-center text-muted-foreground">
-              <KeyboardIcon />
-            </span>
-            Keyboard shortcuts
-            <MenuShortcut keys={apple ? "⌘/" : "Ctrl+/"} />
-          </button>
-          <div className="my-1 h-px bg-border" aria-hidden />
-          <button
-            type="button"
-            className={itemClass}
-            onClick={() => {
-              setOpen(false);
-              useTourStore.getState().open();
-            }}
-          >
-            <span className="flex w-5 justify-center text-muted-foreground">
-              <Compass className="size-4" aria-hidden />
-            </span>
-            Take the tour
-          </button>
-          <TutorialLinks onPick={() => setOpen(false)} />
-          <div className="my-1 h-px bg-border" aria-hidden />
-          {/* Stays open, so the theme can be cycled through in place. */}
-          <button
-            type="button"
-            className={itemClass}
-            onClick={() => setPreference(nextThemePreference(preference))}
-          >
-            <span className="flex w-5 justify-center text-muted-foreground">
-              <Contrast className="size-4" aria-hidden />
-            </span>
-            Switch theme
-            <span className="ml-auto text-xs text-muted-foreground">
-              {THEME_LABELS[preference]}
-            </span>
-          </button>
-          <button
-            type="button"
-            className={itemClass}
-            onClick={() => {
-              setOpen(false);
-              useChangelogStore.getState().setOpen(true);
-            }}
-          >
-            <span className="flex w-5 justify-center text-muted-foreground">
-              <WhatsNewIcon />
-            </span>
-            What&apos;s new
-          </button>
         </PopoverContent>
       ) : (
         <PopoverContent
