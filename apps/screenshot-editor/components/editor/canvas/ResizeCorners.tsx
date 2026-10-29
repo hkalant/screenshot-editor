@@ -51,17 +51,27 @@ export function cornerZones(box: StageRect): Zone[] {
 }
 
 // Where the mouse last was on the page, so corners that come up under a
-// still mouse (a second screenshot selected by a click) start from it.
-let lastMouse: Point | null = null;
-if (typeof window !== "undefined")
+// still mouse (a second screenshot selected by a click) start from it:
+// "away" once it has left the page, and null until a mouse moves, or after
+// a touch.
+let lastMouse: Point | "away" | null = null;
+if (typeof window !== "undefined") {
   window.addEventListener(
     "pointermove",
     (event) => {
-      if (event.pointerType === "mouse")
-        lastMouse = { x: event.clientX, y: event.clientY };
+      lastMouse =
+        event.pointerType === "mouse"
+          ? { x: event.clientX, y: event.clientY }
+          : event.pointerType === "touch"
+            ? null
+            : lastMouse;
     },
     { capture: true, passive: true },
   );
+  document.documentElement.addEventListener("pointerleave", (event) => {
+    if (event.pointerType === "mouse") lastMouse = "away";
+  });
+}
 
 /** How close a mouse at `x`, `y` is to each of `points`, from 0 to 1. */
 const nearnessAt = (points: Point[], x: number, y: number) =>
@@ -75,13 +85,16 @@ const nearnessAt = (points: Point[], x: number, y: number) =>
 /**
  * How close a mouse over the element's parent is to each of `points`, from 0
  * (FAR or more away) to 1 (within NEAR). All 1 until a mouse moves on the
- * page, so the corners show on touchscreens.
+ * page, so the corners show on touchscreens, and all 0 while it's off the
+ * page.
  */
 function useNearness(
   element: RefObject<HTMLElement | null>,
   points: Point[],
 ): number[] {
-  const [near, setNear] = useState<number[]>(() => points.map(() => 1));
+  const [near, setNear] = useState<number[]>(() =>
+    points.map(() => (lastMouse === "away" ? 0 : 1)),
+  );
   const pointsRef = useRef(points);
   useEffect(() => {
     pointsRef.current = points;
@@ -104,7 +117,7 @@ function useNearness(
       );
     };
     // Before paint, so the corners don't flash up under a still mouse.
-    if (lastMouse) update(lastMouse.x, lastMouse.y);
+    if (lastMouse && lastMouse !== "away") update(lastMouse.x, lastMouse.y);
     const onMove = (event: PointerEvent) => {
       if (event.pointerType !== "touch") update(event.clientX, event.clientY);
     };
