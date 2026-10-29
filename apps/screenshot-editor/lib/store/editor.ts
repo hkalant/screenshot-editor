@@ -243,6 +243,11 @@ export type EditorState = {
   addScreenshot: (image: LoadedImage) => void;
   /** Moves and resizes a second screenshot; its height keeps to its shape. */
   resizeScreenshot: (id: string, x: number, y: number, width: number) => void;
+  /**
+   * Resizes a second screenshot to `width` about `centre`, keeping its shape,
+   * no bigger than the canvas and on it.
+   */
+  resizeScreenshotAbout: (id: string, centre: Point, width: number) => void;
   /** Puts a second screenshot in the main screenshot's frame, or takes it out. */
   /** The title or address a second screenshot's frame shows. */
   /** Puts a second screenshot in `kind` of frame, if it fits it. */
@@ -362,6 +367,8 @@ const NO_SELECTION = { selectedAnnotationId: null };
 const INSET_GAP = 0.08;
 const MIN_INSET_ROOM = 0.3;
 const INSET_WIDTH = 0.6;
+/** The smallest a second screenshot can be made, in image widths. */
+const MIN_INSET_WIDTH = 0.1;
 
 /** A second screenshot with the height its image and frame give it. */
 function withInsetHeight(
@@ -1601,6 +1608,33 @@ export const useEditorStore = create<EditorState>()((set, get) => {
           ),
         `annotation-resize-${id}`,
       );
+    },
+
+    resizeScreenshotAbout: (id, centre, width) => {
+      if (![centre.x, centre.y, width].every(finite)) return;
+      const state = get();
+      const shot = state.design.annotations.find(
+        (annotation) => annotation.id === id,
+      );
+      if (shot?.kind !== "screenshot") return;
+      const area = annotationArea(state) ?? FAR;
+      const ratio = shot.height / shot.width;
+      // The canvas wins when even the smallest size wouldn't fit it.
+      const size = clamp(
+        width,
+        MIN_INSET_WIDTH,
+        Math.min(area.width, area.height / ratio),
+      );
+      const box = fitBox(
+        {
+          x: centre.x - size / 2,
+          y: centre.y - (size * ratio) / 2,
+          width: size,
+          height: size * ratio,
+        },
+        area,
+      );
+      get().resizeScreenshot(id, box.x, box.y, box.width);
     },
 
     setScreenshotFrame: (id, kind) => {

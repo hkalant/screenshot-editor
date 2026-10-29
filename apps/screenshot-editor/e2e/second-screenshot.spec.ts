@@ -390,3 +390,73 @@ for (const { line, top, off } of [
     await expectTopAt(top);
   });
 }
+
+test("a second screenshot resizes about its centre from its corners", async ({
+  page,
+}) => {
+  await upload(page, makeSolidPng(IMAGE.width, IMAGE.height, RED));
+  await addSecond(page, makeSolidPng(400, 300, [...BLUE]));
+  // Selected once added, so its corner handles are up.
+  const handle = (corner: string) =>
+    page.getByRole("button", {
+      name: `Resize second screenshot from the ${corner} corner`,
+    });
+  const corner = handle("bottom right");
+  await expect(corner).toBeVisible();
+  // Its box on screen, from where its corner handles are: each reaches 8 px
+  // inside it, and 20 px out.
+  const frame = async () => {
+    const from = await handle("top left").boundingBox();
+    const to = await corner.boundingBox();
+    if (!from || !to) throw new Error("No corners");
+    const left = from.x + 20;
+    const top = from.y + 20;
+    return {
+      width: to.x + 8 - left,
+      height: to.y + 8 - top,
+      centre: { x: (left + to.x + 8) / 2, y: (top + to.y + 8) / 2 },
+    };
+  };
+  const before = await frame();
+
+  // Its curve shows as the pointer comes close, and resting on it says what
+  // it does.
+  const curve = corner.getByTestId("resize-curve");
+  await page.mouse.move(before.centre.x, before.centre.y);
+  await expect(curve).toHaveCSS("opacity", "0");
+  const grip = await corner.boundingBox();
+  if (!grip) throw new Error("No corner");
+  const start = { x: grip.x + grip.width / 2, y: grip.y + grip.height / 2 };
+  await page.mouse.move(start.x, start.y);
+  await expect(curve).not.toHaveCSS("opacity", "0");
+  await expect(page.getByTestId("resize-tooltip")).toHaveText(
+    "Drag to resize.",
+  );
+
+  // Halfway towards the centre: half the size, about the same centre.
+  await page.mouse.down();
+  await page.mouse.move(
+    start.x - before.width / 4,
+    start.y - before.height / 4,
+    { steps: 8 },
+  );
+  await page.mouse.up();
+  const after = await frame();
+  // About half: its border stays as thick.
+  expect(after.width / before.width).toBeGreaterThan(0.45);
+  expect(after.width / before.width).toBeLessThan(0.6);
+  expect(after.width / after.height).toBeCloseTo(
+    before.width / before.height,
+    1,
+  );
+  expect(after.centre.x).toBeCloseTo(before.centre.x, -1);
+  expect(after.centre.y).toBeCloseTo(before.centre.y, -1);
+
+  // One undo puts it back.
+  await page.getByRole("button", { name: "Undo", exact: true }).first().click();
+  await page
+    .getByRole("button", { name: "Delete second screenshot" })
+    .waitFor();
+  const undone = await frame();
+  expect(undone.width).toBeCloseTo(before.width, 0);
+});

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { altBasis, isAltCurrent } from "@/lib/alt/basis";
+import { canvasArea } from "@/lib/design/annotations";
 import { computeLayout } from "@/lib/design/layout";
 import { MAX_ALT_TEXT } from "@/lib/design/limits";
 import { referencedImageIds } from "@/lib/design/refs";
@@ -515,6 +516,57 @@ describe("editor store: annotations", () => {
       width: 0.3,
       height: 0.1875,
     });
+  });
+
+  it("resizes a second screenshot about its centre, between its smallest size and the canvas", () => {
+    state().addScreenshot(fakeImage("second", 800, 400));
+    const [second] = annotations();
+    if (second.kind !== "screenshot") throw new Error("No second screenshot");
+    const id = second.id;
+    const centre = {
+      x: second.x + second.width / 2,
+      y: second.y + second.height / 2,
+    };
+    const box = () => {
+      const annotation = annotations()[0];
+      if (annotation.kind !== "screenshot") throw new Error("Not a screenshot");
+      return annotation;
+    };
+
+    // Half as wide, with the same centre and shape.
+    state().resizeScreenshotAbout(id, centre, second.width / 2);
+    expect(box().width).toBeCloseTo(second.width / 2, 3);
+    expect(box().height).toBeCloseTo(second.height / 2, 3);
+    expect(box().x + box().width / 2).toBeCloseTo(centre.x, 3);
+    expect(box().y + box().height / 2).toBeCloseTo(centre.y, 3);
+
+    // No smaller than a tenth of the main screenshot's width.
+    state().resizeScreenshotAbout(id, centre, 0.001);
+    expect(box().width).toBeCloseTo(0.1, 3);
+
+    // No bigger than the canvas, and on it, wherever its centre is asked for.
+    const image = selectActiveImage(state());
+    if (!image) throw new Error("No screenshot");
+    const { canvas, shot: main } = computeLayout(image, state().design);
+    const area = canvasArea(canvas, {
+      ...main.image,
+      x: main.x + main.image.x,
+      y: main.y + main.image.y,
+    });
+    state().resizeScreenshotAbout(id, { x: 50, y: 50 }, 100);
+    const big = box();
+    expect(big.x).toBeGreaterThanOrEqual(area.x - 1e-3);
+    expect(big.y).toBeGreaterThanOrEqual(area.y - 1e-3);
+    expect(big.x + big.width).toBeLessThanOrEqual(area.x + area.width + 1e-3);
+    expect(big.y + big.height).toBeLessThanOrEqual(area.y + area.height + 1e-3);
+    expect(big.width / big.height).toBeCloseTo(2, 2);
+
+    // Nonsense, or something not a second screenshot, changes nothing.
+    const design = state().design;
+    state().resizeScreenshotAbout(id, centre, Number.NaN);
+    state().resizeScreenshotAbout(id, { x: Infinity, y: 0 }, 0.5);
+    state().resizeScreenshotAbout("missing", centre, 0.5);
+    expect(state().design).toBe(design);
   });
 
   it("puts a new second screenshot in place of the one there already", () => {

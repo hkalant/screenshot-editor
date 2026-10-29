@@ -643,11 +643,14 @@ test("the screenshot resizes from its corners, up to half as big again", async (
     await page.mouse.up();
   };
 
-  // Hidden until the pointer is over the screenshot.
+  // Hidden until the pointer is over the screenshot, which is outlined then.
+  const outline = page.getByTestId("shot-outline");
   await page.mouse.move(box.x + 4, box.y + 4);
   await expect(corner).toBeHidden();
+  await expect(outline).toHaveCount(0);
   await page.mouse.move(middle.x, middle.y);
   await expect(corner).toBeVisible();
+  await expect(outline).toBeVisible();
 
   // Its curve shows only as the pointer comes close to the corner.
   const curve = corner.getByTestId("resize-curve");
