@@ -17,7 +17,6 @@ import { BackgroundNode } from "./nodes/Background";
 import { GuidesNode } from "./nodes/Guides";
 import { ShotNode } from "./nodes/Shot";
 import { ArrowStyleMenu } from "./ArrowStyleMenu";
-import { SecondShotCorners } from "./SecondShotCorners";
 import { SelectionActions } from "./SelectionActions";
 import { ShotHandle } from "./ShotHandle";
 
@@ -106,7 +105,6 @@ export function DesignStage({ image, layout, scale }: Props) {
         </Stage>
       </div>
       <ShotHandle layout={layout} scale={scale} width={width} height={height} />
-      <SecondShotCorners width={width} height={height} />
       <SelectionActions width={width} height={height} />
       <ArrowStyleMenu width={width} height={height} />
     </div>
