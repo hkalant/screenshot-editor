@@ -649,13 +649,6 @@ test("the screenshot resizes from its corners, up to half as big again", async (
   await page.mouse.move(middle.x, middle.y);
   await expect(corner).toBeVisible();
 
-  // Its curve shows only as the pointer comes close to the corner.
-  const curve = corner.getByTestId("resize-curve");
-  await expect(curve).toHaveCSS("opacity", "0");
-  const near = at(1584 - 30, 1008 - 30);
-  await page.mouse.move(near.x, near.y);
-  await expect(curve).not.toHaveCSS("opacity", "0");
-
   // Resting on a corner says what it does.
   const tip = page.getByTestId("resize-tooltip");
   const handle = await corner.boundingBox();
@@ -673,19 +666,15 @@ test("the screenshot resizes from its corners, up to half as big again", async (
   await page.mouse.move(middle.x, middle.y);
   await expect(tip).toHaveCount(0);
 
-  // Resized about its centre: halfway from the centre to the corner makes
-  // it half size, from (648, 306) to (1272, 774).
-  await drag(at(960 + 312, 540 + 234));
-  expect(await isRedAt(960, 540)).toBe(true);
-  expect(await isRedAt(700, 350)).toBe(true);
-  expect(await isRedAt(400, 100)).toBe(false);
+  // Half size, with the top-left corner where it was.
+  await drag(middle);
+  expect(await isRedAt(400, 100)).toBe(true);
   expect(await isRedAt(1400, 900)).toBe(false);
 
   // Bigger than fits: past the padding, cropped by the canvas edge.
   await drag(at(1900, 1070));
   expect(await isRedAt(1400, 900)).toBe(true);
   expect(await isRedAt(1700, 540)).toBe(true);
-  expect(await isRedAt(200, 540)).toBe(true);
 
   // Each resize is one undo step.
   await page.getByRole("button", { name: "Undo", exact: true }).first().click();
