@@ -1,5 +1,6 @@
 import type { Page } from "@playwright/test";
 import {
+  chooseCanvasSize,
   chooseFrame,
   expectColor,
   expectEmptyState,
@@ -459,4 +460,40 @@ test("a second screenshot resizes about its centre from its corners", async ({
     .waitFor();
   const undone = await frame();
   expect(undone.width).toBeCloseTo(before.width, 0);
+});
+
+test("over a second screenshot, the main one isn't outlined, and its corners show only near the pointer", async ({
+  page,
+}) => {
+  await upload(page, makeSolidPng(IMAGE.width, IMAGE.height, RED));
+  await chooseCanvasSize(page, /^Desktop/);
+  const box = await stage(page).boundingBox();
+  if (!box) throw new Error("No stage");
+  // Away from where the second screenshot goes, over the main one.
+  const onMain = { x: box.x + box.width * 0.3, y: box.y + box.height * 0.7 };
+  await page.mouse.move(onMain.x, onMain.y);
+  const outline = page.getByTestId("shot-outline");
+  await expect(outline).toBeVisible();
+
+  // Selected once added, under a still pointer far from its corners: none
+  // of its curves show.
+  await addSecond(page, makeSolidPng(400, 300, [...BLUE]));
+  const curves = page
+    .getByRole("button", { name: /^Resize second screenshot from/ })
+    .getByTestId("resize-curve");
+  await expect(curves).toHaveCount(4);
+  for (const curve of await curves.all())
+    await expect(curve).toHaveCSS("opacity", "0");
+
+  // Over the second screenshot, where it covers the main one.
+  const from = await page
+    .getByRole("button", {
+      name: "Resize second screenshot from the top left corner",
+    })
+    .boundingBox();
+  if (!from) throw new Error("No corner");
+  await page.mouse.move(from.x + 40, from.y + 40, { steps: 4 });
+  await expect(outline).toBeHidden();
+  await page.mouse.move(onMain.x, onMain.y, { steps: 4 });
+  await expect(outline).toBeVisible();
 });

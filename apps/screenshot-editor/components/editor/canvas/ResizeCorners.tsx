@@ -1,6 +1,13 @@
 "use client";
 
-import { type RefObject, useEffect, useId, useRef, useState } from "react";
+import {
+  type RefObject,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { CORNERS, type Corner } from "@/lib/render/resize";
 import type { Point } from "@/lib/render/snap";
 import { clamp, cn } from "@/lib/utils";
@@ -13,10 +20,10 @@ const INSET = 8;
 // corner, and is fully drawn within NEAR.
 const NEAR = 12;
 const FAR = 72;
-// A short curve clear of the top-left corner, which is INSET from the
-// bottom-right of a CORNER-sized box: centred on the diagonal and bending
-// around the corner.
-const CURVE = "M 9.35 22.35 A 12 12 0 0 1 22.35 9.35";
+// A quarter circle round the top-left corner, which is INSET from the
+// bottom-right of a CORNER-sized box: its middle 6 px out from the corner on
+// the diagonal, and all of it outside the box.
+const CURVE = "M 8.73 32.73 A 24 24 0 0 1 32.73 8.73";
 // The corner tooltip: how long the pointer rests before it shows, and half
 // its width, to keep it inside the stage.
 const TIP_DELAY = 300;
@@ -43,40 +50,76 @@ export function cornerZones(box: StageRect): Zone[] {
   });
 }
 
+// Where the mouse last was on the page, so corners that come up under a
+// still mouse (a second screenshot selected by a click) start from it:
+// "away" once it has left the page, and null until a mouse moves, or after
+// a touch.
+let lastMouse: Point | "away" | null = null;
+if (typeof window !== "undefined") {
+  window.addEventListener(
+    "pointermove",
+    (event) => {
+      lastMouse =
+        event.pointerType === "mouse"
+          ? { x: event.clientX, y: event.clientY }
+          : event.pointerType === "touch"
+            ? null
+            : lastMouse;
+    },
+    { capture: true, passive: true },
+  );
+  document.documentElement.addEventListener("pointerleave", (event) => {
+    if (event.pointerType === "mouse") lastMouse = "away";
+  });
+}
+
+/** How close a mouse at `x`, `y` is to each of `points`, from 0 to 1. */
+const nearnessAt = (points: Point[], x: number, y: number) =>
+  points.map((point) => {
+    const distance = Math.hypot(point.x - x, point.y - y);
+    const amount = clamp((FAR - distance) / (FAR - NEAR), 0, 1);
+    // Rounded, so small moves far from a corner don't re-render.
+    return Math.round(amount * 20) / 20;
+  });
+
 /**
  * How close a mouse over the element's parent is to each of `points`, from 0
- * (FAR or more away) to 1 (within NEAR). All 1 until a mouse moves there, so
- * the corners show on touchscreens.
+ * (FAR or more away) to 1 (within NEAR). All 1 until a mouse moves on the
+ * page, so the corners show on touchscreens, and all 0 while it's off the
+ * page.
  */
 function useNearness(
   element: RefObject<HTMLElement | null>,
   points: Point[],
 ): number[] {
-  const [near, setNear] = useState<number[]>(() => points.map(() => 1));
+  const [near, setNear] = useState<number[]>(() =>
+    points.map(() => (lastMouse === "away" ? 0 : 1)),
+  );
   const pointsRef = useRef(points);
   useEffect(() => {
     pointsRef.current = points;
   });
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const parent = element.current?.parentElement;
     if (!parent) return;
-    const onMove = (event: PointerEvent) => {
-      if (event.pointerType === "touch") return;
+    const update = (clientX: number, clientY: number) => {
       const rect = parent.getBoundingClientRect();
-      const x = event.clientX - rect.left;
-      const y = event.clientY - rect.top;
-      // Rounded, so small moves far from a corner don't re-render.
-      const next = pointsRef.current.map((point) => {
-        const distance = Math.hypot(point.x - x, point.y - y);
-        const amount = clamp((FAR - distance) / (FAR - NEAR), 0, 1);
-        return Math.round(amount * 20) / 20;
-      });
+      const next = nearnessAt(
+        pointsRef.current,
+        clientX - rect.left,
+        clientY - rect.top,
+      );
       setNear((now) =>
         now.length === next.length && now.every((n, i) => n === next[i])
           ? now
           : next,
       );
+    };
+    // Before paint, so the corners don't flash up under a still mouse.
+    if (lastMouse && lastMouse !== "away") update(lastMouse.x, lastMouse.y);
+    const onMove = (event: PointerEvent) => {
+      if (event.pointerType !== "touch") update(event.clientX, event.clientY);
     };
     const onLeave = () => setNear((now) => now.map(() => 0));
     parent.addEventListener("pointermove", onMove);
@@ -272,7 +315,7 @@ export function ResizeCorners({
                 d={CURVE}
                 fill="none"
                 stroke="white"
-                strokeWidth={5}
+                strokeWidth={4}
                 strokeLinecap="round"
               />
             </svg>
