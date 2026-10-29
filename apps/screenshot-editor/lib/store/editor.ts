@@ -1619,6 +1619,7 @@ export const useEditorStore = create<EditorState>()((set, get) => {
       if (shot?.kind !== "screenshot") return;
       const area = annotationArea(state) ?? FAR;
       const ratio = shot.height / shot.width;
+      // The canvas wins when even the smallest size wouldn't fit it.
       const size = clamp(
         width,
         MIN_INSET_WIDTH,
