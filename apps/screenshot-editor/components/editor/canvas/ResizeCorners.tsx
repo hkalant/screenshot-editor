@@ -150,6 +150,19 @@ export function ResizeCorners({
     else tipTimer.current = window.setTimeout(() => setTip(corner), delay);
   };
 
+  // Unmounted mid-resize (the selection went with Escape, Delete or undo):
+  // the pointer never comes up, so finish the resize here.
+  const onEndRef = useRef(onEnd);
+  useEffect(() => {
+    onEndRef.current = onEnd;
+  });
+  useEffect(
+    () => () => {
+      if (grab.current) onEndRef.current();
+    },
+    [],
+  );
+
   const points = CORNERS.map((corner) => cornerPoint(box, corner));
   const zones = cornerZones(box);
   const nearness = useNearness(first, points);
