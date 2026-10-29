@@ -30,17 +30,18 @@ const inside = (box: Zone, x: number, y: number) =>
   x >= box.left && x <= box.right && y >= box.top && y <= box.bottom;
 
 /**
- * Whether a mouse is over `zones` of the element's parent. Always true where
- * nothing can hover (touchscreens), so the handle stays there to be found.
- * A mouse moving anywhere counts as hovering too, as some browsers (headless
- * Firefox among them) say they can't hover.
+ * Whether a mouse is over `zones` of the element's parent, and whether there
+ * is a mouse. Hovered is always true where nothing can hover (touchscreens),
+ * so the handle stays there to be found. A mouse moving anywhere counts as
+ * able to hover too, as some browsers (headless Firefox among them) say they
+ * can't hover.
  */
 function useHovered(
   element: RefObject<HTMLElement | null>,
   zones: Zone[],
   /** Whether the element is rendered, so there is a parent to watch. */
   enabled: boolean,
-): boolean {
+): { hovered: boolean; mouse: boolean } {
   const [canHover, setCanHover] = useState(false);
   const [over, setOver] = useState(false);
   const zonesRef = useRef(zones);
@@ -82,7 +83,7 @@ function useHovered(
     };
   }, [element, canHover, enabled]);
 
-  return !canHover || over;
+  return { hovered: !canHover || over, mouse: canHover };
 }
 
 /**
@@ -128,7 +129,7 @@ export function ShotHandle({ layout, scale, width, height }: Props) {
   };
   // The screenshot (unrotated), its corner handles and the move handle, with
   // the gap between them, so moving from one to another keeps them up.
-  const hovered = useHovered(
+  const { hovered, mouse } = useHovered(
     button,
     [
       {
@@ -162,6 +163,22 @@ export function ShotHandle({ layout, scale, width, height }: Props) {
 
   return (
     <>
+      {/* Outlined, like a selected annotation, while its handles are up for
+          a mouse or it's being moved or resized. */}
+      {((mouse && hovered) || dragging) && (
+        <div
+          aria-hidden
+          data-testid="shot-outline"
+          className="pointer-events-none absolute border border-[#0a84ff]"
+          style={{
+            left: onScreen.x,
+            top: onScreen.y,
+            width: onScreen.width,
+            height: onScreen.height,
+            transform: `rotate(${shot.rotation}deg)`,
+          }}
+        />
+      )}
       {shot.rotation === 0 && (
         <ResizeCorners
           name="screenshot"
