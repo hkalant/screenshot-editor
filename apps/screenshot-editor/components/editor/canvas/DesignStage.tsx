@@ -105,13 +105,7 @@ export function DesignStage({ image, layout, scale }: Props) {
           </Layer>
         </Stage>
       </div>
-      <ShotHandle
-        layout={layout}
-        scale={scale}
-        stage={stageRef}
-        width={width}
-        height={height}
-      />
+      <ShotHandle layout={layout} scale={scale} width={width} height={height} />
       <SecondShotCorners width={width} height={height} />
       <SelectionActions width={width} height={height} />
       <ArrowStyleMenu width={width} height={height} />

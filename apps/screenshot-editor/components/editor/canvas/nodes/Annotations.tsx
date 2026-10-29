@@ -93,12 +93,6 @@ const ANNOTATION_NAME = "annotation";
 /** A second screenshot: with a drawing tool on, it's drawn on like the main one. */
 const SCREENSHOT_NAME = "second-screenshot";
 
-/** Each second screenshot's box on `stage`, in stage (screen) px. */
-export const secondShotBoxes = (stage: Konva.Stage) =>
-  stage
-    .find(`.${SCREENSHOT_NAME}`)
-    .map((node) => node.getClientRect({ skipShadow: true }));
-
 const SELECTION_COLOR = "#0a84ff";
 
 /** Screen px: a step, an outline's border or an arrow can be pressed this far out. */

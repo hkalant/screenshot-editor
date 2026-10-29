@@ -1,6 +1,5 @@
 "use client";
 
-import type Konva from "konva";
 import { Move } from "lucide-react";
 import { type RefObject, useEffect, useRef, useState } from "react";
 import type { DesignLayout, Rect } from "@/lib/design/layout";
@@ -9,7 +8,6 @@ import { resizeFromCorner } from "@/lib/render/resize";
 import { NO_GUIDES, snapDrag, type Point } from "@/lib/render/snap";
 import { useEditorStore } from "@/lib/store/editor";
 import { clamp, cn } from "@/lib/utils";
-import { secondShotBoxes } from "./nodes/Annotations";
 import { useGuides } from "./nodes/Guides";
 import { cornerZones, ResizeCorners, type Zone } from "./ResizeCorners";
 
@@ -23,8 +21,6 @@ type Props = {
   layout: DesignLayout;
   /** On-screen zoom of the stage. */
   scale: number;
-  /** The stage, whose second screenshots sit above this one. */
-  stage: RefObject<Konva.Stage | null>;
   /** The stage's size on screen: the handle stays over the canvas. */
   width: number;
   height: number;
@@ -34,8 +30,8 @@ const inside = (box: Zone, x: number, y: number) =>
   x >= box.left && x <= box.right && y >= box.top && y <= box.bottom;
 
 /**
- * Whether a mouse is over `zones` of the element's parent, and not over
- * anything `covered` says is above them, and whether there is a mouse. Hovered is always true where nothing can hover (touchscreens),
+ * Whether a mouse is over `zones` of the element's parent, and whether there
+ * is a mouse. Hovered is always true where nothing can hover (touchscreens),
  * so the handle stays there to be found. A mouse moving anywhere counts as
  * able to hover too, as some browsers (headless Firefox among them) say they
  * can't hover.
@@ -43,17 +39,14 @@ const inside = (box: Zone, x: number, y: number) =>
 function useHovered(
   element: RefObject<HTMLElement | null>,
   zones: Zone[],
-  covered: (x: number, y: number) => boolean,
   /** Whether the element is rendered, so there is a parent to watch. */
   enabled: boolean,
 ): { hovered: boolean; mouse: boolean } {
   const [canHover, setCanHover] = useState(false);
   const [over, setOver] = useState(false);
   const zonesRef = useRef(zones);
-  const coveredRef = useRef(covered);
   useEffect(() => {
     zonesRef.current = zones;
-    coveredRef.current = covered;
   });
 
   useEffect(() => {
@@ -79,10 +72,7 @@ function useHovered(
       const rect = parent.getBoundingClientRect();
       const x = event.clientX - rect.left;
       const y = event.clientY - rect.top;
-      setOver(
-        zonesRef.current.some((zone) => inside(zone, x, y)) &&
-          !coveredRef.current(x, y),
-      );
+      setOver(zonesRef.current.some((zone) => inside(zone, x, y)));
     };
     const onLeave = () => setOver(false);
     parent.addEventListener("pointermove", onMove);
@@ -104,13 +94,10 @@ function useHovered(
  * the way of annotating near the screenshot's edge, and each corner's curve
  * fades in only as the pointer comes close to it.
  */
-export function ShotHandle({ layout, scale, stage, width, height }: Props) {
+export function ShotHandle({ layout, scale, width, height }: Props) {
   const setPosition = useEditorStore((state) => state.setPosition);
   const resizeShot = useEditorStore((state) => state.resizeShot);
   const shotScale = useEditorStore((state) => state.design.layers[0].scale);
-  const borderWidth = useEditorStore(
-    (state) => state.design.layers[0].border.width,
-  );
   const beginGesture = useEditorStore((state) => state.beginGesture);
   const sealHistory = useEditorStore((state) => state.sealHistory);
   const drag = useRef<{ pointer: Point; centre: Point } | null>(null);
@@ -133,15 +120,12 @@ export function ShotHandle({ layout, scale, stage, width, height }: Props) {
         ? above
         : clamp(below - 2 * GAP - SIZE, 0, Math.max(0, height - SIZE));
   const left = clamp(centre.x * scale - SIZE / 2, 0, Math.max(0, width - SIZE));
-  // The screenshot on screen with its border, which goes round its outside
-  // (a device has none): the corner handles go round both, as a second
-  // screenshot's do.
-  const edge = (shot.device ? 0 : borderWidth) * scale;
+  // The screenshot on screen, which the corner handles go round.
   const onScreen = {
-    x: shot.x * scale - edge,
-    y: shot.y * scale - edge,
-    width: shot.width * scale + 2 * edge,
-    height: shot.height * scale + 2 * edge,
+    x: shot.x * scale,
+    y: shot.y * scale,
+    width: shot.width * scale,
+    height: shot.height * scale,
   };
   // The screenshot (unrotated), its corner handles and the move handle, with
   // the gap between them, so moving from one to another keeps them up.
@@ -149,10 +133,10 @@ export function ShotHandle({ layout, scale, stage, width, height }: Props) {
     button,
     [
       {
-        left: onScreen.x - GAP,
-        top: onScreen.y - GAP,
-        right: onScreen.x + onScreen.width + GAP,
-        bottom: onScreen.y + onScreen.height + GAP,
+        left: shot.x * scale - GAP,
+        top: shot.y * scale - GAP,
+        right: (shot.x + shot.width) * scale + GAP,
+        bottom: (shot.y + shot.height) * scale + GAP,
       },
       {
         left: left - GAP,
@@ -162,21 +146,6 @@ export function ShotHandle({ layout, scale, stage, width, height }: Props) {
       },
       ...(shot.rotation === 0 ? cornerZones(onScreen) : []),
     ],
-    // A second screenshot on top, or its corner handles, is what the pointer
-    // is over instead.
-    (x, y) =>
-      !!stage.current &&
-      secondShotBoxes(stage.current).some((box) =>
-        [
-          {
-            left: box.x,
-            top: box.y,
-            right: box.x + box.width,
-            bottom: box.y + box.height,
-          },
-          ...cornerZones(box),
-        ].some((zone) => inside(zone, x, y)),
-      ),
     layout.draggable,
   );
   if (!layout.draggable) return null;
@@ -240,10 +209,7 @@ export function ShotHandle({ layout, scale, stage, width, height }: Props) {
               start.box,
               start.scale,
               corner,
-              {
-                x: (point.x - corner.x * edge) / scale,
-                y: (point.y - corner.y * edge) / scale,
-              },
+              { x: point.x / scale, y: point.y / scale },
               layout.canvas,
             );
             resizeShot(next.scale, next.position.x, next.position.y);
