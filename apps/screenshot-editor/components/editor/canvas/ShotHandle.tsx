@@ -1,21 +1,24 @@
 "use client";
 
-import type Konva from "konva";
 import { Move } from "lucide-react";
-import { type RefObject, useEffect, useRef, useState } from "react";
+import { type RefObject, useEffect, useId, useRef, useState } from "react";
 import type { DesignLayout, Rect } from "@/lib/design/layout";
 import { SHOT_SCALE } from "@/lib/design/limits";
-import { resizeFromCorner } from "@/lib/render/resize";
+import { CORNERS, resizeFromCorner, type Corner } from "@/lib/render/resize";
 import { NO_GUIDES, snapDrag, type Point } from "@/lib/render/snap";
 import { useEditorStore } from "@/lib/store/editor";
 import { clamp, cn } from "@/lib/utils";
-import { secondShotBoxes } from "./nodes/Annotations";
 import { useGuides } from "./nodes/Guides";
-import { cornerZones, ResizeCorners, type Zone } from "./ResizeCorners";
 
 // The handle's size, and its distance from the screenshot.
 const SIZE = 32;
 const GAP = 8;
+// The corner handles' size: inside the gap, so reaching one keeps them up.
+const CORNER = 12;
+// The corner tooltip: how long the pointer rests before it shows, and half
+// its width, to keep it inside the stage.
+const TIP_DELAY = 300;
+const TIP_HALF = 112;
 const RESIZE_TIP =
   "Drag to resize. Double-click to return to the original size.";
 
@@ -23,37 +26,33 @@ type Props = {
   layout: DesignLayout;
   /** On-screen zoom of the stage. */
   scale: number;
-  /** The stage, whose second screenshots sit above this one. */
-  stage: RefObject<Konva.Stage | null>;
   /** The stage's size on screen: the handle stays over the canvas. */
   width: number;
   height: number;
 };
 
-const inside = (box: Zone, x: number, y: number) =>
+type Box = { left: number; top: number; right: number; bottom: number };
+
+const inside = (box: Box, x: number, y: number) =>
   x >= box.left && x <= box.right && y >= box.top && y <= box.bottom;
 
 /**
- * Whether a mouse is over `zones` of the element's parent, and not over
- * anything `covered` says is above them, and whether there is a mouse. Hovered is always true where nothing can hover (touchscreens),
- * so the handle stays there to be found. A mouse moving anywhere counts as
- * able to hover too, as some browsers (headless Firefox among them) say they
- * can't hover.
+ * Whether a mouse is over `zones` of the element's parent. Always true where
+ * nothing can hover (touchscreens), so the handle stays there to be found.
+ * A mouse moving anywhere counts as hovering too, as some browsers (headless
+ * Firefox among them) say they can't hover.
  */
 function useHovered(
   element: RefObject<HTMLElement | null>,
-  zones: Zone[],
-  covered: (x: number, y: number) => boolean,
+  zones: Box[],
   /** Whether the element is rendered, so there is a parent to watch. */
   enabled: boolean,
-): { hovered: boolean; mouse: boolean } {
+): boolean {
   const [canHover, setCanHover] = useState(false);
   const [over, setOver] = useState(false);
   const zonesRef = useRef(zones);
-  const coveredRef = useRef(covered);
   useEffect(() => {
     zonesRef.current = zones;
-    coveredRef.current = covered;
   });
 
   useEffect(() => {
@@ -79,10 +78,7 @@ function useHovered(
       const rect = parent.getBoundingClientRect();
       const x = event.clientX - rect.left;
       const y = event.clientY - rect.top;
-      setOver(
-        zonesRef.current.some((zone) => inside(zone, x, y)) &&
-          !coveredRef.current(x, y),
-      );
+      setOver(zonesRef.current.some((zone) => inside(zone, x, y)));
     };
     const onLeave = () => setOver(false);
     parent.addEventListener("pointermove", onMove);
@@ -93,7 +89,7 @@ function useHovered(
     };
   }, [element, canHover, enabled]);
 
-  return { hovered: !canHover || over, mouse: canHover };
+  return !canHover || over;
 }
 
 /**
@@ -101,24 +97,30 @@ function useHovered(
  * is on (drawing tools take presses on the screenshot itself), and one at
  * each corner that resizes it. With a mouse they show only while the
  * pointer is over the screenshot or the move handle, so they don't get in
- * the way of annotating near the screenshot's edge, and each corner's curve
- * fades in only as the pointer comes close to it.
+ * the way of annotating near the screenshot's edge.
  */
-export function ShotHandle({ layout, scale, stage, width, height }: Props) {
+export function ShotHandle({ layout, scale, width, height }: Props) {
   const setPosition = useEditorStore((state) => state.setPosition);
   const resizeShot = useEditorStore((state) => state.resizeShot);
   const shotScale = useEditorStore((state) => state.design.layers[0].scale);
-  const borderWidth = useEditorStore(
-    (state) => state.design.layers[0].border.width,
-  );
   const beginGesture = useEditorStore((state) => state.beginGesture);
   const sealHistory = useEditorStore((state) => state.sealHistory);
   const drag = useRef<{ pointer: Point; centre: Point } | null>(null);
-  const resize = useRef<{ box: Rect; scale: number } | null>(null);
+  const resize = useRef<{ corner: Corner; box: Rect; scale: number } | null>(
+    null,
+  );
   const [dragging, setDragging] = useState(false);
-  // Moving by the handle below, rather than resizing from a corner.
-  const [moving, setMoving] = useState(false);
   const button = useRef<HTMLButtonElement>(null);
+  // The corner whose tooltip shows, if any.
+  const [tip, setTip] = useState<Corner | null>(null);
+  const tipTimer = useRef<number | undefined>(undefined);
+  const tipId = useId();
+  useEffect(() => () => window.clearTimeout(tipTimer.current), []);
+  const showTip = (corner: Corner | null, delay = 0) => {
+    window.clearTimeout(tipTimer.current);
+    if (!corner || !delay) setTip(corner);
+    else tipTimer.current = window.setTimeout(() => setTip(corner), delay);
+  };
 
   const shot = layout.shot;
   const centre = { x: shot.x + shot.width / 2, y: shot.y + shot.height / 2 };
@@ -133,26 +135,16 @@ export function ShotHandle({ layout, scale, stage, width, height }: Props) {
         ? above
         : clamp(below - 2 * GAP - SIZE, 0, Math.max(0, height - SIZE));
   const left = clamp(centre.x * scale - SIZE / 2, 0, Math.max(0, width - SIZE));
-  // The screenshot on screen with its border, which goes round its outside
-  // (a device has none): the corner handles go round both, as a second
-  // screenshot's do.
-  const edge = (shot.device ? 0 : borderWidth) * scale;
-  const onScreen = {
-    x: shot.x * scale - edge,
-    y: shot.y * scale - edge,
-    width: shot.width * scale + 2 * edge,
-    height: shot.height * scale + 2 * edge,
-  };
-  // The screenshot (unrotated), its corner handles and the move handle, with
-  // the gap between them, so moving from one to another keeps them up.
-  const { hovered, mouse } = useHovered(
+  // The screenshot (unrotated) and the handle, with the gap between them, so
+  // moving from one to the other keeps the handle up.
+  const hovered = useHovered(
     button,
     [
       {
-        left: onScreen.x - GAP,
-        top: onScreen.y - GAP,
-        right: onScreen.x + onScreen.width + GAP,
-        bottom: onScreen.y + onScreen.height + GAP,
+        left: shot.x * scale - GAP,
+        top: shot.y * scale - GAP,
+        right: (shot.x + shot.width) * scale + GAP,
+        bottom: (shot.y + shot.height) * scale + GAP,
       },
       {
         left: left - GAP,
@@ -160,23 +152,7 @@ export function ShotHandle({ layout, scale, stage, width, height }: Props) {
         right: left + SIZE + GAP,
         bottom: top + SIZE + GAP,
       },
-      ...(shot.rotation === 0 ? cornerZones(onScreen) : []),
     ],
-    // A second screenshot on top, or its corner handles, is what the pointer
-    // is over instead.
-    (x, y) =>
-      !!stage.current &&
-      secondShotBoxes(stage.current).some((box) =>
-        [
-          {
-            left: box.x,
-            top: box.y,
-            right: box.x + box.width,
-            bottom: box.y + box.height,
-          },
-          ...cornerZones(box),
-        ].some((zone) => inside(zone, x, y)),
-      ),
     layout.draggable,
   );
   if (!layout.draggable) return null;
@@ -187,72 +163,116 @@ export function ShotHandle({ layout, scale, stage, width, height }: Props) {
     drag.current = null;
     resize.current = null;
     setDragging(false);
-    setMoving(false);
     useGuides.setState(NO_GUIDES);
     sealHistory();
   };
 
+  // Outside the screenshot, beyond the corner: above the top corners, below
+  // the bottom ones, unless the stage's edge is in the way.
+  const tipPlace = (corner: Corner) => {
+    const x = (corner.x > 0 ? shot.x + shot.width : shot.x) * scale;
+    const y = (corner.y > 0 ? shot.y + shot.height : shot.y) * scale;
+    const above = corner.y < 0 ? y > 56 : y > height - 56;
+    return {
+      left: clamp(x, TIP_HALF, Math.max(TIP_HALF, width - TIP_HALF)),
+      top: above ? y - CORNER : y + CORNER,
+      transform: `translate(-50%, ${above ? "-100%" : "0"})`,
+    };
+  };
+
+  const corners = shot.rotation === 0 && (
+    <>
+      {CORNERS.map((corner) => {
+        const x = (corner.x > 0 ? shot.x + shot.width : shot.x) * scale;
+        const y = (corner.y > 0 ? shot.y + shot.height : shot.y) * scale;
+        return (
+          <button
+            key={corner.name}
+            type="button"
+            aria-label={`Resize screenshot from the ${corner.name.replace("-", " ")} corner`}
+            aria-describedby={tipId}
+            onPointerEnter={(event) => {
+              if (event.pointerType !== "touch") showTip(corner, TIP_DELAY);
+            }}
+            onPointerLeave={() => showTip(null)}
+            onFocus={() => showTip(corner)}
+            onBlur={() => showTip(null)}
+            onPointerDown={(event) => {
+              if (event.button !== 0) return;
+              event.preventDefault();
+              showTip(null);
+              event.currentTarget.setPointerCapture(event.pointerId);
+              resize.current = {
+                corner,
+                box: {
+                  x: shot.x,
+                  y: shot.y,
+                  width: shot.width,
+                  height: shot.height,
+                },
+                scale: shotScale,
+              };
+              setDragging(true);
+              // The whole resize is one undo step.
+              beginGesture();
+            }}
+            onPointerMove={(event) => {
+              const start = resize.current;
+              const parent = event.currentTarget.parentElement;
+              if (!start || !parent) return;
+              const rect = parent.getBoundingClientRect();
+              const next = resizeFromCorner(
+                start.box,
+                start.scale,
+                start.corner,
+                {
+                  x: (event.clientX - rect.left) / scale,
+                  y: (event.clientY - rect.top) / scale,
+                },
+                layout.canvas,
+              );
+              resizeShot(next.scale, next.position.x, next.position.y);
+            }}
+            onPointerUp={end}
+            onPointerCancel={end}
+            onLostPointerCapture={end}
+            // Back to the size and place it started at.
+            onDoubleClick={() => resizeShot(SHOT_SCALE.default, 0.5, 0.5)}
+            className={cn(
+              "absolute touch-none rounded-full border-[1.5px] border-[#0a84ff] bg-white shadow-sm transition-[opacity,visibility] duration-150 outline-none focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid motion-reduce:transition-none",
+              corner.x === corner.y
+                ? "cursor-nwse-resize"
+                : "cursor-nesw-resize",
+              !shown && "invisible opacity-0",
+            )}
+            style={{
+              left: x - CORNER / 2,
+              top: y - CORNER / 2,
+              width: CORNER,
+              height: CORNER,
+            }}
+          />
+        );
+      })}
+      <span id={tipId} className="sr-only">
+        {RESIZE_TIP}
+      </span>
+      {tip && shown && !dragging && (
+        <span
+          aria-hidden
+          data-testid="resize-tooltip"
+          className="pointer-events-none absolute z-50 w-max max-w-56 rounded-md bg-foreground px-2.5 py-1.5 text-center text-xs font-medium text-background shadow-md"
+          style={tipPlace(tip)}
+        >
+          {RESIZE_TIP}
+        </span>
+      )}
+    </>
+  );
+
   return (
     <>
-      {/* Outlined, like a selected annotation, while its handles are up for
-          a mouse or it's being moved or resized. */}
-      {((mouse && hovered) || dragging) && (
-        <div
-          aria-hidden
-          data-testid="shot-outline"
-          className="pointer-events-none absolute border border-[#0a84ff]"
-          style={{
-            left: onScreen.x,
-            top: onScreen.y,
-            width: onScreen.width,
-            height: onScreen.height,
-            transform: `rotate(${shot.rotation}deg)`,
-          }}
-        />
-      )}
-      {shot.rotation === 0 && (
-        <ResizeCorners
-          name="screenshot"
-          box={onScreen}
-          width={width}
-          height={height}
-          shown={shown}
-          busy={moving}
-          tip={RESIZE_TIP}
-          onStart={() => {
-            resize.current = {
-              box: {
-                x: shot.x,
-                y: shot.y,
-                width: shot.width,
-                height: shot.height,
-              },
-              scale: shotScale,
-            };
-            setDragging(true);
-            // The whole resize is one undo step.
-            beginGesture();
-          }}
-          onMove={(corner, point) => {
-            const start = resize.current;
-            if (!start) return;
-            const next = resizeFromCorner(
-              start.box,
-              start.scale,
-              corner,
-              {
-                x: (point.x - corner.x * edge) / scale,
-                y: (point.y - corner.y * edge) / scale,
-              },
-              layout.canvas,
-            );
-            resizeShot(next.scale, next.position.x, next.position.y);
-          }}
-          onEnd={end}
-          // Back to the size and place it started at.
-          onDoubleClick={() => resizeShot(SHOT_SCALE.default, 0.5, 0.5)}
-        />
-      )}
+      {corners}
       <button
         ref={button}
         type="button"
@@ -267,7 +287,6 @@ export function ShotHandle({ layout, scale, stage, width, height }: Props) {
             centre,
           };
           setDragging(true);
-          setMoving(true);
           // The whole drag is one undo step.
           beginGesture();
         }}

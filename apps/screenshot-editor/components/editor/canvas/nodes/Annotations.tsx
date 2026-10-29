@@ -93,12 +93,6 @@ const ANNOTATION_NAME = "annotation";
 /** A second screenshot: with a drawing tool on, it's drawn on like the main one. */
 const SCREENSHOT_NAME = "second-screenshot";
 
-/** Each second screenshot's box on `stage`, in stage (screen) px. */
-export const secondShotBoxes = (stage: Konva.Stage) =>
-  stage
-    .find(`.${SCREENSHOT_NAME}`)
-    .map((node) => node.getClientRect({ skipShadow: true }));
-
 const SELECTION_COLOR = "#0a84ff";
 
 /** Screen px: a step, an outline's border or an arrow can be pressed this far out. */
@@ -1483,11 +1477,48 @@ export function AnnotationsNode({
     (annotation) => annotation.kind !== "screenshot",
   );
 
+  // A second screenshot is resized from its corners, keeping its shape; the
+  // stretch becomes its width when the resize ends.
+  const screenshotTransformProps = (shot: ScreenshotAnnotation) => ({
+    onTransformStart: startMoving,
+    onTransformEnd: (event: KonvaEventObject<Event>) => {
+      const node = event.currentTarget as Konva.Group;
+      const ratio = shot.height / shot.width;
+      // No bigger than the canvas, and on it.
+      const width = Math.min(
+        shot.width * node.scaleX(),
+        area.width,
+        area.height / ratio,
+      );
+      const box = fitBox(
+        {
+          x: node.x() / unit,
+          y: node.y() / unit,
+          width,
+          height: width * ratio,
+        },
+        area,
+      );
+      node.setAttrs({
+        x: box.x * unit,
+        y: box.y * unit,
+        scaleX: 1,
+        scaleY: 1,
+      });
+      useEditorStore
+        .getState()
+        .resizeScreenshot(shot.id, box.x, box.y, box.width);
+      transformerRef.current?.forceUpdate();
+      stopMoving(shot.id);
+    },
+  });
+
   const selectedShape = selected?.kind === "shape" ? selected : null;
   const selectedArrow = selected?.kind === "arrow" ? selected : null;
   // Steps and circles keep their proportions, from the corners.
   const roundSelection =
     selected?.kind === "step" ||
+    selected?.kind === "screenshot" ||
     (selectedShape !== null && isSquareShape(selectedShape));
 
   const pictures = usePictures(annotations, source, unit);
@@ -1557,6 +1588,7 @@ export function AnnotationsNode({
         name={`${ANNOTATION_NAME} ${SCREENSHOT_NAME}`}
         x={annotation.x * unit}
         y={annotation.y * unit}
+        {...screenshotTransformProps(annotation)}
         // Moved with the select tool; drawn on with the others.
         {...(selecting ? dragProps(annotation) : {})}
       >
@@ -1831,8 +1863,6 @@ export function AnnotationsNode({
           ref={transformerRef}
           name={EXPORT_HIDDEN}
           rotateEnabled={false}
-          // A second screenshot has its own corner handles, over the stage.
-          resizeEnabled={selected.kind !== "screenshot"}
           keepRatio={roundSelection}
           enabledAnchors={
             roundSelection
