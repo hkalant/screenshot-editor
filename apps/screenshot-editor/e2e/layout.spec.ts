@@ -59,14 +59,32 @@ test("the theme can be switched and is remembered", async ({ page }) => {
   await expect(html).toHaveClass(/\bdark\b/);
 });
 
-test("what's new opens from the menu, below Switch theme", async ({ page }) => {
+test("the menu runs from adding a screenshot to clearing autosaves, and opens what's new", async ({
+  page,
+}) => {
   await page.goto("./");
   await expectEmptyState(page);
   await page.getByRole("button", { name: "Menu" }).click();
-  const items = page.getByRole("dialog", { name: "Menu" }).getByRole("button");
-  await expect(items.last()).toHaveAccessibleName("What's new");
-  await expect(items.nth(-2)).toHaveAccessibleName(/^Switch theme/);
-  await items.last().click();
+  const menu = page.getByRole("dialog", { name: "Menu" });
+  // Adding, the project, help, the theme, then clearing autosaves, out of the way.
+  const order = [
+    "Add screenshot",
+    "Open project",
+    "Save project",
+    "Take the tour",
+    "Keyboard shortcuts",
+    "What's new",
+    "Switch theme",
+    "Clear autosaved work",
+  ];
+  const names = await menu.getByRole("button").allTextContents();
+  const places = order.map((name) =>
+    names.findIndex((text) => text.startsWith(name)),
+  );
+  expect(places).not.toContain(-1);
+  expect(places).toEqual([...places].sort((a, b) => a - b));
+  expect(names.at(-1)).toMatch(/^Clear autosaved work/);
+  await menu.getByRole("button", { name: "What's new" }).click();
 
   const dialog = page.getByRole("dialog", { name: "What's new" });
   await expect(dialog).toBeVisible();
