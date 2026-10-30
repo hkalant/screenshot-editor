@@ -259,7 +259,7 @@ test("clearing the autosaved work deletes it and starts blank", async ({
     .toBe(true);
 
   await page.getByRole("button", { name: "Menu" }).click();
-  const item = page.getByRole("button", { name: "Clear autosaved work…" });
+  const item = page.getByRole("button", { name: "Clear autosaved work" });
   await expect(item).toHaveAccessibleDescription(
     "Delete autosaves and start over.",
   );
@@ -273,7 +273,7 @@ test("clearing the autosaved work deletes it and starts blank", async ({
   await expect(stage(page)).toBeVisible();
 
   await page.getByRole("button", { name: "Menu" }).click();
-  await page.getByRole("button", { name: "Clear autosaved work…" }).click();
+  await page.getByRole("button", { name: "Clear autosaved work" }).click();
   await dialog.getByRole("button", { name: "Clear autosaved work" }).click();
   await expectEmptyState(page);
   await expect(

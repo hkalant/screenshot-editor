@@ -134,10 +134,10 @@ export function MainMenu({ onReplace }: { onReplace: () => void }) {
               )}
             </span>
             {!hasImage
-              ? "Add screenshot…"
+              ? "Add screenshot"
               : hasSecond
-                ? "Replace all screenshots…"
-                : "Replace screenshot…"}
+                ? "Replace all screenshots"
+                : "Replace screenshot"}
             <MenuShortcut keys={apple ? "⌘O" : "Ctrl+O"} />
           </button>
           {/* Pasting or dropping works too, which few would guess. */}
@@ -252,7 +252,7 @@ export function MainMenu({ onReplace }: { onReplace: () => void }) {
             <span className="flex w-5 justify-center text-muted-foreground">
               <Trash2 className="size-4" aria-hidden />
             </span>
-            Clear autosaved work…
+            Clear autosaved work
           </button>
           <p
             id="clear-autosave-hint"

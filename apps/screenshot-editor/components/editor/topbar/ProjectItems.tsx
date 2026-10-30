@@ -34,7 +34,7 @@ export function ProjectItems({
         <span className="flex w-5 justify-center text-muted-foreground">
           <FolderOpen className="size-4" aria-hidden />
         </span>
-        Open project…
+        Open project
         {shortcuts && <MenuShortcut keys={shortcuts.open} />}
       </button>
       <button
