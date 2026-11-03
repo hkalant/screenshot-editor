@@ -308,3 +308,28 @@ test("the second screenshot menu works from the keyboard", async ({ page }) => {
   ).toBeVisible();
   expect(await captures(page)).toBe(1);
 });
+
+test("the empty editor says where to capture the screen", async ({ page }) => {
+  await expect(page.getByTestId("empty-state")).toContainText(
+    "Click ‘Capture screen’ top right to insert a screenshot of a tab, window or the full screen.",
+  );
+});
+
+test("where the browser can't capture the screen, the empty editor doesn't suggest it", async ({
+  page,
+}) => {
+  // As on phones: runs after the fake picker is set up, so it goes too.
+  await page.addInitScript(() => {
+    delete (MediaDevices.prototype as { getDisplayMedia?: unknown })
+      .getDisplayMedia;
+  });
+  await page.reload();
+  await expectEmptyState(page);
+  await expect(captureButton(page)).toHaveCount(0);
+  await expect(page.getByTestId("empty-state")).toContainText(
+    "Drag and drop screenshots",
+  );
+  await expect(page.getByTestId("empty-state")).not.toContainText(
+    "Capture screen",
+  );
+});
