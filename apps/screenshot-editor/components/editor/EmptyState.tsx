@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Camera,
   ClipboardPaste,
   FolderOpen,
   ImageDown,
@@ -9,6 +10,8 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
+import { useCanCaptureScreen } from "@/lib/hooks/useCanCaptureScreen";
+import { cn } from "@/lib/utils";
 
 type Props = {
   loading: boolean;
@@ -44,8 +47,15 @@ const OPTIONS: { icon: LucideIcon; text: ReactNode }[] = [
   },
 ];
 
+// Where the browser can capture the screen, as the top bar's button does.
+const CAPTURE = {
+  icon: Camera,
+  text: "Click ‘Capture screen’ top right to insert a screenshot of a tab, window or the full screen.",
+};
+
 export function EmptyState({ loading, restoring, onUpload, onSample }: Props) {
   const busy = loading || restoring;
+  const options = useCanCaptureScreen() ? [...OPTIONS, CAPTURE] : OPTIONS;
 
   return (
     <div
@@ -78,8 +88,15 @@ export function EmptyState({ loading, restoring, onUpload, onSample }: Props) {
               To get started, do any of the following:
             </span>
             {/* Inside the button, so spans rather than a list. */}
-            <span className="mt-4 grid max-w-3xl gap-6 sm:grid-cols-3">
-              {OPTIONS.map(({ icon: Icon, text }, index) => (
+            <span
+              className={cn(
+                "mt-4 grid gap-6",
+                options.length > 3
+                  ? "max-w-4xl sm:grid-cols-2 lg:grid-cols-4"
+                  : "max-w-3xl sm:grid-cols-3",
+              )}
+            >
+              {options.map(({ icon: Icon, text }, index) => (
                 <span
                   key={index}
                   className="flex flex-col items-center gap-3 text-sm text-balance text-foreground"

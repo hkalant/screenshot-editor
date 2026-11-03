@@ -308,3 +308,9 @@ test("the second screenshot menu works from the keyboard", async ({ page }) => {
   ).toBeVisible();
   expect(await captures(page)).toBe(1);
 });
+
+test("the empty editor says where to capture the screen", async ({ page }) => {
+  await expect(page.getByTestId("empty-state")).toContainText(
+    "Click ‘Capture screen’ top right to insert a screenshot of a tab, window or the full screen.",
+  );
+});
