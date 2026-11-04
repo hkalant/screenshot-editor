@@ -35,7 +35,7 @@ jobs:
   build:
     name: Lint, test and build
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 15
     # Playwright's image has the browsers and their system packages, so nothing comes from
     # the runner's Ubuntu mirror, which has stalled the browser install for 30 minutes.
     # Its version must match @playwright/test in package.json. As the runner's user, as
@@ -77,20 +77,6 @@ jobs:
       - name: Build the static site
         run: npm run build
 
-      - name: End-to-end tests
-        run: npm run test:e2e
-
-      # Artifact paths are relative to the repository root, not the working directory.
-      - name: Upload the Playwright report
-        if: failure()
-        uses: actions/upload-artifact@v7
-        with:
-          name: playwright-report
-          path: apps/screenshot-editor/playwright-report
-          if-no-files-found: ignore
-          retention-days: 14
-          overwrite: true
-
       - name: Upload the site
         uses: actions/upload-artifact@v7
         with:
@@ -99,4 +85,56 @@ jobs:
           if-no-files-found: error
           retention-days: 7
           # A re-run of this job replaces the artifact instead of failing on the name.
+          overwrite: true
+
+  # The browser tests take most of the time, so each browser gets its own job and the three
+  # run at once, against the site the build job uploaded. Deploy waits for all of them.
+  e2e:
+    name: End-to-end tests (${{ matrix.browser }})
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      # One browser failing doesn't stop the others, so a run reports every failure.
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    # The same Playwright image and user as the build job, for the same reasons.
+    container:
+      image: mcr.microsoft.com/playwright:v1.56.1-noble
+      options: --user 1001
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: apps/screenshot-editor/.nvmrc
+          cache: npm
+          cache-dependency-path: apps/screenshot-editor/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download the site built by the build job
+        uses: actions/download-artifact@v8
+        with:
+          name: site
+          path: apps/screenshot-editor/out
+
+      - name: End-to-end tests
+        run: npm run test:e2e -- --project=${{ matrix.browser }}
+
+      # Artifact paths are relative to the repository root, not the working directory.
+      - name: Upload the Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report-${{ matrix.browser }}
+          path: apps/screenshot-editor/playwright-report
+          if-no-files-found: ignore
+          retention-days: 14
           overwrite: true
