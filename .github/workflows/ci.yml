@@ -89,8 +89,11 @@ jobs:
 
   # The browser tests take most of the time, so each browser gets its own job and the three
   # run at once, against the site the build job uploaded. Deploy waits for all of them.
+  # To save GitHub Actions minutes they run only through the deploy workflow (pushes to main
+  # and manual runs), never on pull requests: run them locally before merging instead.
   e2e:
     name: End-to-end tests (${{ matrix.browser }})
+    if: github.event_name != 'pull_request'
     needs: build
     runs-on: ubuntu-24.04
     timeout-minutes: 30

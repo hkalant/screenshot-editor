@@ -84,7 +84,7 @@ Then open http://127.0.0.1:4173/screenshot-editor/ (with the trailing slash). Ru
 
 Two GitHub Actions workflows in the repository root handle this:
 
-- **`.github/workflows/ci.yml`** runs on every pull request: format check, lint, type check, unit tests, deploy-script tests, the static build with `/screenshot-editor`, and then the browser tests in Chromium, Firefox and WebKit, as three jobs that run at the same time.
+- **`.github/workflows/ci.yml`** runs on every pull request: format check, lint, type check, unit tests, deploy-script tests and the static build with `/screenshot-editor`. The browser tests (Chromium, Firefox and WebKit, as three jobs that run at the same time) run only on pushes to `main`, through the deploy workflow, to save GitHub Actions minutes; run `npm run test:e2e` locally before merging.
 - **`.github/workflows/deploy-bitbucket.yml`** runs on every push to `main` that touches the app (and can be started by hand on `main`). It runs the same checks, then copies the built site into the `screenshot-editor/` folder of your Bitbucket website repository and pushes it. Nothing outside that folder is changed, so the rest of the repository stays free for your portfolio.
 
 ### One-time setup
