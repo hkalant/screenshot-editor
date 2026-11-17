@@ -582,22 +582,28 @@ function BlurBody({
       />
       {area && patch ? (
         <KonvaImage
-          // A new node for each patch: a resize stretches the old one, and its
-          // place and size must not carry over where the props are unchanged.
-          key={`${area.x},${area.y},${area.width},${area.height}`}
+          // A new node for each box: a resize cuts the old one off, and its
+          // size and crop must not carry over where the props are unchanged.
+          key={`${x},${y},${width},${height}`}
           image={patch}
           x={(area.x - x) * unit}
           y={(area.y - y) * unit}
           width={area.width * unit}
           height={area.height * unit}
+          // Its whole size, which a resize cuts it off from.
+          fullWidth={area.width * unit}
+          fullHeight={area.height * unit}
           listening={false}
         />
       ) : (
         // Off the screenshot there is nothing to blur: show where it is.
         <Rect
+          key={`${x},${y},${width},${height}`}
           name={EXPORT_HIDDEN}
           width={width * unit}
           height={height * unit}
+          fullWidth={width * unit}
+          fullHeight={height * unit}
           stroke={SELECTION_COLOR}
           strokeWidth={1 / zoom}
           dash={[4 / zoom, 3 / zoom]}
@@ -921,20 +927,31 @@ function placeShape(
   group.setAttrs({ x: box.x, y: box.y, scaleX: 1, scaleY: 1 });
   const [body, ...rest] = group.getChildren();
   const { width, height } = box;
-  // A blur's patch (or its outline off the screenshot) stretches with the box
-  // until it is worked out again. Left at its old size, it would hold the box
-  // at least that big, so a box once made bigger could never be made smaller.
-  if (shape.shape === "blur" && body && body.width() > 0 && body.height() > 0) {
-    const fx = width / body.width();
-    const fy = height / body.height();
-    for (const child of rest)
-      child.setAttrs({
-        x: child.x() * fx,
-        y: child.y() * fy,
-        width: child.width() * fx,
-        height: child.height() * fy,
-      });
-  }
+  // A blur's patch (or its outline off the screenshot) is only worked out
+  // again once a resize ends. Until then it stays as it was, but cut off
+  // where the box now ends: left whole, it would hold the box at least that
+  // big, so a box once made bigger could never be made smaller.
+  if (shape.shape === "blur")
+    for (const child of rest) {
+      const full = {
+        width: Number(child.attrs.fullWidth),
+        height: Number(child.attrs.fullHeight),
+      };
+      if (!(full.width > 0) || !(full.height > 0)) continue;
+      const shown = {
+        width: Math.max(0, Math.min(full.width, width - child.x())),
+        height: Math.max(0, Math.min(full.height, height - child.y())),
+      };
+      child.setAttrs(shown);
+      const image = child instanceof Konva.Image && child.image();
+      if (image instanceof HTMLCanvasElement)
+        (child as Konva.Image).crop({
+          x: 0,
+          y: 0,
+          width: (image.width * shown.width) / full.width,
+          height: (image.height * shown.height) / full.height,
+        });
+    }
   if (body instanceof Konva.Ellipse)
     body.setAttrs({
       x: width / 2,
