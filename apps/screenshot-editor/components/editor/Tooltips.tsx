@@ -117,11 +117,14 @@ export function Tooltips() {
       // The elements are named for assistive technology already.
       aria-hidden
       data-testid="tooltip"
-      className="pointer-events-none fixed z-50 w-max max-w-64 -translate-x-1/2 rounded-md bg-foreground px-2.5 py-1.5 text-center text-xs font-medium text-background shadow-md"
+      className="pointer-events-none fixed z-50 w-max max-w-64 rounded-md bg-foreground px-2.5 py-1.5 text-center text-xs font-medium text-background shadow-md"
       style={{
         left: tip.x,
         top: tip.y,
-        transform: tip.above ? "translate(-50%, -100%)" : undefined,
+        // One transform for both offsets: Tailwind's translate classes set
+        // the separate `translate` property, which would add to this one and
+        // push a tooltip shown above its button half its width to the left.
+        transform: tip.above ? "translate(-50%, -100%)" : "translateX(-50%)",
       }}
     >
       {tip.text}
