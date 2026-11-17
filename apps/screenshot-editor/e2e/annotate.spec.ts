@@ -1112,6 +1112,49 @@ test("a blur box can be made bigger and then smaller again", async ({
   expect(mixed(shrunk)).toBe(false);
 });
 
+test("a blur box follows a resize as it happens, not only at the end", async ({
+  page,
+}) => {
+  await upload(page, makeSolidPng(IMAGE.width, IMAGE.height, RED));
+  await tool(page, "Blur").click();
+  await drag(page, [0.2, 0.2], [0.4, 0.4]);
+  await nextFrame(page);
+  const at = await onImage(page, 0.3, 0.3);
+  await page.mouse.click(at.x, at.y);
+  await expect(page.getByRole("button", { name: "Delete blur" })).toBeVisible();
+  await nextFrame(page);
+  // The worked-out patch's width in screenshot pixels: one per pixel here.
+  const patchWidth = () =>
+    page.evaluate(() => {
+      const konva = (
+        window as unknown as {
+          Konva?: {
+            stages: {
+              find: (selector: string) => {
+                image: () => HTMLCanvasElement | undefined;
+              }[];
+            }[];
+          };
+        }
+      ).Konva;
+      const image = konva?.stages[0]
+        ?.find("Image")
+        .map((node) => node.image())
+        .find((source) => source instanceof HTMLCanvasElement);
+      return image?.width ?? 0;
+    });
+  expect(await patchWidth()).toBe(0.2 * IMAGE.width);
+
+  // Mid-drag, the patch is already worked out for the bigger box.
+  const from = await onImage(page, 0.4, 0.4);
+  const to = await onImage(page, 0.7, 0.7);
+  await page.mouse.move(from.x, from.y);
+  await page.mouse.down();
+  await page.mouse.move(to.x, to.y, { steps: 6 });
+  await expect.poll(patchWidth).toBe(0.5 * IMAGE.width);
+  await page.mouse.up();
+});
+
 test("a highlight is a see-through fill in its colour, square or rounded", async ({
   page,
 }) => {

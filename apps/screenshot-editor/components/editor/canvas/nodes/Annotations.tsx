@@ -1310,8 +1310,9 @@ export function AnnotationsNode({
         height: size.height * node.scaleY(),
       };
       placeShape(node, box, shape, weight);
-      // A magnifier's picture and frame follow as it happens, not only the box.
-      if (shape.shape === "magnify")
+      // A magnifier's picture and frame, and a blur's patch, follow as it
+      // happens, not only the box: no stretched blocks that snap back after.
+      if (shape.shape === "magnify" || shape.shape === "blur")
         useEditorStore.getState().resizeShape(shape.id, {
           x: box.x / unit,
           y: box.y / unit,
