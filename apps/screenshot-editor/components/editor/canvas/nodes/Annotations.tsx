@@ -582,6 +582,9 @@ function BlurBody({
       />
       {area && patch ? (
         <KonvaImage
+          // A new node for each patch: a resize stretches the old one, and its
+          // place and size must not carry over where the props are unchanged.
+          key={`${area.x},${area.y},${area.width},${area.height}`}
           image={patch}
           x={(area.x - x) * unit}
           y={(area.y - y) * unit}
@@ -916,8 +919,22 @@ function placeShape(
   weight: number,
 ) {
   group.setAttrs({ x: box.x, y: box.y, scaleX: 1, scaleY: 1 });
-  const body = group.getChildren()[0];
+  const [body, ...rest] = group.getChildren();
   const { width, height } = box;
+  // A blur's patch (or its outline off the screenshot) stretches with the box
+  // until it is worked out again. Left at its old size, it would hold the box
+  // at least that big, so a box once made bigger could never be made smaller.
+  if (shape.shape === "blur" && body && body.width() > 0 && body.height() > 0) {
+    const fx = width / body.width();
+    const fy = height / body.height();
+    for (const child of rest)
+      child.setAttrs({
+        x: child.x() * fx,
+        y: child.y() * fy,
+        width: child.width() * fx,
+        height: child.height() * fy,
+      });
+  }
   if (body instanceof Konva.Ellipse)
     body.setAttrs({
       x: width / 2,

@@ -1073,6 +1073,45 @@ test("a blur box blurs the screenshot under it, and its slider sets how much", a
   expect(light[0]).toBeLessThan(inside[0]);
 });
 
+test("a blur box can be made bigger and then smaller again", async ({
+  page,
+}) => {
+  const BLUE = [0, 0, 255, 255] as const;
+  await upload(
+    page,
+    makeStripedPng(IMAGE.width, IMAGE.height, 8, RED, [...BLUE]),
+  );
+  await tool(page, "Blur").click();
+  await drag(page, [0.2, 0.2], [0.4, 0.4]);
+  await nextFrame(page);
+  const select = async () => {
+    const at = await onImage(page, 0.3, 0.3);
+    await page.mouse.click(at.x, at.y);
+    await expect(
+      page.getByRole("button", { name: "Delete blur" }),
+    ).toBeVisible();
+    await nextFrame(page);
+  };
+  const mixed = (pixel: number[]) => pixel[0] > 60 && pixel[2] > 60;
+  // Outside the box at first, inside it once it is bigger.
+  const between: [number, number] = [0.61, 0.45];
+
+  // Bigger, from its bottom-right corner.
+  await select();
+  await drag(page, [0.4, 0.4], [0.7, 0.7]);
+  await nextFrame(page);
+  const [grown] = await pixelsOnImage(page, [between]);
+  expect(mixed(grown)).toBe(true);
+
+  // Then smaller: the second resize takes too.
+  await select();
+  await drag(page, [0.7, 0.7], [0.5, 0.5]);
+  await nextFrame(page);
+  const [inside, shrunk] = await pixelsOnImage(page, [[0.31, 0.3], between]);
+  expect(mixed(inside)).toBe(true);
+  expect(mixed(shrunk)).toBe(false);
+});
+
 test("a highlight is a see-through fill in its colour, square or rounded", async ({
   page,
 }) => {
