@@ -1,4 +1,3 @@
-import { Ban, ImageIcon, PaintBucket, type LucideIcon } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import type { BackgroundKind } from "@/lib/design/schema";
 
@@ -8,11 +7,10 @@ export type BackgroundChoice = "image" | "solid" | "none";
 const CHOICES: readonly {
   value: BackgroundChoice;
   label: string;
-  icon: LucideIcon;
 }[] = [
-  { value: "image", label: "Image", icon: ImageIcon },
-  { value: "solid", label: "Solid", icon: PaintBucket },
-  { value: "none", label: "None", icon: Ban },
+  { value: "image", label: "Image" },
+  { value: "solid", label: "Solid" },
+  { value: "none", label: "None" },
 ];
 
 /** Null for kinds the picker no longer offers, such as "fromImage" in older designs. */
@@ -52,13 +50,12 @@ export function BackgroundKindPicker({ value, onChange }: Props) {
       }}
       className="grid grid-cols-3 gap-0.5 rounded-md bg-muted/80 p-0.5"
     >
-      {CHOICES.map(({ value: option, label, icon: Icon }) => (
+      {CHOICES.map(({ value: option, label }) => (
         <ToggleGroupItem
           key={option}
           value={option}
-          className="h-9 gap-1.5 px-3 text-sm"
+          className="h-9 px-3 text-sm"
         >
-          <Icon className="size-4" aria-hidden />
           {label}
         </ToggleGroupItem>
       ))}
