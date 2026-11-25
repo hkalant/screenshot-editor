@@ -34,3 +34,22 @@ test("a tooltip shows under the pointer and goes on a press", async ({
   await expect(tip).toHaveCount(0);
   await page.mouse.up();
 });
+
+test("a tooltip shown above its button is centred over it", async ({
+  page,
+}) => {
+  await upload(page, makeSolidPng(400, 300, [0, 128, 255, 255]));
+  // The zoom controls sit at the bottom, so their tooltips show above them.
+  const button = page.getByRole("button", { name: "Zoom out" });
+  await button.hover();
+  const tip = page.getByTestId("tooltip");
+  await expect(tip).toHaveText("Zoom out");
+  const [box, tipBox] = await Promise.all([
+    button.boundingBox(),
+    tip.boundingBox(),
+  ]);
+  expect(tipBox!.y + tipBox!.height).toBeLessThanOrEqual(box!.y);
+  expect(
+    Math.abs(tipBox!.x + tipBox!.width / 2 - (box!.x + box!.width / 2)),
+  ).toBeLessThan(2);
+});
